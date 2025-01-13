@@ -1,4 +1,4 @@
-package com.java.email.common;
+package com.java.email.common.Redis;
 
 import com.java.email.utils.LogUtil;
 import org.springframework.beans.factory.annotation.Autowired;

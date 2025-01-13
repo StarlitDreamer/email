@@ -1,4 +1,4 @@
-package com.java.email.Response;
+package com.java.email.common.Response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,6 +10,8 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PageResponse<T> {
-    private long total;
+    private long totalItems;
+    private int pageNum;
+    private int pageSize;
     private List<T> items;
 }

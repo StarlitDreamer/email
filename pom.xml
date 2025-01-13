@@ -39,7 +39,8 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <version>1.18.30</version>
+            <scope>provided</scope>
         </dependency>
 
         <!--elasticsearch-->
@@ -56,10 +57,30 @@
         </dependency>
 
         <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-elasticsearch</artifactId>
+            <version>4.2.1</version>
+        </dependency>
+
+        <!--JWT-->
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+            <version>4.3.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!--配置redis-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -72,6 +93,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

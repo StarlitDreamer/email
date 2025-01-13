@@ -1,3 +1,9 @@
 spring:
   elasticsearch:
     uris: http://112.35.176.43:9200
+  # data:
+  #   redis:
+  #     host: 112.35.176.43  # Redis服务器地址
+  #     port: 9500      # Redis服务器端口
+  #     password:       # Redis服务器密码（如果有的话）
+  #     database: 0

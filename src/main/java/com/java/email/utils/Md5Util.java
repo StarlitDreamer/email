@@ -1,4 +1,4 @@
-package com.example.rv.utils;
+package com.java.email.utils;
 
 import org.apache.logging.log4j.util.Strings;
 

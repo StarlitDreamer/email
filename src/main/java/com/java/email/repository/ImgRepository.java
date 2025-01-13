@@ -5,6 +5,7 @@ import org.springframework.data.elasticsearch.repository.ElasticsearchRepository
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ImgRepository extends ElasticsearchRepository<ImgDocument, String> {
@@ -16,4 +17,12 @@ public interface ImgRepository extends ElasticsearchRepository<ImgDocument, Stri
     
     // 根据状态查询
     List<ImgDocument> findByStatus(Integer status);
-} 
+
+    <S extends ImgDocument> Iterable<S> saveAll(Iterable<S> entities);
+
+    Optional<ImgDocument> findById(String imgId);
+
+    ImgDocument save(ImgDocument imgDoc);
+
+    void deleteById(String imgId);
+}

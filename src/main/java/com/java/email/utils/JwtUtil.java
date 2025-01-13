@@ -1,8 +1,8 @@
-package com.example.rv.utils;
+package com.java.email.utils;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.example.rv.constData.MagicMathConstData;
+import com.java.email.constant.MagicMathConstData;
 
 import java.util.Date;
 import java.util.Map;
@@ -16,7 +16,7 @@ public class JwtUtil {
         try {
             return JWT.create()
                     .withClaim("claims", claims)
-                    .withExpiresAt(new Date(System.currentTimeMillis() + MagicMathConstData.MAGIC_GEN_TOKEN_TIME))
+                    .withExpiresAt(new Date(System.currentTimeMillis() + MagicMathConstData.TOKEN_TIME))
                     .sign(Algorithm.HMAC256(KEY));
         }catch (Exception e){
             logUtil.error("jwt create token error: " + e);

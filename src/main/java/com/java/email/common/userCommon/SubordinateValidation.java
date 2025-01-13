@@ -1,4 +1,4 @@
-package com.java.email.common;
+package com.java.email.common.userCommon;
 
 import com.java.email.esdao.UserDocument;
 import com.java.email.repository.UserRepository;

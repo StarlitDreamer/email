@@ -1,4 +1,4 @@
-package com.java.email.Response;
+package com.java.email.common.Response;
 
 public enum ResultCode {
     //成功
@@ -19,41 +19,30 @@ public enum ResultCode {
     R_ParamError(401,"参数异常"),
     R_UserNameIsExist(402,"用户名已存在"),
     R_UserPhoneNumberIsExist(403, "手机号已注册"),
-    R_UserEmailIsExist(404,"邮箱已被注册"),
     R_PasswordError(405,"密码错误"),
     R_UserNotFound(406,"该用户不存在"),
     R_OldPasswordError(407,"旧密码错误"),
     R_NewPasswordNotSame(408,"新密码不一致"),
     R_RoleAlreadyUpgrade(409,"权限早已升级"),
     R_CodeError(410,"验证码错误"),
-    R_CampIsExist(411,"该营地已存在，请检查名称或地址是否正确"),
-    R_DateError(412,"预定时间错误"),
-    R_CampNotFound(413,"营地不存在"),
-    R_CampAlreadyReserved(414,"该营地不可预定"),
-    R_PriceIsLow(415,"预定价格过低"),
-    R_IsReserved(416,"用户已有预定"),
-    R_UserNotReserved(417,"用户暂无预定"),
-    R_VehicleNotFound(418,"车辆不存在"),
-    R_VehicleAlreadyReserved(419,"该车辆不可预定"),
-    R_ReservationNotFound(420,"未找到该预定信息"),
-    R_UserNoBalance(421,"该用户余额不足"),
-    R_SignedContractFailed(422,"签署合同失败"),
-    R_ReservationTimeout(424,"该预定已超时"),
-    R_PaymentFailed(425,"支付失败"),
-    R_ExceedRefundTime(426,"超出退款时间"),
-    R_PaymentNotFound(427,"未找到该订单信息"),
-    R_ExceedCancelTime(428,"超出退款时间"),
-    R_InvoiceAlreadyExist(429,"该订单发票已开具"),
-    R_PaymentNotSuccess(429,"该订单未支付成功，不可开具发票"),
-    R_PaymentNotGenerateInvoice(430,"该订单暂未生成发票"),
-
-
+    R_NoAuth(411,"该用户没有权限"),
+    R_AttachmentNotFound(412,"附件不存在"),
+    R_NotBelongToAdmin(413,"该用户不属于当前管理员"),
+    R_PageError(414,"分页参数错误"),
+    R_NoData(415,"暂无数据"),
+    R_UnassignedNoBelongUser(416,"未分配状态下不能指定所属用户"),
+    R_CreatorNotValid(417,"搜索的创建者不是您或您的下属"),
+    R_BelongUserNotValid(418,"搜索的所属用户不是您或您的下属"),
+    R_CreatorError(419,"创建人错误"),
+    R_BelongUserError(420,"所属用户错误"),
+    R_ImgNotFound(421,"图片不存在"),
 
 
 
 
     //-----------------------系统相关错误 401-500---------------------
-    R_SaveFileError(501,"文件保存异常"),
+    R_SaveFileError(503,"文件保存异常"),
+    R_DeleteFileError(504,"文件删除异常"),  
     ;
 
     private int code;

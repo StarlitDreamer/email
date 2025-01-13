@@ -1,16 +1,15 @@
-package com.example.rv.interceptors;
+package com.java.email.aop.interceptors;
 
-import com.example.rv.constData.RedisConstData;
-import com.example.rv.service.common.RedisService;
-import com.example.rv.utils.JwtUtil;
-import com.example.rv.utils.LogUtil;
-import com.example.rv.utils.Md5Util;
-import com.example.rv.utils.ThreadLocalUtil;
+
+import com.java.email.common.Redis.RedisService;
+import com.java.email.constant.RedisConstData;
+import com.java.email.utils.JwtUtil;
+import com.java.email.utils.LogUtil;
+import com.java.email.common.userCommon.ThreadLocalUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 

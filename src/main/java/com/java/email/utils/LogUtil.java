@@ -1,9 +1,9 @@
-package com.example.rv.utils;
+package com.java.email.utils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class LogUtil{
+public class LogUtil {
     private final Logger logger;
     private LogUtil(Logger logger){
         this.logger = logger;

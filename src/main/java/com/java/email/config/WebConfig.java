@@ -1,6 +1,6 @@
-package com.example.rv.config;
+package com.java.email.config;
 
-import com.example.rv.interceptors.CheckTokenInterceptor;
+import com.java.email.aop.interceptors.CheckTokenInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -17,12 +17,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         List<String> excludePathList=new ArrayList<>();
-        excludePathList.add("/user/register");
-        excludePathList.add("/user/loginAccount");
-        excludePathList.add("/user/loginPhoneNumber");
-        excludePathList.add("/user/loginEmail");
-        excludePathList.add("/user/logout");
-        excludePathList.add("/user/getCode");
+        excludePathList.add("/userManage/createUser");
+        excludePathList.add("/user/login");
         excludePathList.add("/error");
         registry.addInterceptor(checkTokenInterceptor).addPathPatterns("/**").excludePathPatterns(excludePathList);
     }

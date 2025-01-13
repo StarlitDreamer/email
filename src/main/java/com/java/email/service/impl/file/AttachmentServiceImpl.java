@@ -1,9 +1,765 @@
 package com.java.email.service.impl.file;
 
-import com.java.email.service.AttachmentService;
+import com.java.email.common.Response.PageResponse;
+import com.java.email.common.Response.Result;
+import com.java.email.common.Response.ResultCode;
+import com.java.email.constant.MagicMathConstData;
+import com.java.email.esdao.UserDocument;
+import com.java.email.esdao.file.AttachmentAssignDocument;
+import com.java.email.esdao.file.AttachmentDocument;
+import com.java.email.repository.AttachmentAssignRepository;
+import com.java.email.repository.AttachmentRepository;
+import com.java.email.repository.UserRepository;
+import com.java.email.service.file.AttachmentService;
+import com.java.email.utils.LogUtil;
+import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.email.common.userCommon.SubordinateValidation;
+import com.java.email.common.userCommon.SubordinateValidation.ValidationResult;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AttachmentServiceImpl implements AttachmentService {
 
-} 
+    @Autowired
+    private AttachmentRepository attachmentRepository;
+
+    @Autowired
+    private AttachmentAssignRepository attachmentAssignRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ElasticsearchOperations elasticsearchOperations;
+
+    @Autowired
+    private SubordinateValidation subordinateValidation;
+
+    private static final LogUtil logUtil = LogUtil.getLogger(AttachmentServiceImpl.class);
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result uploadAttachment(Map<String, List<Map<String, String>>> request) {
+        try {
+            // 参数校验
+            if (request == null || !request.containsKey("attachment")) {
+                return new Result(ResultCode.R_ParamError);
+            }
+            List<Map<String, String>> attachments = request.get("attachment");
+            if (attachments == null || attachments.isEmpty()) {
+                return new Result(ResultCode.R_ParamError);
+            }
+
+            // 获取当前时间
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            String currentTime = LocalDateTime.now().format(formatter);
+
+            // 获取当前用户ID
+            List<String> belongUserIds = new ArrayList<>();
+            String userId = ThreadLocalUtil.getUserId();
+            if (userId == null) {
+                return new Result(ResultCode.R_UserNotFound);
+            }
+            belongUserIds.add(userId);
+
+
+            // 插入附件
+            List<AttachmentDocument> attachmentDocuments = new ArrayList<>();
+            for (Map<String, String> attachment : attachments) {
+                AttachmentDocument doc = new AttachmentDocument();
+                doc.setAttachmentId(attachment.get("attachment_id"));
+                doc.setAttachmentUrl(attachment.get("attachment_url"));
+                doc.setAttachmentSize(attachment.get("attachment_size"));
+                doc.setAttachmentName(attachment.get("attachment_name"));
+                doc.setCreatorId(userId);
+                doc.setBelongUserId(belongUserIds);
+                doc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_UNASSIGNED);
+                doc.setCreatedAt(currentTime);
+                doc.setUpdatedAt(currentTime);
+                attachmentDocuments.add(doc);
+            }
+
+            attachmentRepository.saveAll(attachmentDocuments);
+            return new Result(ResultCode.R_Ok);
+        } catch (Exception e) {
+            logUtil.error("Error saving attachments: " + e.getMessage());
+            throw e;
+        }
+    }
+
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result assignAttachment(Map<String, Object> request) {
+        try {
+            // 获取当前用户角色
+            Integer userRole = ThreadLocalUtil.getUserRole();
+            if (userRole == null || (userRole != 2 && userRole != 3)) {
+                return new Result(ResultCode.R_NoAuth);
+            }
+
+            // 检查参数
+            if (!request.containsKey("attachment_id") || !request.containsKey("belong_user_id")) {
+                return new Result(ResultCode.R_ParamError);
+            }
+
+            String attachmentId = (String) request.get("attachment_id");
+            @SuppressWarnings("unchecked")
+            List<String> belongUserIds = (List<String>) request.get("belong_user_id");
+
+            if (attachmentId == null || belongUserIds == null || belongUserIds.isEmpty()) {
+                return new Result(ResultCode.R_ParamError);
+            }
+
+            // 检查附件是否存在
+            AttachmentDocument attachmentDoc = attachmentRepository.findById(attachmentId).orElse(null);
+            if (attachmentDoc == null) {
+                return new Result(ResultCode.R_AttachmentNotFound);
+            }
+
+            // 检查所有用户ID是否存在
+            String assignId = ThreadLocalUtil.getUserId();
+            if (assignId == null) {
+                return new Result(ResultCode.R_Error);
+            }
+            // 先查询并验证所有用户,如果全部合格，则保存起来可以直接用，不用每次都查询
+            Map<String, UserDocument> userDocs = new HashMap<>();
+            for (String userId : belongUserIds) {
+                UserDocument userDoc = userRepository.findByUserId(userId).orElse(null);
+                if (userDoc == null) {
+                    return new Result(ResultCode.R_Error, "User " + userId + " not found");
+                }
+                userDocs.put(userId, userDoc);
+            }
+
+            // 如果是小管理员(role=3)，检查用户是否属于自己管理
+            if (userRole == 3) {
+                if (!belongUserIds.contains("1")) {
+                    for (UserDocument userDoc : userDocs.values()) {
+                        if (!userDoc.getBelongUserId().equals(assignId)) {
+                            return new Result(ResultCode.R_NotBelongToAdmin);
+                        }
+                    }
+                }
+
+            }
+
+            // 更新附件的归属用户
+            attachmentDoc.setBelongUserId(belongUserIds);
+            attachmentDoc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_ASSIGNED);
+            attachmentDoc.setUpdatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+            attachmentRepository.save(attachmentDoc);
+
+            // 创建分配记录
+            Map<String, Object> process = new HashMap<>();
+            process.put("assignor_id", assignId);
+            process.put("assignor_name", ThreadLocalUtil.getUserName());
+
+            List<Map<String, String>> assigneeList = new ArrayList<>();
+            for (UserDocument userDoc : userDocs.values()) {
+                Map<String, String> assignee = new HashMap<>();
+                assignee.put("id", userDoc.getUserId());
+                assignee.put("name", userDoc.getUserName());
+                assigneeList.add(assignee);
+            }
+            process.put("assignee", assigneeList);
+            process.put("assign_date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+
+            // 查找现有的分配记录进行追加，没有则创建新的。
+            AttachmentAssignDocument existingAssignDoc = attachmentAssignRepository.findById(attachmentId).orElse(null);
+            List<Map<String, Object>> processList;
+            if (existingAssignDoc != null) {
+                processList = existingAssignDoc.getAssignProcess();
+                processList.add(0, process);
+                existingAssignDoc.setAssignProcess(processList);
+                attachmentAssignRepository.save(existingAssignDoc);
+            } else {
+                processList = new ArrayList<>();
+                processList.add(process);
+                AttachmentAssignDocument assignDoc = new AttachmentAssignDocument();
+                assignDoc.setAttachmentId(attachmentId);
+                assignDoc.setAssignProcess(processList);
+                attachmentAssignRepository.save(assignDoc);
+            }
+            return new Result(ResultCode.R_Ok);
+
+        } catch (Exception e) {
+            logUtil.error("Error assigning attachment: " + e.getMessage());
+            throw e;
+        }
+    }
+
+
+    @Override
+    public Result assignAttachmentDetails(Map<String, Object> request) {
+        // 参数校验
+        if (!request.containsKey("attachment_id") || !request.containsKey("page_num") || !request.containsKey("page_size")) {
+            return new Result(ResultCode.R_ParamError);
+        }
+        Integer pageNum = (Integer) request.get("page_num");
+        Integer pageSize = (Integer) request.get("page_size");
+        if (pageNum <= 0 || pageSize <= 0) {
+            return new Result(ResultCode.R_PageError);
+        }
+        String attachmentId = (String) request.get("attachment_id");
+        AttachmentAssignDocument assignDoc = attachmentAssignRepository.findById(attachmentId).orElse(null);
+        if (assignDoc == null) {
+            return new Result(ResultCode.R_AttachmentNotFound);
+        }
+
+        try {
+            // 查找附件分配记录
+            List<Map<String, Object>> processList = assignDoc.getAssignProcess();
+            if (processList == null || processList.isEmpty()) {
+                return new Result(ResultCode.R_Ok, new PageResponse<>(0, pageNum, pageSize, new ArrayList<>()));
+            }
+
+            // 计算分页
+            int total = processList.size();
+            int start = (pageNum - 1) * pageSize;
+            int end = Math.min(start + pageSize, total);
+
+            // 验证分页参数
+            if (start >= total) {
+                return new Result(ResultCode.R_NoData);
+            }
+
+            // 获取当前页的数据
+            List<Map<String, Object>> pageData = processList.subList(start, end);
+            return new Result(ResultCode.R_Ok, new PageResponse<>(total, pageNum, pageSize, pageData));
+
+        } catch (Exception e) {
+            logUtil.error("Error getting attachment assign details: " + e.getMessage());
+            return new Result(ResultCode.R_Error, "Error getting attachment assign details: " + e.getMessage());
+        }
+    }
+
+
+    @Override
+    public Result deleteAttachment(Map<String, Object> request) {
+        // 参数校验
+        if (!request.containsKey("attachment_id")) {
+            return new Result(ResultCode.R_ParamError);
+        }
+        String attachmentId = (String) request.get("attachment_id");
+        AttachmentDocument attachmentDoc = attachmentRepository.findById(attachmentId).orElse(null);
+        if (attachmentDoc == null) {
+            return new Result(ResultCode.R_AttachmentNotFound);
+        }
+        // 获取当前用户信息
+        String currentUserId = ThreadLocalUtil.getUserId();
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (currentUserId == null || userRole == null) {
+            return new Result(ResultCode.R_UserNotFound);
+        }
+
+        // 角色2可以直接删除
+        if (userRole == 2) {
+            // Continue to delete
+        }
+        // 角色3需要检查创建者和所属用户
+        else if (userRole == 3) {
+            String creatorId = attachmentDoc.getCreatorId();
+            List<String> belongUserIds = attachmentDoc.getBelongUserId();
+
+            // 检查是否为创建者且在所属用户中
+            boolean isCreatorAndBelongs = currentUserId.equals(creatorId) &&
+                    (belongUserIds != null && belongUserIds.contains(currentUserId));
+
+            // 如果是创建者且在所属用户中，直接删除
+            if (isCreatorAndBelongs) {
+                try {
+                    attachmentRepository.deleteById(attachmentId);
+                    return new Result(ResultCode.R_Ok);
+                } catch (Exception e) {
+                    logUtil.error("Error deleting attachment: " + e.getMessage());
+                    return new Result(ResultCode.R_DeleteFileError);
+                }
+            }
+
+            // 检查创建者和所属用户是否都包含下属
+            boolean hasSubordinates = false;
+            // 检查创建者是否为下属
+            UserDocument creator = userRepository.findByUserId(creatorId).orElse(null);
+            boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
+
+            // 检查所属用户是否包含下属
+            boolean hasBelongUserSubordinate = false;
+            if (belongUserIds != null && !belongUserIds.isEmpty()) {
+                hasBelongUserSubordinate = belongUserIds.stream()
+                        .map(id -> userRepository.findByUserId(id).orElse(null))
+                        .filter(user -> user != null)
+                        .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
+            }
+
+            hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
+            if (!hasSubordinates) {
+                return new Result(ResultCode.R_NoAuth);
+            }
+        }
+        // 角色4需要检查是否为创建者且是所属用户
+        else if (userRole == 4) {
+            String creatorId = attachmentDoc.getCreatorId();
+            List<String> belongUserIds = attachmentDoc.getBelongUserId();
+
+            if (!currentUserId.equals(creatorId) ||
+                    belongUserIds == null ||
+                    !belongUserIds.contains(currentUserId)) {
+                return new Result(ResultCode.R_NoAuth);
+            }
+        } else {
+            return new Result(ResultCode.R_NoAuth);
+        }
+        // 删除附件
+        try {
+            attachmentRepository.deleteById(attachmentId);
+            return new Result(ResultCode.R_Ok);
+        } catch (Exception e) {
+            logUtil.error("Error deleting attachment: " + e.getMessage());
+            return new Result(ResultCode.R_DeleteFileError);
+        }
+    }
+
+
+    @Override
+    public Result filterAttachment(Map<String, Object> request) {
+        // 参数校验
+        if (request == null) {
+            return new Result(ResultCode.R_ParamError);
+        }
+
+        String attachmentName = (String) request.get("attachment_name");
+        String belongUserName = (String) request.get("belong_user_name");
+        String creatorName = (String) request.get("creator_name");
+        Integer status = request.get("status") != null ? (Integer) request.get("status") : 0;
+        Integer pageNum = request.get("page_num") != null ? (Integer) request.get("page_num") : 1;
+        Integer pageSize = request.get("page_size") != null ? (Integer) request.get("page_size") : 50;
+
+        // 校验分页参数
+        if (pageNum < 1 || pageSize < 1) {
+            return new Result(ResultCode.R_PageError);
+        }
+
+        // 校验状态参数
+        if (status != 0 && status != 1 && status != 2) {
+            return new Result(ResultCode.R_ParamError);
+        }
+        // 如果belongUserName是"公司"，直接执行查询
+        if (StringUtils.hasText(belongUserName) && "公司".equals(belongUserName)) {
+            // 创建主查询
+            BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
+
+            // 公司id默认是1
+            mainQuery.must(QueryBuilders.termQuery("belongUserId", "1"));
+
+            // 添加附件名称条件
+            if (StringUtils.hasText(attachmentName)) {
+                mainQuery.must(QueryBuilders.matchQuery("attachmentName", attachmentName));
+            }
+
+            // 添加创建者名称条件
+            if (StringUtils.hasText(creatorName)) {
+                List<UserDocument> creators = userRepository.findByUserNameLike(creatorName);
+                if (!creators.isEmpty()) {
+                    BoolQueryBuilder creatorQuery = QueryBuilders.boolQuery();
+                    for (UserDocument creator : creators) {
+                        creatorQuery.should(QueryBuilders.termQuery("creatorId", creator.getUserId()));
+                    }
+                    creatorQuery.minimumShouldMatch(1);
+                    mainQuery.must(creatorQuery);
+                }
+            }
+
+            // 添加状态条件
+            if (status != null && status != 0) {
+                mainQuery.must(QueryBuilders.termQuery("status", status));
+            }
+
+            // 执行查询
+            Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
+            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
+                    .withQuery(mainQuery)
+                    .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+                    .withPageable(pageable)
+                    .build();
+
+            SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                    searchQuery,
+                    AttachmentDocument.class
+            );
+
+            List<AttachmentDocument> content = searchHits.stream()
+                    .map(SearchHit::getContent)
+                    .collect(Collectors.toList());
+
+            return new Result(
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            searchHits.getTotalHits(),
+                            pageNum,
+                            pageSize,
+                            convertToResponseFormat(content)
+                    )
+            );
+        }
+
+        // 获取当前用户信息
+        String currentUserId = ThreadLocalUtil.getUserId();
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (currentUserId == null || userRole == null) {
+            return new Result(ResultCode.R_UserNotFound);
+        }
+
+        // 角色2 - 大管理员
+        if (userRole == 2) {
+            // 创建主查询
+            BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
+            int validConditions = 0;
+
+            // 添加附件名称条件
+            if (StringUtils.hasText(attachmentName)) {
+                mainQuery.should(QueryBuilders.matchQuery("attachmentName", attachmentName));
+                validConditions++;
+            }
+
+            // 添加所属用户条件
+            if (StringUtils.hasText(belongUserName)) {
+                List<UserDocument> belongUsers = userRepository.findByUserNameLike(belongUserName);
+                if (!belongUsers.isEmpty()) {
+                    BoolQueryBuilder belongUserQuery = QueryBuilders.boolQuery();
+                    for (UserDocument user : belongUsers) {
+                        belongUserQuery.should(QueryBuilders.termQuery("belongUserId", user.getUserId()));
+                    }
+                    belongUserQuery.minimumShouldMatch(1);
+                    mainQuery.should(belongUserQuery);
+                    validConditions++;
+                }
+            }
+
+            // 添加创建者条件
+            if (StringUtils.hasText(creatorName)) {
+                List<UserDocument> creators = userRepository.findByUserNameLike(creatorName);
+                if (!creators.isEmpty()) {
+                    BoolQueryBuilder creatorQuery = QueryBuilders.boolQuery();
+                    for (UserDocument creator : creators) {
+                        creatorQuery.should(QueryBuilders.termQuery("creatorId", creator.getUserId()));
+                    }
+                    creatorQuery.minimumShouldMatch(1);
+                    mainQuery.should(creatorQuery);
+                    validConditions++;
+                }
+            }
+
+            // 添加状态条件
+            if (status != null && status != 0) {
+                mainQuery.must(QueryBuilders.termQuery("status", status));
+                validConditions++;
+            }
+
+            // 如果没有任何有效条件，返回所有文档
+            if (validConditions == 0) {
+                Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
+                NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
+                        .withQuery(QueryBuilders.matchAllQuery())
+                        .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+                        .withPageable(pageable)
+                        .build();
+
+                SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                        searchQuery,
+                        AttachmentDocument.class
+                );
+
+                List<AttachmentDocument> content = searchHits.stream()
+                        .map(SearchHit::getContent)
+                        .collect(Collectors.toList());
+
+                return new Result(
+                        ResultCode.R_Ok,
+                        new PageResponse<>(
+                                searchHits.getTotalHits(),
+                                pageNum,
+                                pageSize,
+                                convertToResponseFormat(content)
+                        )
+                );
+            }
+
+            // 有查询条件时
+            Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
+            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
+                    .withQuery(mainQuery)
+                    .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+                    .withPageable(pageable)
+                    .build();
+
+            SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                    searchQuery,
+                    AttachmentDocument.class
+            );
+
+            // 处理结果
+            List<AttachmentDocument> content = searchHits.stream()
+                    .map(SearchHit::getContent)
+                    .collect(Collectors.toList());
+
+            return new Result(
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            searchHits.getTotalHits(),
+                            pageNum,
+                            pageSize,
+                            convertToResponseFormat(content)
+                    )
+            );
+        }
+        // 角色3 - 小管理员
+        else if (userRole == 3) {
+            // 创建主查询
+            BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
+
+            // 1. 首先添加权限过滤（必须满足）
+            BoolQueryBuilder accessQuery = QueryBuilders.boolQuery();
+
+            // 创建者是自己或下属
+            BoolQueryBuilder creatorAccessQuery = QueryBuilders.boolQuery()
+                    .should(QueryBuilders.termQuery("creatorId", currentUserId));
+
+            // 添加下属的创建者条件
+            List<UserDocument> subordinates = userRepository.findByBelongUserId(currentUserId);
+            if (!subordinates.isEmpty()) {
+                for (UserDocument sub : subordinates) {
+                    creatorAccessQuery.should(QueryBuilders.termQuery("creatorId", sub.getUserId()));
+                }
+            }
+            accessQuery.should(creatorAccessQuery);
+
+            // 所属用户是自己或下属
+            BoolQueryBuilder belongAccessQuery = QueryBuilders.boolQuery()
+                    .should(QueryBuilders.termQuery("belongUserId", currentUserId));
+
+            if (!subordinates.isEmpty()) {
+                for (UserDocument sub : subordinates) {
+                    belongAccessQuery.should(QueryBuilders.termQuery("belongUserId", sub.getUserId()));
+                }
+            }
+            accessQuery.should(belongAccessQuery);
+
+            // 至少满足一个权限条件（创建者或所属用户）
+            accessQuery.minimumShouldMatch(1);
+            mainQuery.must(accessQuery);
+
+            // 2. 添加搜索条件（如果有）
+            // 添加附件名称条件
+            if (StringUtils.hasText(attachmentName)) {
+                mainQuery.must(QueryBuilders.matchQuery("attachmentName", attachmentName));
+            }
+
+            // 添加所属用户名称条件
+            if (StringUtils.hasText(belongUserName)) {
+                ValidationResult belongValidation = subordinateValidation.findSubordinatesAndSelfByName(
+                        belongUserName,
+                        currentUserId
+                );
+                if (!belongValidation.isValid()) {
+                    return new Result(ResultCode.R_NotBelongToAdmin);
+                }
+                BoolQueryBuilder belongQuery = QueryBuilders.boolQuery();
+                for (String id : belongValidation.getValidUserIds()) {
+                    belongQuery.should(QueryBuilders.termQuery("belongUserId", id));
+                }
+                mainQuery.must(belongQuery);
+            }
+
+            // 添加创建者名称条件
+            if (StringUtils.hasText(creatorName)) {
+                ValidationResult creatorValidation = subordinateValidation.findSubordinatesAndSelfByName(
+                        creatorName,
+                        currentUserId
+                );
+                if (!creatorValidation.isValid()) {
+                    return new Result(ResultCode.R_NotBelongToAdmin);
+                }
+                BoolQueryBuilder creatorQuery = QueryBuilders.boolQuery();
+                for (String id : creatorValidation.getValidUserIds()) {
+                    creatorQuery.should(QueryBuilders.termQuery("creatorId", id));
+                }
+                mainQuery.must(creatorQuery);
+            }
+
+            // 添加状态条件
+            if (status != null && status != 0) {
+                mainQuery.must(QueryBuilders.termQuery("status", status));
+            }
+
+            // 执行查询
+            Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
+            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
+                    .withQuery(mainQuery)
+                    .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+                    .withPageable(pageable)
+                    .build();
+
+            SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                    searchQuery,
+                    AttachmentDocument.class
+            );
+
+            List<AttachmentDocument> content = searchHits.stream()
+                    .map(SearchHit::getContent)
+                    .collect(Collectors.toList());
+
+            return new Result(
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            searchHits.getTotalHits(),
+                            pageNum,
+                            pageSize,
+                            convertToResponseFormat(content)
+                    )
+            );
+        }
+        // 角色4 - 普通用户
+        else if (userRole == 4) {
+            // 创建主查询
+            BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
+            String currentUserName = ThreadLocalUtil.getUserName();
+
+            // 状态只能为0
+            if (status == null || status != 0) {
+                return new Result(ResultCode.R_ParamError);
+            }
+
+            // 验证创建者名称（如果有）
+            if (StringUtils.hasText(creatorName)) {
+                // 获取当前用户信息
+                if (currentUserName == null || !currentUserName.equals(creatorName)) {
+                    return new Result(ResultCode.R_CreatorError);
+                }
+                mainQuery.must(QueryBuilders.termQuery("creatorId", currentUserId));
+            }
+
+            // 添加附件名称条件
+            if (StringUtils.hasText(attachmentName)) {
+                mainQuery.must(QueryBuilders.matchQuery("attachmentName", attachmentName));
+            }
+
+            // 处理belongUserName条件
+            if (StringUtils.hasText(belongUserName)) {
+                if ("公司".equals(belongUserName)) {
+                    // 如果是"公司"，不添加belongUserId过滤
+                } else {
+                    // 验证belongUserName是否是自己
+                    if (!belongUserName.equals(currentUserName)) {
+                        return new Result(ResultCode.R_BelongUserError);
+                    }
+                    // 是自己，添加belongUserId条件
+                    mainQuery.must(QueryBuilders.termQuery("belongUserId", currentUserId));
+                }
+            }
+
+            // 无论有没有其他条件，都必须确保所属用户包含自己
+            BoolQueryBuilder belongQuery = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.termQuery("belongUserId", currentUserId));
+            mainQuery.must(belongQuery);
+
+            // 执行查询
+            Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
+            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
+                    .withQuery(mainQuery)
+                    .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+                    .withPageable(pageable)
+                    .build();
+
+            SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                    searchQuery,
+                    AttachmentDocument.class
+            );
+
+            // 处理结果，只返回指定字段
+            List<Map<String, Object>> content = searchHits.stream()
+                    .map(hit -> {
+                        AttachmentDocument doc = hit.getContent();
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("id", doc.getAttachmentId());
+                        item.put("name", doc.getAttachmentName());
+
+                        // 查询创建者名称
+                        String responseCreatorName = userRepository.findByUserId(doc.getCreatorId())
+                                .map(UserDocument::getUserName)
+                                .orElse("");
+                        item.put("creator_name", responseCreatorName);
+
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            return new Result(
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            searchHits.getTotalHits(),
+                            pageNum,
+                            pageSize,
+                            content
+                    )
+            );
+        }
+
+        return new Result(ResultCode.R_Fail);
+    }
+
+    // 处理查询结果，转换为所需格式
+    private List<Map<String, Object>> convertToResponseFormat(List<AttachmentDocument> documents) {
+        return documents.stream().map(doc -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", doc.getAttachmentId());
+            item.put("name", doc.getAttachmentName());
+
+            // 查询创建者名称
+            String creatorName = userRepository.findByUserId(doc.getCreatorId())
+                    .map(UserDocument::getUserName)
+                    .orElse("");
+            item.put("creator_name", creatorName);
+
+            // 查询所属用户名称列表
+            List<String> belongUserNames = new ArrayList<>();
+            if (doc.getBelongUserId() != null && !doc.getBelongUserId().isEmpty()) {
+                belongUserNames = doc.getBelongUserId().stream()
+                        .map(userId -> userRepository.findByUserId(userId)
+                                .map(UserDocument::getUserName)
+                                .orElse(""))
+                        .filter(name -> !name.isEmpty())
+                        .collect(Collectors.toList());
+            }
+            item.put("belong_user_name", belongUserNames);
+
+            item.put("status", doc.getStatus());
+            return item;
+        }).collect(Collectors.toList());
+    }
+
+}
