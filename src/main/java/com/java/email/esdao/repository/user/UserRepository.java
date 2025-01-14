@@ -1,5 +1,6 @@
 package com.java.email.esdao.repository.user;
 
+import com.java.email.model.domain.User;
 import com.java.email.model.entity.UserDocument;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Repository;
@@ -27,4 +28,8 @@ public interface UserRepository extends ElasticsearchRepository<UserDocument, St
     Optional<UserDocument> findByUserId(String userId);
 
     List<UserDocument> findByBelongUserId(String currentUserId);
+
+    List<UserDocument> findByUserNameLikeAndUserAccountLikeAndUserEmailLike(String userName,
+            String userAccount, String userEmail);
+
 } 

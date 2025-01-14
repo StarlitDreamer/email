@@ -1,6 +1,8 @@
 package com.java.email.controller.file;
 
+import com.java.email.annotation.AuthPermission;
 import com.java.email.common.Response.Result;
+import com.java.email.constant.AuthConstData;
 import com.java.email.service.file.ImgService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -10,6 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/file/img")
+@AuthPermission(permission = AuthConstData.FILE_MANAGE)
 public class ImgController {
 
     @Autowired

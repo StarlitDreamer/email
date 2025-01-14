@@ -3,7 +3,9 @@ package com.java.email.service.impl.file;
 import com.java.email.common.Response.PageResponse;
 import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
+import com.java.email.constant.AuthConstData;
 import com.java.email.constant.MagicMathConstData;
+import com.java.email.constant.UserConstData;
 import com.java.email.model.entity.UserDocument;
 import com.java.email.model.entity.file.ImgAssignDocument;
 import com.java.email.model.entity.file.ImgDocument;
@@ -29,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.java.email.utils.LogUtil;
+import com.java.email.common.userCommon.AuthValidation;
 import com.java.email.common.userCommon.SubordinateValidation;
 import com.java.email.common.userCommon.SubordinateValidation.ValidationResult;
 import com.java.email.common.userCommon.ThreadLocalUtil;
@@ -62,6 +65,10 @@ public class ImgServiceImpl implements ImgService {
     @Transactional(rollbackFor = Exception.class)
     public Result uploadImg(Map<String, List<Map<String, String>>> request) {
         try {
+            String userId = ThreadLocalUtil.getUserId();
+            if (userId == null) {
+                return new Result(ResultCode.R_UserNotFound);
+            }
             // 参数校验
             if (request == null || !request.containsKey("img")) {
                 return new Result(ResultCode.R_ParamError);
@@ -77,10 +84,6 @@ public class ImgServiceImpl implements ImgService {
 
             // 获取当前用户ID
             List<String> belongUserIds = new ArrayList<>();
-            String userId = ThreadLocalUtil.getUserId();
-            if (userId == null) {
-                return new Result(ResultCode.R_UserNotFound);
-            }
             belongUserIds.add(userId);
 
             // 插入图片
@@ -360,13 +363,13 @@ public class ImgServiceImpl implements ImgService {
         if (status != 0 && status != 1 && status != 2) {
             return new Result(ResultCode.R_ParamError);
         }
-        // 如果belongUserName是"公司"，直接执行查询
-        if (StringUtils.hasText(belongUserName) && "公司".equals(belongUserName)) {
+        // 如果belongUserName是公司名称，直接执行查询
+        if (StringUtils.hasText(belongUserName) && UserConstData.COMPANY_USER_NAME.equals(belongUserName)) {
             // 创建主查询
             BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
 
-            // 公司id默认是1
-            mainQuery.must(QueryBuilders.termQuery("belongUserId", "1"));
+            // 添加公司id条件
+            mainQuery.must(QueryBuilders.termQuery("belongUserId", UserConstData.COMPANY_USER_ID));
 
             // 添加附件名称条件
             if (StringUtils.hasText(imgName)) {
