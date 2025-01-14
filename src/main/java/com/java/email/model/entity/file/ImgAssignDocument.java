@@ -1,4 +1,4 @@
-package com.java.email.esdao.file;
+package com.java.email.model.entity.file;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.Map;
 
 @Data
-@Document(indexName = "attachment_assign")
-public class AttachmentAssignDocument {
+@Document(indexName = "img_assign")
+public class ImgAssignDocument {
     
     @Id
-    private String attachmentId;
+    private String imgId;
 
     @Field(type = FieldType.Object)
     private List<Map<String, Object>> assignProcess;

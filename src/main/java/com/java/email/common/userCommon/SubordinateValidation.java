@@ -1,7 +1,7 @@
 package com.java.email.common.userCommon;
 
-import com.java.email.esdao.UserDocument;
-import com.java.email.repository.UserRepository;
+import com.java.email.model.entity.UserDocument;
+import com.java.email.esdao.repository.user.UserRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 

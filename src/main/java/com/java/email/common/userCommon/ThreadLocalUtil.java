@@ -1,6 +1,6 @@
 package com.java.email.common.userCommon;
 
-import com.java.email.repository.UserRepository;
+import com.java.email.esdao.repository.user.UserRepository;
 import com.java.email.utils.LogUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

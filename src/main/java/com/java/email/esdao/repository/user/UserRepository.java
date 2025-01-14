@@ -1,6 +1,6 @@
-package com.java.email.repository;
+package com.java.email.esdao.repository.user;
 
-import com.java.email.esdao.UserDocument;
+import com.java.email.model.entity.UserDocument;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Repository;
 

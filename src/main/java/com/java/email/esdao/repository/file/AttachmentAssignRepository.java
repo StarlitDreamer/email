@@ -1,6 +1,6 @@
-package com.java.email.repository;
+package com.java.email.esdao.repository.file;
 
-import com.java.email.esdao.file.AttachmentAssignDocument;
+import com.java.email.model.entity.file.AttachmentAssignDocument;
 
 import java.util.Optional;
 

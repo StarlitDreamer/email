@@ -1,6 +1,6 @@
-package com.java.email.repository;
+package com.java.email.esdao.repository.file;
 
-import com.java.email.esdao.file.AttachmentDocument;
+import com.java.email.model.entity.file.AttachmentDocument;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

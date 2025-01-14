@@ -1,4 +1,4 @@
-package com.java.email.esdao.file;
+package com.java.email.model.entity.file;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;

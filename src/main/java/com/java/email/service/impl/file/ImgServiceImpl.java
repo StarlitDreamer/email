@@ -4,14 +4,12 @@ import com.java.email.common.Response.PageResponse;
 import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
 import com.java.email.constant.MagicMathConstData;
-import com.java.email.esdao.UserDocument;
-import com.java.email.esdao.file.AttachmentAssignDocument;
-import com.java.email.esdao.file.AttachmentDocument;
-import com.java.email.esdao.file.ImgAssignDocument;
-import com.java.email.esdao.file.ImgDocument;
-import com.java.email.repository.ImgRepository;
-import com.java.email.repository.ImgAssignRepository;
-import com.java.email.repository.UserRepository;
+import com.java.email.model.entity.UserDocument;
+import com.java.email.model.entity.file.ImgAssignDocument;
+import com.java.email.model.entity.file.ImgDocument;
+import com.java.email.esdao.repository.file.ImgRepository;
+import com.java.email.esdao.repository.file.ImgAssignRepository;
+import com.java.email.esdao.repository.user.UserRepository;
 import com.java.email.service.file.ImgService;
 
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -28,7 +26,6 @@ import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.util.StringUtils;
 
 import com.java.email.utils.LogUtil;
