@@ -3,6 +3,7 @@ package com.java.email.entity;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 
 import java.util.List;
@@ -25,66 +26,67 @@ public class Supplier {
     private String creatorId;                  // 创建人ID
     private List<String> emails;               // 邮箱列表
     private String sex;                        // 性别
-    private SupplierStatus status;             // 分配状态 1:未分配 2:已分配
+    private int status;             // 分配状态 1:未分配 2:已分配
     private String supplierCountryId;          // 供应商国家ID
+    @Id
     private String supplierId;                 // 供应商ID
-    private SupplierLevel supplierLevel;       // 供应商等级 1:初级 2:中级 3:高级
+    private int supplierLevel;       // 供应商等级 1:初级 2:中级 3:高级
     private String supplierName;               // 供应商名称
-    private TradeType tradeType;               // 贸易类型 1:工厂 2:贸易商
+    private int tradeType;               // 贸易类型 1:工厂 2:贸易商
     private long updatedAt;                    // 更新日期
 }
 
-/**
- * 供应商状态枚举
- */
-enum SupplierStatus {
-    UNASSIGNED(1),  // 未分配
-    ASSIGNED(2);    // 已分配
-
-    private final int code;
-
-    SupplierStatus(int code) {
-        this.code = code;
-    }
-
-    public int getCode() {
-        return code;
-    }
-}
-
-/**
- * 供应商等级枚举
- */
-enum SupplierLevel {
-    PRIMARY(1),      // 初级
-    INTERMEDIATE(2), // 中级
-    ADVANCED(3);     // 高级
-
-    private final int code;
-
-    SupplierLevel(int code) {
-        this.code = code;
-    }
-
-    public int getCode() {
-        return code;
-    }
-}
-
-/**
- * 贸易类型枚举
- */
-enum TradeType {
-    FACTORY(1),  // 工厂
-    TRADER(2);   // 贸易商
-
-    private final int code;
-
-    TradeType(int code) {
-        this.code = code;
-    }
-
-    public int getCode() {
-        return code;
-    }
-}
+///**
+// * 供应商状态枚举
+// */
+//enum SupplierStatus {
+//    UNASSIGNED(1),  // 未分配
+//    ASSIGNED(2);    // 已分配
+//
+//    private final int code;
+//
+//    SupplierStatus(int code) {
+//        this.code = code;
+//    }
+//
+//    public int getCode() {
+//        return code;
+//    }
+//}
+//
+///**
+// * 供应商等级枚举
+// */
+//enum SupplierLevel {
+//    PRIMARY(1),      // 初级
+//    INTERMEDIATE(2), // 中级
+//    ADVANCED(3);     // 高级
+//
+//    private final int code;
+//
+//    SupplierLevel(int code) {
+//        this.code = code;
+//    }
+//
+//    public int getCode() {
+//        return code;
+//    }
+//}
+//
+///**
+// * 贸易类型枚举
+// */
+//enum TradeType {
+//    FACTORY(1),  // 工厂
+//    TRADER(2);   // 贸易商
+//
+//    private final int code;
+//
+//    TradeType(int code) {
+//        this.code = code;
+//    }
+//
+//    public int getCode() {
+//        return code;
+//    }
+//}
