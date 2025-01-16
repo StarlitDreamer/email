@@ -3,6 +3,7 @@ package com.java.email.entity;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.springframework.data.elasticsearch.annotations.Document;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(indexName = "imgs")
 public class Img {
     private List<String> ownerUserIds;  // 所属用户ID列表
     private long createdAt;    // 创建日期

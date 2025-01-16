@@ -3,6 +3,7 @@ package com.java.email.entity;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.springframework.data.elasticsearch.annotations.Document;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(indexName = "attachments")
 public class Attachment {
     private String attachmentId;        // 附件ID
     private String attachmentName;      // 附件名称

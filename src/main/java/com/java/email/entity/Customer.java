@@ -3,6 +3,7 @@ package com.java.email.entity;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.springframework.data.elasticsearch.annotations.Document;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Document(indexName = "customers")
 public class Customer {
     private List<String> acceptedEmailTypeIds;  // 接受的邮件类型ID列表，默认接受所有类型
     private String ownerUserId;                // 所属用户ID
