@@ -1,9 +1,14 @@
 package com.java.email.service;
 
+import com.java.email.common.Result;
 import com.java.email.entity.Template;
 import com.java.email.repository.TemplateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class TemplateService {
@@ -27,4 +32,71 @@ public class TemplateService {
             return "";
         }
     }
+
+    /**
+     * 根据任意条件筛选模板
+     *
+     * @param ownerUserIds 所属用户ID列表
+     * @param creator      创建人
+     * @param creatorId    创建人ID
+     * @param status       模板状态
+     * @param templateName 模板名称
+     * @param templateType 模板类型
+     * @return 符合条件的模板列表
+     */
+
+    public Result<List<Template>> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
+                                                          Integer status, String templateName, Integer templateType) {
+        try {
+            List<Template> templates;
+
+            // 动态构建查询条件
+            if (ownerUserIds != null && !ownerUserIds.isEmpty()) {
+                templates = templateRepository.findByOwnerUserIdsIn(ownerUserIds);
+            } else if (creator != null) {
+                templates = templateRepository.findByCreator(creator);
+            } else if (creatorId != null) {
+                templates = templateRepository.findByCreatorId(creatorId);
+            } else if (status != null) {
+                templates = templateRepository.findByStatus(status);
+            } else if (templateName != null) {
+                templates = templateRepository.findByTemplateName(templateName);
+            } else if (templateType != null) {
+                templates = templateRepository.findByTemplateType(templateType);
+            } else {
+                // 如果没有条件，返回所有模板
+                templates = (List<Template>) templateRepository.findAll();
+            }
+
+            // 返回成功结果
+            return Result.success(templates);
+        } catch (Exception e) {
+            // 返回错误结果
+            return Result.error("查询失败: " + e.getMessage());
+        }
+    }
+//    public List<Template> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
+//                                                  Integer status, String templateName, Integer templateType) {
+//        // 动态构建查询条件
+//        if (ownerUserIds != null && !ownerUserIds.isEmpty()) {
+//            return templateRepository.findByOwnerUserIdsIn(ownerUserIds);
+//        }
+//        if (creator != null) {
+//            return templateRepository.findByCreator(creator);
+//        }
+//        if (creatorId != null) {
+//            return templateRepository.findByCreatorId(creatorId);
+//        }
+//        if (status != null) {
+//            return templateRepository.findByStatus(status);
+//        }
+//        if (templateName != null) {
+//            return templateRepository.findByTemplateName(templateName);
+//        }
+//        if (templateType != null) {
+//            return templateRepository.findByTemplateType(templateType);
+//        }
+//        // 如果没有条件，返回所有模板
+//        return (List<Template>) templateRepository.findAll();
+//    }
 }
