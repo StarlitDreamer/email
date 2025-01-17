@@ -47,4 +47,19 @@ public class TemplateController {
             @RequestParam(required = false) Integer templateType) {
         return templateService.findTemplatesByCriteria(ownerUserIds, creator, creatorId, status, templateName, templateType);
     }
+
+    /**
+     * 分页查询模板数据
+     *
+     * @param pageNum  当前页码（从 0 开始）
+     * @param pageSize 每页大小
+     * @return 当前页的数据列表
+     */
+    @GetMapping
+    public Result<List<Template>> getTemplates(
+            @RequestParam(defaultValue = "0") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        List<Template> templates = templateService.getTemplates(pageNum, pageSize);
+        return Result.success(templates);
+    }
 }

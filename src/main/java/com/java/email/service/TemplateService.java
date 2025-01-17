@@ -4,7 +4,7 @@ import com.java.email.common.Result;
 import com.java.email.entity.Template;
 import com.java.email.repository.TemplateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -74,6 +74,20 @@ public class TemplateService {
             // 返回错误结果
             return Result.error("查询失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 分页查询模板数据
+     *
+     * @param pageNum  当前页码（从 0 开始）
+     * @param pageSize 每页大小
+     * @return 当前页的数据列表
+     */
+    public List<Template> getTemplates(int pageNum, int pageSize) {
+        // 执行分页查询
+        Page<Template> page = templateRepository.findAll(PageRequest.of(pageNum, pageSize));
+        // 获取当前页的数据列表
+        return page.getContent();
     }
 //    public List<Template> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
 //                                                  Integer status, String templateName, Integer templateType) {
