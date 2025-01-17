@@ -6,6 +6,7 @@ import com.java.email.repository.TemplateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -45,27 +46,31 @@ public class TemplateService {
      * @return 符合条件的模板列表
      */
 
-    public Result<List<Template>> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
-                                                          Integer status, String templateName, Integer templateType) {
+    public Result<Page<Template>> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
+                                                          Integer status, String templateName, Integer templateType,
+                                                          int page, int size) {
         try {
-            List<Template> templates;
+            Page<Template> templates;
+
+            // 创建分页对象
+            Pageable pageable = PageRequest.of(page, size);
 
             // 动态构建查询条件
             if (ownerUserIds != null && !ownerUserIds.isEmpty()) {
-                templates = templateRepository.findByOwnerUserIdsIn(ownerUserIds);
+                templates = templateRepository.findByOwnerUserIdsIn(ownerUserIds, pageable);
             } else if (creator != null) {
-                templates = templateRepository.findByCreator(creator);
+                templates = templateRepository.findByCreator(creator, pageable);
             } else if (creatorId != null) {
-                templates = templateRepository.findByCreatorId(creatorId);
+                templates = templateRepository.findByCreatorId(creatorId, pageable);
             } else if (status != null) {
-                templates = templateRepository.findByStatus(status);
+                templates = templateRepository.findByStatus(status, pageable);
             } else if (templateName != null) {
-                templates = templateRepository.findByTemplateName(templateName);
+                templates = templateRepository.findByTemplateName(templateName, pageable);
             } else if (templateType != null) {
-                templates = templateRepository.findByTemplateType(templateType);
+                templates = templateRepository.findByTemplateType(templateType, pageable);
             } else {
-                // 如果没有条件，返回所有模板
-                templates = (List<Template>) templateRepository.findAll();
+                // 如果没有条件，返回所有模板（分页）
+                templates = templateRepository.findAll(pageable);
             }
 
             // 返回成功结果
@@ -75,6 +80,36 @@ public class TemplateService {
             return Result.error("查询失败: " + e.getMessage());
         }
     }
+//    public Result<List<Template>> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
+//                                                          Integer status, String templateName, Integer templateType) {
+//        try {
+//            List<Template> templates;
+//
+//            // 动态构建查询条件
+//            if (ownerUserIds != null && !ownerUserIds.isEmpty()) {
+//                templates = templateRepository.findByOwnerUserIdsIn(ownerUserIds);
+//            } else if (creator != null) {
+//                templates = templateRepository.findByCreator(creator);
+//            } else if (creatorId != null) {
+//                templates = templateRepository.findByCreatorId(creatorId);
+//            } else if (status != null) {
+//                templates = templateRepository.findByStatus(status);
+//            } else if (templateName != null) {
+//                templates = templateRepository.findByTemplateName(templateName);
+//            } else if (templateType != null) {
+//                templates = templateRepository.findByTemplateType(templateType);
+//            } else {
+//                // 如果没有条件，返回所有模板
+//                templates = (List<Template>) templateRepository.findAll();
+//            }
+//
+//            // 返回成功结果
+//            return Result.success(templates);
+//        } catch (Exception e) {
+//            // 返回错误结果
+//            return Result.error("查询失败: " + e.getMessage());
+//        }
+//    }
 
     /**
      * 分页查询模板数据

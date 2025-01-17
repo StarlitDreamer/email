@@ -4,6 +4,7 @@ import com.java.email.common.Result;
 import com.java.email.entity.Template;
 import com.java.email.service.TemplateService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,15 +39,29 @@ public class TemplateController {
      * @return 符合条件的模板列表
      */
     @GetMapping("/search")
-    public Result<List<Template>> searchTemplates(
+    public Result<Page<Template>> findTemplatesByCriteria(
             @RequestParam(required = false) List<String> ownerUserIds,
             @RequestParam(required = false) String creator,
             @RequestParam(required = false) String creatorId,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String templateName,
-            @RequestParam(required = false) Integer templateType) {
-        return templateService.findTemplatesByCriteria(ownerUserIds, creator, creatorId, status, templateName, templateType);
+            @RequestParam(required = false) Integer templateType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return templateService.findTemplatesByCriteria(
+                ownerUserIds, creator, creatorId, status, templateName, templateType, page, size);
     }
+//    @GetMapping("/search")
+//    public Result<List<Template>> searchTemplates(
+//            @RequestParam(required = false) List<String> ownerUserIds,
+//            @RequestParam(required = false) String creator,
+//            @RequestParam(required = false) String creatorId,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) String templateName,
+//            @RequestParam(required = false) Integer templateType) {
+//        return templateService.findTemplatesByCriteria(ownerUserIds, creator, creatorId, status, templateName, templateType);
+//    }
 
     /**
      * 分页查询模板数据

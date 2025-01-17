@@ -11,13 +11,24 @@ public interface TemplateRepository extends ElasticsearchRepository<Template, St
     // 根据模板 ID 查找模板
     Template findByTemplateId(String templateId);
 
-    // 自定义查询方法
-    List<Template> findByOwnerUserIdsIn(List<String> ownerUserIds);
-    List<Template> findByCreator(String creator);
-    List<Template> findByCreatorId(String creatorId);
-    List<Template> findByStatus(int status);
-    List<Template> findByTemplateName(String templateName);
-    List<Template> findByTemplateType(int templateType);
+    // 自定义查询方法（分页）
+    Page<Template> findByOwnerUserIdsIn(List<String> ownerUserIds, Pageable pageable);
+    Page<Template> findByCreator(String creator, Pageable pageable);
+    Page<Template> findByCreatorId(String creatorId, Pageable pageable);
+    Page<Template> findByStatus(int status, Pageable pageable);
+    Page<Template> findByTemplateName(String templateName, Pageable pageable);
+    Page<Template> findByTemplateType(int templateType, Pageable pageable);
 
-    Page<Template> findAll(Pageable pageable); // 分页查询方法
+    // 分页查询方法
+    Page<Template> findAll(Pageable pageable);
+
+//    // 自定义查询方法
+//    List<Template> findByOwnerUserIdsIn(List<String> ownerUserIds);
+//    List<Template> findByCreator(String creator);
+//    List<Template> findByCreatorId(String creatorId);
+//    List<Template> findByStatus(int status);
+//    List<Template> findByTemplateName(String templateName);
+//    List<Template> findByTemplateType(int templateType);
+//
+//    Page<Template> findAll(Pageable pageable); // 分页查询方法
 }
