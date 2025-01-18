@@ -10,6 +10,7 @@ import com.java.email.model.CategoryCreateRequest;
 import com.java.email.model.CategoryFilterRequest;
 import com.java.email.model.CategoryFilterResponse;
 import com.java.email.model.CategoryVO;
+import com.java.email.model.CategoryDeleteRequest;
 import com.java.email.service.CommodityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -153,6 +154,39 @@ public class CommodityServiceImpl implements CommodityService {
             return Result.success(filterResponse);
         } catch (Exception e) {
             return Result.error("搜索品类失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> deleteCategory(CategoryDeleteRequest request) {
+        try {
+            // 检查参数
+            if (request.getCategory_id() == null || request.getCategory_id().trim().isEmpty()) {
+                return Result.error("品类ID不能为空");
+            }
+
+            // 先检查文档是否存在
+            boolean exists = elasticsearchClient.exists(e -> e
+                    .index("category_index")
+                    .id(request.getCategory_id())
+            ).value();
+
+            if (!exists) {
+                return Result.error("品类不存在，ID: " + request.getCategory_id());
+            }
+
+            // 执行删除操作
+            elasticsearchClient.delete(d -> d
+                    .index("category_index")
+                    .id(request.getCategory_id())
+            );
+
+            // 构建响应数据
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("category_id", request.getCategory_id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("删除品类失败：" + e.getMessage());
         }
     }
 } 
