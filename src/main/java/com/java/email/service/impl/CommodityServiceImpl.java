@@ -12,6 +12,7 @@ import com.java.email.model.CategoryFilterResponse;
 import com.java.email.model.CategoryVO;
 import com.java.email.model.CategoryDeleteRequest;
 import com.java.email.model.ImportCommodityResponse;
+import com.java.email.model.CommodityCreateRequest;
 import com.java.email.service.CommodityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -264,6 +265,47 @@ public class CommodityServiceImpl implements CommodityService {
             }
         } catch (Exception e) {
             // 处理异常
+        }
+    }
+
+    @Override
+    public Result<?> createCommodity(CommodityCreateRequest request) {
+        try {
+            // 检查参数
+            if (request.getCommodity_name() == null || request.getCommodity_name().trim().isEmpty()) {
+                return Result.error("商品名称不能为空");
+            }
+            if (request.getCategory_id() == null || request.getCategory_id().trim().isEmpty()) {
+                return Result.error("品类ID不能为空");
+            }
+
+            // 检查品类是否存在
+            boolean exists = elasticsearchClient.exists(e -> e
+                    .index("category_index")
+                    .id(request.getCategory_id())
+            ).value();
+
+            if (!exists) {
+                return Result.error("品类不存在，ID: " + request.getCategory_id());
+            }
+
+            // 构建文档
+            Map<String, Object> document = new HashMap<>();
+            document.put("commodity_name", request.getCommodity_name());
+            document.put("category_id", request.getCategory_id());
+
+            // 保存到 Elasticsearch
+            IndexResponse response = elasticsearchClient.index(i -> i
+                    .index("commodity_index")
+                    .document(document)
+            );
+
+            // 构建响应数据
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("commodity_id", response.id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("创建商品失败：" + e.getMessage());
         }
     }
 } 
