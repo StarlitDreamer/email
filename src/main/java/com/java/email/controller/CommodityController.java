@@ -74,4 +74,25 @@ public class CommodityController {
         }
         return commodityService.deleteCategory(request);
     }
+
+    @PostMapping("/importCommodity")
+    public Result<?> importCommodity(@RequestParam(value = "commodity.csv", required = false) MultipartFile file) {
+        System.out.println("Received commodity file upload request");
+        
+        if (file == null) {
+            System.out.println("File is null");
+            return Result.error("文件不能为空");
+        }
+        
+        if (file.isEmpty()) {
+            System.out.println("File is empty");
+            return Result.error("文件不能为空");
+        }
+        
+        System.out.println("File name: " + file.getOriginalFilename());
+        System.out.println("Content type: " + file.getContentType());
+        System.out.println("File size: " + file.getSize());
+        
+        return commodityService.importCommodity(file);
+    }
 } 

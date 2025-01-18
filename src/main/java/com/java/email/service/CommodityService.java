@@ -11,4 +11,5 @@ public interface CommodityService {
     Result<?> createCategory(CategoryCreateRequest request);
     Result<?> filterCategory(CategoryFilterRequest request);
     Result<?> deleteCategory(CategoryDeleteRequest request);
+    Result<?> importCommodity(MultipartFile file);
 } 

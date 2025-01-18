@@ -11,6 +11,7 @@ import com.java.email.model.CategoryFilterRequest;
 import com.java.email.model.CategoryFilterResponse;
 import com.java.email.model.CategoryVO;
 import com.java.email.model.CategoryDeleteRequest;
+import com.java.email.model.ImportCommodityResponse;
 import com.java.email.service.CommodityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -187,6 +188,82 @@ public class CommodityServiceImpl implements CommodityService {
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("删除品类失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> importCommodity(MultipartFile file) {
+        try {
+            BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)
+            );
+
+            int successCount = 0;
+            int failCount = 0;
+            String line;
+            
+            // 跳过CSV头行
+            reader.readLine();
+            
+            // 读取每一行数据
+            while ((line = reader.readLine()) != null) {
+                try {
+                    // 处理CSV行
+                    String[] fields = line.split(",");
+                    if (fields.length >= 2) {  // 假设CSV至少包含商品名称和品类ID
+                        Map<String, Object> document = new HashMap<>();
+                        document.put("commodity_name", fields[0].trim());
+                        document.put("category_id", fields[1].trim());
+                        
+                        // 保存到 Elasticsearch
+                        elasticsearchClient.index(i -> i
+                                .index("commodity_index")
+                                .document(document)
+                        );
+                        
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (Exception e) {
+                    failCount++;
+                }
+            }
+
+            // 构建响应数据
+            ImportCommodityResponse response = new ImportCommodityResponse();
+            response.setSuccess_count(successCount);
+            response.setFail_count(failCount);
+
+            return Result.success(response);
+        } catch (Exception e) {
+            return Result.error("导入商品失败：" + e.getMessage());
+        }
+    }
+
+    // 添加索引创建方法
+    private void createCommodityIndexIfNotExists() {
+        try {
+            boolean exists = elasticsearchClient.indices().exists(e -> e.index("commodity_index")).value();
+            if (!exists) {
+                elasticsearchClient.indices().create(c -> c
+                        .index("commodity_index")
+                        .mappings(m -> m
+                                .properties("commodity_name", p -> p
+                                        .text(t -> t
+                                                .fields("keyword", k -> k
+                                                        .keyword(kw -> kw)
+                                                )
+                                        )
+                                )
+                                .properties("category_id", p -> p
+                                        .keyword(k -> k)
+                                )
+                        )
+                );
+            }
+        } catch (Exception e) {
+            // 处理异常
         }
     }
 } 
