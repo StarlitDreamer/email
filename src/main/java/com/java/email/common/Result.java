@@ -1,33 +1,11 @@
 package com.java.email.common;
 
-import lombok.Data;
-import java.util.HashMap;
-
-@Data
 public class Result<T> {
     private Integer code;
     private String msg;
     private T data;
 
-    public static Result<HashMap<String, Object>> success() {
-        Result<HashMap<String, Object>> result = new Result<>();
-        result.setCode(200);
-        result.setMsg("成功");
-        result.setData(new HashMap<>());
-        return result;
-    }
-
-    public static Result<HashMap<String, Object>> error(String msg) {
-        Result<HashMap<String, Object>> result = new Result<>();
-        result.setCode(500);
-        result.setMsg(msg);
-        result.setData(new HashMap<>());
-        return result;
-    }
-
-
-
-    // Getter 和 Setter 方法
+    // Getter and Setter methods
     public Integer getCode() {
         return code;
     }
@@ -50,5 +28,28 @@ public class Result<T> {
 
     public void setData(T data) {
         this.data = data;
+    }
+
+    // Static factory methods
+    public static <T> Result<T> success() {
+        Result<T> result = new Result<>();
+        result.setCode(200);
+        result.setMsg("成功");
+        return result;
+    }
+
+    public static <T> Result<T> success(T data) {
+        Result<T> result = new Result<>();
+        result.setCode(200);
+        result.setMsg("成功");
+        result.setData(data);
+        return result;
+    }
+
+    public static <T> Result<T> error(String message) {
+        Result<T> result = new Result<>();
+        result.setCode(500);
+        result.setMsg(message);
+        return result;
     }
 }
