@@ -5,6 +5,7 @@ import com.java.email.model.CategoryCreateRequest;
 import com.java.email.model.CategoryFilterRequest;
 import com.java.email.model.CategoryDeleteRequest;
 import com.java.email.model.CommodityCreateRequest;
+import com.java.email.model.CommodityFilterRequest;
 import com.java.email.service.CommodityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -109,5 +110,19 @@ public class CommodityController {
             return Result.error("品类ID不能为空");
         }
         return commodityService.createCommodity(request);
+    }
+
+    @PostMapping("/filterCommodity")
+    public Result<?> filterCommodity(@RequestBody CommodityFilterRequest request) {
+        if (request == null) {
+            return Result.error("请求参数不能为空");
+        }
+        if (request.getPage_num() == null || request.getPage_num() < 1) {
+            request.setPage_num(1);
+        }
+        if (request.getPage_size() == null || request.getPage_size() < 1) {
+            request.setPage_size(10);
+        }
+        return commodityService.filterCommodity(request);
     }
 } 

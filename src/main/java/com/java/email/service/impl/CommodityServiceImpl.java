@@ -13,6 +13,9 @@ import com.java.email.model.CategoryVO;
 import com.java.email.model.CategoryDeleteRequest;
 import com.java.email.model.ImportCommodityResponse;
 import com.java.email.model.CommodityCreateRequest;
+import com.java.email.model.CommodityFilterRequest;
+import com.java.email.model.CommodityFilterResponse;
+import com.java.email.model.CommodityVO;
 import com.java.email.service.CommodityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,12 +29,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class CommodityServiceImpl implements CommodityService {
 
     @Autowired
     private ElasticsearchClient elasticsearchClient;
+
+    @PostConstruct
+    public void init() {
+        createCategoryIndexIfNotExists();
+        createCommodityIndexIfNotExists();
+    }
 
     private void createIndexIfNotExists() {
         try {
@@ -242,23 +252,19 @@ public class CommodityServiceImpl implements CommodityService {
         }
     }
 
-    // 添加索引创建方法
-    private void createCommodityIndexIfNotExists() {
+    private void createCategoryIndexIfNotExists() {
         try {
-            boolean exists = elasticsearchClient.indices().exists(e -> e.index("commodity_index")).value();
+            boolean exists = elasticsearchClient.indices().exists(e -> e.index("category_index")).value();
             if (!exists) {
                 elasticsearchClient.indices().create(c -> c
-                        .index("commodity_index")
+                        .index("category_index")
                         .mappings(m -> m
-                                .properties("commodity_name", p -> p
+                                .properties("category_name", p -> p
                                         .text(t -> t
                                                 .fields("keyword", k -> k
                                                         .keyword(kw -> kw)
                                                 )
                                         )
-                                )
-                                .properties("category_id", p -> p
-                                        .keyword(k -> k)
                                 )
                         )
                 );
@@ -306,6 +312,137 @@ public class CommodityServiceImpl implements CommodityService {
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建商品失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> filterCommodity(CommodityFilterRequest request) {
+        try {
+            // 计算从第几条记录开始
+            int from = (request.getPage_num() - 1) * request.getPage_size();
+
+            // 检查索引是否存在，不存在则返回空结果
+            boolean exists = elasticsearchClient.indices().exists(e -> e
+                    .index("commodity_index")
+            ).value();
+
+            if (!exists) {
+                // 返回空结果但保持数据结构一致
+                CommodityFilterResponse emptyResponse = new CommodityFilterResponse();
+                emptyResponse.setTotal_items(0L);
+                emptyResponse.setPage_num(request.getPage_num());
+                emptyResponse.setPage_size(request.getPage_size());
+                emptyResponse.setCommodity(new ArrayList<>());
+                return Result.success(emptyResponse);
+            }
+
+            // 构建搜索请求
+            SearchResponse<Map> response = elasticsearchClient.search(s -> s
+                    .index("commodity_index")
+                    .query(q -> {
+                        if (StringUtils.hasText(request.getCommodity_name()) && StringUtils.hasText(request.getCategory_id())) {
+                            return q.bool(b -> b
+                                    .must(m -> m
+                                            .term(t -> t
+                                                    .field("commodity_name.keyword")
+                                                    .value(request.getCommodity_name())
+                                            )
+                                    )
+                                    .must(m -> m
+                                            .term(t -> t
+                                                    .field("category_id")
+                                                    .value(request.getCategory_id())
+                                            )
+                                    )
+                            );
+                        } else if (StringUtils.hasText(request.getCommodity_name())) {
+                            return q.term(t -> t
+                                    .field("commodity_name.keyword")
+                                    .value(request.getCommodity_name())
+                            );
+                        } else if (StringUtils.hasText(request.getCategory_id())) {
+                            return q.term(t -> t
+                                    .field("category_id")
+                                    .value(request.getCategory_id())
+                            );
+                        }
+                        return q.matchAll(ma -> ma);
+                    })
+                    .from(from)
+                    .size(request.getPage_size()),
+                    Map.class
+            );
+
+            // 构建响应对象
+            CommodityFilterResponse filterResponse = new CommodityFilterResponse();
+            filterResponse.setTotal_items(response.hits().total().value());
+            filterResponse.setPage_num(request.getPage_num());
+            filterResponse.setPage_size(request.getPage_size());
+
+            // 转换搜索结果
+            List<CommodityVO> commodities = new ArrayList<>();
+            for (Hit<Map> hit : response.hits().hits()) {
+                CommodityVO commodity = new CommodityVO();
+                commodity.setCommodity_id(hit.id());
+                commodity.setCommodity_name((String) hit.source().get("commodity_name"));
+                
+                // 获取品类名称
+                String categoryId = (String) hit.source().get("category_id");
+                try {
+                    Map<String, Object> category = elasticsearchClient.get(g -> g
+                            .index("category_index")
+                            .id(categoryId),
+                            Map.class
+                    ).source();
+                    if (category != null) {
+                        commodity.setCategory_name((String) category.get("category_name"));
+                    }
+                } catch (Exception e) {
+                    // 如果获取品类失败，设置为空
+                    commodity.setCategory_name("");
+                }
+                
+                commodities.add(commodity);
+            }
+            filterResponse.setCommodity(commodities);
+
+            return Result.success(filterResponse);
+        } catch (Exception e) {
+            // 出错时也要保持数据结构一致
+            CommodityFilterResponse errorResponse = new CommodityFilterResponse();
+            errorResponse.setTotal_items(0L);
+            errorResponse.setPage_num(request.getPage_num() != null ? request.getPage_num() : 1);
+            errorResponse.setPage_size(request.getPage_size() != null ? request.getPage_size() : 10);
+            errorResponse.setCommodity(new ArrayList<>());
+            return Result.success(errorResponse);
+        }
+    }
+
+    private void createCommodityIndexIfNotExists() {
+        try {
+            boolean exists = elasticsearchClient.indices().exists(e -> e.index("commodity_index")).value();
+            if (!exists) {
+                elasticsearchClient.indices().create(c -> c
+                        .index("commodity_index")
+                        .mappings(m -> m
+                                .properties("commodity_name", p -> p
+                                        .text(t -> t
+                                                .fields("keyword", k -> k
+                                                        .keyword(kw -> kw)
+                                                )
+                                        )
+                                )
+                                .properties("category_id", p -> p
+                                        .keyword(k -> k)
+                                )
+                                .properties("category_name", p -> p
+                                        .keyword(k -> k)
+                                )
+                        )
+                );
+            }
+        } catch (Exception e) {
+            // 处理异常
         }
     }
 } 
