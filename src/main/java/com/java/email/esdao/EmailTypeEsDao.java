@@ -1,11 +1,11 @@
 package com.java.email.esdao;
 
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestHighLevelClient;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.IndexResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,15 +13,15 @@ import java.util.Map;
 public class EmailTypeEsDao {
 
     @Autowired
-    private RestHighLevelClient elasticsearchClient;
+    private ElasticsearchClient elasticsearchClient;
 
-    public void saveEmailType(String emailTypeName) throws Exception {
-        Map<String, Object> jsonMap = new HashMap<>();
-        jsonMap.put("email_type_name", emailTypeName);
+    public void saveEmailType(String emailTypeName) throws IOException {
+        Map<String, Object> document = new HashMap<>();
+        document.put("email_type_name", emailTypeName);
 
-        IndexRequest indexRequest = new IndexRequest("email_index")
-                .source(jsonMap);
-
-        elasticsearchClient.index(indexRequest, RequestOptions.DEFAULT);
+        IndexResponse response = elasticsearchClient.index(i -> i
+                .index("email_index")
+                .document(document)
+        );
     }
 }

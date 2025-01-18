@@ -1,0 +1,5 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  elasticsearch:
+    uris: http://localhost:9200 

@@ -1,8 +1,11 @@
 package com.java.email.config;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.transport.ElasticsearchTransport;
+import co.elastic.clients.transport.rest_client.RestClientTransport;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,9 +17,22 @@ public class ElasticsearchConfig {
     private static final String SCHEME = "http";
 
     @Bean
-    public RestHighLevelClient elasticsearchClient() {
-        return new RestHighLevelClient(
-                RestClient.builder(new HttpHost(HOST, PORT, SCHEME))
+    public RestClient restClient() {
+        return RestClient.builder(
+            new HttpHost(HOST, PORT, SCHEME)
+        ).build();
+    }
+
+    @Bean
+    public ElasticsearchTransport elasticsearchTransport(RestClient restClient) {
+        return new RestClientTransport(
+            restClient,
+            new JacksonJsonpMapper()
         );
+    }
+
+    @Bean
+    public ElasticsearchClient elasticsearchClient(ElasticsearchTransport transport) {
+        return new ElasticsearchClient(transport);
     }
 }
