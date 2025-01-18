@@ -9,6 +9,7 @@ import com.java.email.model.EmailTypeFilterRequest;
 import com.java.email.model.EmailTypeFilterResponse;
 import com.java.email.model.EmailTypeVO;
 import com.java.email.model.EmailTypeUpdateRequest;
+import com.java.email.model.EmailTypeDeleteRequest;
 import com.java.email.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -127,6 +128,38 @@ public class EmailServiceImpl implements EmailService {
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("更新邮件类型失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> deleteEmailType(EmailTypeDeleteRequest request) {
+        try {
+            // 检查参数
+            if (request.getEmail_type_id() == null || request.getEmail_type_id().trim().isEmpty()) {
+                return Result.error("邮件类型ID不能为空");
+            }
+
+            // 先检查文档是否存在
+            boolean exists = elasticsearchClient.exists(e -> e
+                    .index("email_index")
+                    .id(request.getEmail_type_id())
+            ).value();
+
+            if (!exists) {
+                return Result.error("邮件类型不存在，ID: " + request.getEmail_type_id());
+            }
+
+            // 执行删除操作
+            elasticsearchClient.delete(d -> d
+                    .index("email_index")
+                    .id(request.getEmail_type_id())
+            );
+
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("email_type_id", request.getEmail_type_id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("删除邮件类型失败：" + e.getMessage());
         }
     }
 }

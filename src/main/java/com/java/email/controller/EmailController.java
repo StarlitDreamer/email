@@ -4,6 +4,7 @@ import com.java.email.common.Result;
 import com.java.email.model.EmailTypeCreateRequest;
 import com.java.email.model.EmailTypeFilterRequest;
 import com.java.email.model.EmailTypeUpdateRequest;
+import com.java.email.model.EmailTypeDeleteRequest;
 import com.java.email.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -41,5 +42,16 @@ public class EmailController {
             return Result.error("邮件类型名称不能为空");
         }
         return emailService.updateEmailType(request);
+    }
+
+    @PostMapping("/deleteEmailType")
+    public Result<?> deleteEmailType(@RequestBody EmailTypeDeleteRequest request) {
+        if (request == null) {
+            return Result.error("请求参数不能为空");
+        }
+        if (request.getEmail_type_id() == null || request.getEmail_type_id().trim().isEmpty()) {
+            return Result.error("邮件类型ID不能为空");
+        }
+        return emailService.deleteEmailType(request);
     }
 }
