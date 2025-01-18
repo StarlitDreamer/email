@@ -8,6 +8,9 @@ import com.java.email.model.ImportCountryResponse;
 import com.java.email.model.CountryFilterRequest;
 import com.java.email.model.CountryFilterResponse;
 import com.java.email.model.CountryVO;
+import com.java.email.model.CountryCreateRequest;
+import com.java.email.model.CountryDeleteRequest;
+import com.java.email.model.CountryUpdateRequest;
 import com.java.email.service.CountryService;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -188,6 +191,115 @@ public class CountryServiceImpl implements CountryService {
             errorResponse.setPage_size(request.getPage_size() != null ? request.getPage_size() : 10);
             errorResponse.setCountry(new ArrayList<>());
             return Result.success(errorResponse);
+        }
+    }
+
+    @Override
+    public Result<?> createCountry(CountryCreateRequest request) {
+        try {
+            // 检查参数
+            if (request.getCountry_code() == null || request.getCountry_code().trim().isEmpty()) {
+                return Result.error("国家代码不能为空");
+            }
+            if (request.getCountry_name() == null || request.getCountry_name().trim().isEmpty()) {
+                return Result.error("国家名称不能为空");
+            }
+
+            // 构建文档
+            Map<String, Object> document = new HashMap<>();
+            document.put("country_code", request.getCountry_code());
+            document.put("country_name", request.getCountry_name());
+
+            // 保存到 Elasticsearch
+            elasticsearchClient.index(i -> i
+                    .index("country_index")
+                    .id(request.getCountry_code())  // 使用国家代码作为文档ID
+                    .document(document)
+            );
+
+            // 构建响应数据
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("country_code", request.getCountry_code());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("创建国家失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> deleteCountry(CountryDeleteRequest request) {
+        try {
+            // 检查参数
+            if (request.getCountry_id() == null || request.getCountry_id().trim().isEmpty()) {
+                return Result.error("国家ID不能为空");
+            }
+
+            // 先检查文档是否存在
+            boolean exists = elasticsearchClient.exists(e -> e
+                    .index("country_index")
+                    .id(request.getCountry_id())
+            ).value();
+
+            if (!exists) {
+                return Result.error("国家不存在，ID: " + request.getCountry_id());
+            }
+
+            // 执行删除操作
+            elasticsearchClient.delete(d -> d
+                    .index("country_index")
+                    .id(request.getCountry_id())
+            );
+
+            // 构建响应数据
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("country_id", request.getCountry_id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("删除国家失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> updateCountry(CountryUpdateRequest request) {
+        try {
+            // 检查参数
+            if (request.getCountry_id() == null || request.getCountry_id().trim().isEmpty()) {
+                return Result.error("国家ID不能为空");
+            }
+
+            // 先检查文档是否存在
+            boolean exists = elasticsearchClient.exists(e -> e
+                    .index("country_index")
+                    .id(request.getCountry_id())
+            ).value();
+
+            if (!exists) {
+                return Result.error("国家不存在，ID: " + request.getCountry_id());
+            }
+
+            // 构建更新文档
+            Map<String, Object> document = new HashMap<>();
+            if (StringUtils.hasText(request.getCountry_code())) {
+                document.put("country_code", request.getCountry_code());
+            }
+            if (StringUtils.hasText(request.getCountry_name())) {
+                document.put("country_name", request.getCountry_name());
+            }
+
+            // 执行更新操作
+            elasticsearchClient.update(u -> u
+                    .index("country_index")
+                    .id(request.getCountry_id())
+                    .doc(document),
+                    Map.class
+            );
+
+            // 构建响应数据
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("country_id", request.getCountry_id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("更新国家失败：" + e.getMessage());
         }
     }
 } 
