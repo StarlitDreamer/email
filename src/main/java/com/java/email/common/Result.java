@@ -1,5 +1,7 @@
 package com.java.email.common;
 
+import java.util.HashMap;
+
 public class Result<T> {
     private Integer code;
     private String msg;
@@ -35,6 +37,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(200);
         result.setMsg("成功");
+        result.setData((T) new HashMap<String, Object>());
         return result;
     }
 
@@ -42,7 +45,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(200);
         result.setMsg("成功");
-        result.setData(data);
+        result.setData(data != null ? data : (T) new HashMap<String, Object>());
         return result;
     }
 
@@ -50,6 +53,7 @@ public class Result<T> {
         Result<T> result = new Result<>();
         result.setCode(500);
         result.setMsg(message);
+        result.setData((T) new HashMap<String, Object>());
         return result;
     }
 }

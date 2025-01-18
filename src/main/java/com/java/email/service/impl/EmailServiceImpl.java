@@ -8,6 +8,7 @@ import com.java.email.common.Result;
 import com.java.email.model.EmailTypeFilterRequest;
 import com.java.email.model.EmailTypeFilterResponse;
 import com.java.email.model.EmailTypeVO;
+import com.java.email.model.EmailTypeUpdateRequest;
 import com.java.email.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,17 +28,17 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public Result<?> createEmail(String emailTypeName) {
         try {
-            // 创建要存储到ES的数据
             Map<String, Object> document = new HashMap<>();
             document.put("email_type_name", emailTypeName);
 
-            // 执行索引请求
             IndexResponse response = elasticsearchClient.index(i -> i
                     .index("email_index")
                     .document(document)
             );
 
-            return Result.success();
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("email_type_id", response.id());
+            return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建邮件类型失败：" + e.getMessage());
         }
@@ -85,6 +86,47 @@ public class EmailServiceImpl implements EmailService {
             return Result.success(filterResponse);
         } catch (Exception e) {
             return Result.error("搜索邮件类型失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> updateEmailType(EmailTypeUpdateRequest request) {
+        try {
+            // 检查参数
+            if (request.getEmail_type_id() == null || request.getEmail_type_id().trim().isEmpty()) {
+                return Result.error("邮件类型ID不能为空");
+            }
+            if (request.getEmail_type_name() == null || request.getEmail_type_name().trim().isEmpty()) {
+                return Result.error("邮件类型名称不能为空");
+            }
+
+            // 先检查文档是否存在
+            boolean exists = elasticsearchClient.exists(e -> e
+                    .index("email_index")
+                    .id(request.getEmail_type_id())
+            ).value();
+
+            if (!exists) {
+                return Result.error("邮件类型不存在，ID: " + request.getEmail_type_id());
+            }
+
+            // 构建更新文档
+            Map<String, Object> document = new HashMap<>();
+            document.put("email_type_name", request.getEmail_type_name());
+
+            // 执行更新操作
+            elasticsearchClient.update(u -> u
+                    .index("email_index")
+                    .id(request.getEmail_type_id())
+                    .doc(document),
+                    Map.class
+            );
+
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("email_type_id", request.getEmail_type_id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("更新邮件类型失败：" + e.getMessage());
         }
     }
 }
