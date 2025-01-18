@@ -16,6 +16,8 @@ import com.java.email.model.CommodityCreateRequest;
 import com.java.email.model.CommodityFilterRequest;
 import com.java.email.model.CommodityFilterResponse;
 import com.java.email.model.CommodityVO;
+import com.java.email.model.CommodityDeleteRequest;
+import com.java.email.model.CommodityUpdateRequest;
 import com.java.email.service.CommodityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -443,6 +445,95 @@ public class CommodityServiceImpl implements CommodityService {
             }
         } catch (Exception e) {
             // 处理异常
+        }
+    }
+
+    @Override
+    public Result<?> deleteCommodity(CommodityDeleteRequest request) {
+        try {
+            // 检查参数
+            if (request.getCommodity_id() == null || request.getCommodity_id().trim().isEmpty()) {
+                return Result.error("商品ID不能为空");
+            }
+
+            // 先检查文档是否存在
+            boolean exists = elasticsearchClient.exists(e -> e
+                    .index("commodity_index")
+                    .id(request.getCommodity_id())
+            ).value();
+
+            if (!exists) {
+                return Result.error("商品不存在，ID: " + request.getCommodity_id());
+            }
+
+            // 执行删除操作
+            elasticsearchClient.delete(d -> d
+                    .index("commodity_index")
+                    .id(request.getCommodity_id())
+            );
+
+            // 构建响应数据
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("commodity_id", request.getCommodity_id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("删除商品失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> updateCommodity(CommodityUpdateRequest request) {
+        try {
+            // 检查参数
+            if (request.getCommodity_id() == null || request.getCommodity_id().trim().isEmpty()) {
+                return Result.error("商品ID不能为空");
+            }
+            if (request.getCommodity_name() == null || request.getCommodity_name().trim().isEmpty()) {
+                return Result.error("商品名称不能为空");
+            }
+            if (request.getCategory_id() == null || request.getCategory_id().trim().isEmpty()) {
+                return Result.error("品类ID不能为空");
+            }
+
+            // 先检查商品是否存在
+            boolean commodityExists = elasticsearchClient.exists(e -> e
+                    .index("commodity_index")
+                    .id(request.getCommodity_id())
+            ).value();
+
+            if (!commodityExists) {
+                return Result.error("商品不存在，ID: " + request.getCommodity_id());
+            }
+
+            // 检查品类是否存在
+            boolean categoryExists = elasticsearchClient.exists(e -> e
+                    .index("category_index")
+                    .id(request.getCategory_id())
+            ).value();
+
+            if (!categoryExists) {
+                return Result.error("品类不存在，ID: " + request.getCategory_id());
+            }
+
+            // 构建更新文档
+            Map<String, Object> document = new HashMap<>();
+            document.put("commodity_name", request.getCommodity_name());
+            document.put("category_id", request.getCategory_id());
+
+            // 执行更新操作
+            elasticsearchClient.update(u -> u
+                    .index("commodity_index")
+                    .id(request.getCommodity_id())
+                    .doc(document),
+                    Map.class
+            );
+
+            // 构建响应数据
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("commodity_id", request.getCommodity_id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("更新商品失败：" + e.getMessage());
         }
     }
 } 
