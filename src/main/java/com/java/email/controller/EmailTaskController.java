@@ -1,10 +1,14 @@
 package com.java.email.controller;
 
 import com.java.email.common.Result;
+import com.java.email.entity.Attachment;
 import com.java.email.entity.EmailTask;
 import com.java.email.service.EmailTaskService;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/email-tasks")
@@ -58,4 +62,63 @@ public class EmailTaskController {
             return Result.error("更新任务操作状态失败");
         }
     }
+
+    /**
+     * 更新生日邮件任务的状态、主题、模板ID和附件
+     *
+     * @param emailTaskId 邮件任务ID
+     * @param request     请求体，包含 operateStatus、subject、templateId 和 attachments
+     * @return 更新结果
+     */
+    @PutMapping("/{emailTaskId}/update")
+    public Result updateEmailTask(
+            @PathVariable String emailTaskId,
+            @RequestBody UpdateEmailTaskRequest request) {
+        try {
+            // 调用服务层方法更新邮件任务
+            EmailTask updatedTask = emailTaskService.updateBirthdayEmailTask(
+                    emailTaskId,
+                    request.getOperateStatus(),
+                    request.getSubject(),
+                    request.getTemplateId(),
+                    request.getAttachments()
+            );
+            // 返回成功结果
+            return Result.success(updatedTask);
+        } catch (IllegalArgumentException e) {
+            // 返回参数错误信息
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            // 返回系统错误信息
+            return Result.error("更新邮件任务失败");
+        }
+    }
+
+    /**
+     * 查询节日发送的邮件任务
+     *
+     * @return 节日发送的邮件任务列表
+     */
+    @GetMapping("/festival")
+    public List<EmailTask> getFestivalTasks() {
+        return emailTaskService.findFestivalTasks();
+    }
+
+    /**
+     * 查询生日发送的邮件任务
+     *
+     * @return 生日发送的邮件任务列表
+     */
+    @GetMapping("/birthday")
+    public List<EmailTask> getBirthdayTasks() {
+        return emailTaskService.findBirthdayTasks();
+    }
+}
+
+@Data
+class UpdateEmailTaskRequest {
+    private int operateStatus;  // 操作状态
+    private String subject;     // 主题
+    private String templateId;  // 模板ID
+    private List<Attachment> attachments; // 附件列表
 }

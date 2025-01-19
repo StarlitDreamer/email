@@ -1,9 +1,12 @@
 package com.java.email.service;
 
+import com.java.email.entity.Attachment;
 import com.java.email.entity.EmailTask;
 import com.java.email.repository.EmailTaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class EmailTaskService {
@@ -57,5 +60,61 @@ public class EmailTaskService {
 
         // 保存更新后的邮件任务
         return emailTaskRepository.save(emailTask);
+    }
+
+    /**
+     * 更新邮件任务的状态、主题、模板ID和附件
+     *
+     * @param emailTaskId 邮件任务ID
+     * @param operateStatus 新的操作状态
+     * @param subject 新的主题
+     * @param templateId 新的模板ID
+     * @param attachments 新的附件列表
+     * @return 更新后的邮件任务
+     */
+    public EmailTask updateBirthdayEmailTask(
+            String emailTaskId,
+            int operateStatus,
+            String subject,
+            String templateId,
+            List<Attachment> attachments) {
+        // 查询邮件任务
+        EmailTask emailTask = emailTaskRepository.findByEmailTaskId(emailTaskId);
+        if (emailTask == null) {
+            throw new IllegalArgumentException("邮件任务不存在，emailTaskId: " + emailTaskId);
+        }
+
+        // 更新操作状态
+        emailTask.setOperateStatus(operateStatus);
+
+        // 更新主题
+        emailTask.setSubject(subject);
+
+        // 更新模板ID
+        emailTask.setTemplateId(templateId);
+
+        // 更新附件列表
+        emailTask.setAttachments(attachments);
+
+        // 保存更新后的邮件任务
+        return emailTaskRepository.save(emailTask);
+    }
+
+    /**
+     * 查询节日发送的邮件任务
+     *
+     * @return 节日发送的邮件任务列表
+     */
+    public List<EmailTask> findFestivalTasks() {
+        return emailTaskRepository.findByTaskType(3); // 3 表示节日发送
+    }
+
+    /**
+     * 查询生日发送的邮件任务
+     *
+     * @return 生日发送的邮件任务列表
+     */
+    public List<EmailTask> findBirthdayTasks() {
+        return emailTaskRepository.findByTaskType(4); // 4 表示生日发送
     }
 }
