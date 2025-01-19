@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @Document(indexName = "templates")
 public class Template {
-    private List<String> ownerUserIds;  // 所属用户ID列表
+    private List<String> belongUserId;  // 所属用户ID列表ownerUserIds
     private String creator;             // 创建人
     private String creatorId;           // 创建人ID
     private int status;      // 模板状态 1:未分配 2:已分配
@@ -24,41 +24,5 @@ public class Template {
     @Id
     private String templateId;          // 模板ID
     private String templateName;        // 模板名称
-    private int templateType;    // 模板类型
+    private int templateTypeId;    // 模板类型templateType
 }
-
-///**
-// * 模板状态枚举
-// */
-//enum TemplateStatus {
-//    UNASSIGNED(1),  // 未分配
-//    ASSIGNED(2);    // 已分配
-//
-//    private final int code;
-//
-//    TemplateStatus(int code) {
-//        this.code = code;
-//    }
-//
-//    public int getCode() {
-//        return code;
-//    }
-//}
-//
-///**
-// * 模板类型枚举
-// */
-//enum TemplateType {
-//    EMAIL_TYPE_1("type1"),  // 邮件类型1
-//    EMAIL_TYPE_2("type2");  // 邮件类型2
-//
-//    private final String typeId;
-//
-//    TemplateType(String typeId) {
-//        this.typeId = typeId;
-//    }
-//
-//    public String getTypeId() {
-//        return typeId;
-//    }
-//}

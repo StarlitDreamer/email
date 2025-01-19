@@ -35,7 +35,7 @@ public class AttachmentController {
     /**
      * 根据条件筛选附件
      *
-     * @param ownerUserIds  所属用户ID列表
+     * @param belongUserId  所属用户ID列表
      * @param creatorId     创建人ID
      * @param status        附件状态
      * @param attachmentName 附件名称
@@ -45,7 +45,7 @@ public class AttachmentController {
      */
     @GetMapping("/search")
     public Result<Page<Attachment>> findAttachmentsByCriteria(
-            @RequestParam(required = false) List<String> ownerUserIds,
+            @RequestParam(required = false) List<String> belongUserId,
             @RequestParam(required = false) String creatorId,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String attachmentName,
@@ -53,6 +53,6 @@ public class AttachmentController {
             @RequestParam(defaultValue = "10") int size) {
 
         return attachmentService.findAttachmentsByCriteria(
-                ownerUserIds, creatorId, status, attachmentName, page, size);
+                belongUserId, creatorId, status, attachmentName, page, size);
     }
 }

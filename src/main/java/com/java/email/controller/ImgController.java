@@ -19,7 +19,7 @@ public class ImgController {
     /**
      * 根据条件筛选图片
      *
-     * @param ownerUserIds 所属用户ID列表
+     * @param belongUserId 所属用户ID列表
      * @param creatorId    创建人ID
      * @param status       图片状态
      * @param imgName      图片名称
@@ -30,7 +30,7 @@ public class ImgController {
      */
     @GetMapping("/search")
     public Result<Page<Img>> findImgsByCriteria(
-            @RequestParam(required = false) List<String> ownerUserIds,
+            @RequestParam(required = false) List<String> belongUserId,
             @RequestParam(required = false) String creatorId,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String imgName,
@@ -39,48 +39,6 @@ public class ImgController {
             @RequestParam(defaultValue = "10") int size) {
 
         return imgService.findImgsByCriteria(
-                ownerUserIds, creatorId, status, imgName, imgSize, page, size);
+                belongUserId, creatorId, status, imgName, imgSize, page, size);
     }
-
-    // 根据状态筛选图片
-//    @GetMapping("/by-status/{status}")
-//    public Result<List<Img>> getImgsByStatus(@PathVariable int status) {
-//        return Result.success(imgService.getImgsByStatus(status));
-//    }
-//
-//    // 根据创建人 ID 筛选图片
-//    @GetMapping("/by-creator/{creatorId}")
-//    public Result<List<Img>> getImgsByCreatorId(@PathVariable String creatorId) {
-//        return Result.success(imgService.getImgsByCreatorId(creatorId));
-//    }
-//
-//    // 根据图片名称模糊查询
-//    @GetMapping("/by-name/{imgName}")
-//    public Result<List<Img>> getImgsByName(@PathVariable String imgName) {
-//        return Result.success(imgService.getImgsByName(imgName));
-//    }
-//
-//    // 根据图片大小范围筛选图片
-//    @GetMapping("/by-size/{minSize}/{maxSize}")
-//    public Result<List<Img>> getImgsBySizeRange(
-//            @PathVariable long minSize,
-//            @PathVariable long maxSize) {
-//        return Result.success(imgService.getImgsBySizeRange(minSize, maxSize));
-//    }
-//
-//    // 根据创建时间范围筛选图片
-//    @GetMapping("/by-created-at/{startTime}/{endTime}")
-//    public Result<List<Img>> getImgsByCreatedAtRange(
-//            @PathVariable long startTime,
-//            @PathVariable long endTime) {
-//        return Result.success(imgService.getImgsByCreatedAtRange(startTime, endTime));
-//    }
-//
-//    // 根据状态和创建人 ID 组合筛选
-//    @GetMapping("/by-status-and-creator/{status}/{creatorId}")
-//    public Result<List<Img>> getImgsByStatusAndCreatorId(
-//            @PathVariable int status,
-//            @PathVariable String creatorId) {
-//        return Result.success(imgService.getImgsByStatusAndCreatorId(status, creatorId));
-//    }
 }

@@ -30,17 +30,19 @@ public class TemplateController {
     /**
      * 根据条件筛选模板
      *
-     * @param ownerUserIds  所属用户ID列表
-     * @param creator       创建人
-     * @param creatorId     创建人ID
-     * @param status        模板状态
-     * @param templateName  模板名称
-     * @param templateType  模板类型
-     * @return 符合条件的模板列表
+     * @param belongUserId 所属用户ID列表
+     * @param creator      创建人
+     * @param creatorId    创建人ID
+     * @param status       模板状态
+     * @param templateName 模板名称
+     * @param templateType 模板类型
+     * @param page         页码
+     * @param size         每页大小
+     * @return 符合条件的模板分页结果
      */
     @GetMapping("/search")
     public Result<Page<Template>> findTemplatesByCriteria(
-            @RequestParam(required = false) List<String> ownerUserIds,
+            @RequestParam(required = false) List<String> belongUserId,
             @RequestParam(required = false) String creator,
             @RequestParam(required = false) String creatorId,
             @RequestParam(required = false) Integer status,
@@ -50,18 +52,8 @@ public class TemplateController {
             @RequestParam(defaultValue = "10") int size) {
 
         return templateService.findTemplatesByCriteria(
-                ownerUserIds, creator, creatorId, status, templateName, templateType, page, size);
+                belongUserId, creator, creatorId, status, templateName, templateType, page, size);
     }
-//    @GetMapping("/search")
-//    public Result<List<Template>> searchTemplates(
-//            @RequestParam(required = false) List<String> ownerUserIds,
-//            @RequestParam(required = false) String creator,
-//            @RequestParam(required = false) String creatorId,
-//            @RequestParam(required = false) Integer status,
-//            @RequestParam(required = false) String templateName,
-//            @RequestParam(required = false) Integer templateType) {
-//        return templateService.findTemplatesByCriteria(ownerUserIds, creator, creatorId, status, templateName, templateType);
-//    }
 
     /**
      * 分页查询模板数据

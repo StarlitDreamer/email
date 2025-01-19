@@ -27,18 +27,24 @@ public interface ImgRepository extends ElasticsearchRepository<Img, String> {
     // 根据状态和创建人 ID 组合筛选
     List<Img> findByStatusAndCreatorId(int status, String creatorId);
 
-
-
     // 根据图片 ID 查找图片
     Img findByImgId(String imgId);
 
-    // 自定义查询方法（分页）
-    Page<Img> findByOwnerUserIdsIn(List<String> ownerUserIds, Pageable pageable);
+    // 根据所属用户 ID 列表查询图片（分页）
+    Page<Img> findByBelongUserIdIn(List<String> belongUserId, Pageable pageable);
+
+    // 根据创建人 ID 查询图片（分页）
     Page<Img> findByCreatorId(String creatorId, Pageable pageable);
+
+    // 根据状态查询图片（分页）
     Page<Img> findByStatus(int status, Pageable pageable);
+
+    // 根据图片名称查询图片（分页）
     Page<Img> findByImgName(String imgName, Pageable pageable);
+
+    // 根据图片大小查询图片（分页）
     Page<Img> findByImgSize(long imgSize, Pageable pageable);
 
-    // 分页查询方法
+    // 分页查询所有图片
     Page<Img> findAll(Pageable pageable);
 }

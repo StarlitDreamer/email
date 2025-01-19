@@ -37,79 +37,46 @@ public class TemplateService {
     /**
      * 根据任意条件筛选模板
      *
-     * @param ownerUserIds 所属用户ID列表
+     * @param belongUserId 所属用户ID列表
      * @param creator      创建人
      * @param creatorId    创建人ID
      * @param status       模板状态
      * @param templateName 模板名称
      * @param templateType 模板类型
-     * @return 符合条件的模板列表
+     * @param page         页码
+     * @param size         每页大小
+     * @return 符合条件的模板分页结果
      */
-
-    public Result<Page<Template>> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
-                                                          Integer status, String templateName, Integer templateType,
-                                                          int page, int size) {
+    public Result<Page<Template>> findTemplatesByCriteria(
+            List<String> belongUserId, String creator, String creatorId,
+            Integer status, String templateName, Integer templateType,
+            int page, int size) {
         try {
-            Page<Template> templates;
-
             // 创建分页对象
             Pageable pageable = PageRequest.of(page, size);
 
             // 动态构建查询条件
-            if (ownerUserIds != null && !ownerUserIds.isEmpty()) {
-                templates = templateRepository.findByOwnerUserIdsIn(ownerUserIds, pageable);
+            if (belongUserId != null && !belongUserId.isEmpty()) {
+                return Result.success(templateRepository.findByBelongUserIdIn(belongUserId, pageable));
             } else if (creator != null) {
-                templates = templateRepository.findByCreator(creator, pageable);
+                return Result.success(templateRepository.findByCreator(creator, pageable));
             } else if (creatorId != null) {
-                templates = templateRepository.findByCreatorId(creatorId, pageable);
+                return Result.success(templateRepository.findByCreatorId(creatorId, pageable));
             } else if (status != null) {
-                templates = templateRepository.findByStatus(status, pageable);
+                return Result.success(templateRepository.findByStatus(status, pageable));
             } else if (templateName != null) {
-                templates = templateRepository.findByTemplateName(templateName, pageable);
+                return Result.success(templateRepository.findByTemplateName(templateName, pageable));
             } else if (templateType != null) {
-                templates = templateRepository.findByTemplateType(templateType, pageable);
+                return Result.success(templateRepository.findByTemplateTypeId(templateType, pageable));
             } else {
                 // 如果没有条件，返回所有模板（分页）
-                templates = templateRepository.findAll(pageable);
+                return Result.success(templateRepository.findAll(pageable));
             }
-
-            // 返回成功结果
-            return Result.success(templates);
         } catch (Exception e) {
             // 返回错误结果
             return Result.error("查询失败: " + e.getMessage());
         }
     }
-//    public Result<List<Template>> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
-//                                                          Integer status, String templateName, Integer templateType) {
-//        try {
-//            List<Template> templates;
-//
-//            // 动态构建查询条件
-//            if (ownerUserIds != null && !ownerUserIds.isEmpty()) {
-//                templates = templateRepository.findByOwnerUserIdsIn(ownerUserIds);
-//            } else if (creator != null) {
-//                templates = templateRepository.findByCreator(creator);
-//            } else if (creatorId != null) {
-//                templates = templateRepository.findByCreatorId(creatorId);
-//            } else if (status != null) {
-//                templates = templateRepository.findByStatus(status);
-//            } else if (templateName != null) {
-//                templates = templateRepository.findByTemplateName(templateName);
-//            } else if (templateType != null) {
-//                templates = templateRepository.findByTemplateType(templateType);
-//            } else {
-//                // 如果没有条件，返回所有模板
-//                templates = (List<Template>) templateRepository.findAll();
-//            }
-//
-//            // 返回成功结果
-//            return Result.success(templates);
-//        } catch (Exception e) {
-//            // 返回错误结果
-//            return Result.error("查询失败: " + e.getMessage());
-//        }
-//    }
 
     /**
      * 分页查询模板数据
@@ -124,28 +91,4 @@ public class TemplateService {
         // 获取当前页的数据列表
         return page.getContent();
     }
-//    public List<Template> findTemplatesByCriteria(List<String> ownerUserIds, String creator, String creatorId,
-//                                                  Integer status, String templateName, Integer templateType) {
-//        // 动态构建查询条件
-//        if (ownerUserIds != null && !ownerUserIds.isEmpty()) {
-//            return templateRepository.findByOwnerUserIdsIn(ownerUserIds);
-//        }
-//        if (creator != null) {
-//            return templateRepository.findByCreator(creator);
-//        }
-//        if (creatorId != null) {
-//            return templateRepository.findByCreatorId(creatorId);
-//        }
-//        if (status != null) {
-//            return templateRepository.findByStatus(status);
-//        }
-//        if (templateName != null) {
-//            return templateRepository.findByTemplateName(templateName);
-//        }
-//        if (templateType != null) {
-//            return templateRepository.findByTemplateType(templateType);
-//        }
-//        // 如果没有条件，返回所有模板
-//        return (List<Template>) templateRepository.findAll();
-//    }
 }

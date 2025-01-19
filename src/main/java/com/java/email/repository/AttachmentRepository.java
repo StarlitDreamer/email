@@ -12,7 +12,7 @@ public interface AttachmentRepository extends ElasticsearchRepository<Attachment
     Attachment findByAttachmentId(String attachmentId);
 
     // 根据所属用户 ID 列表查询附件（分页）
-    Page<Attachment> findByOwnerUserIdsIn(List<String> ownerUserIds, Pageable pageable);
+    Page<Attachment> findByBelongUserIdIn(List<String> belongUserId, Pageable pageable);
 
     // 根据创建人 ID 查询附件（分页）
     Page<Attachment> findByCreatorId(String creatorId, Pageable pageable);

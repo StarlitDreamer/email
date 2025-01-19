@@ -37,7 +37,7 @@ public class CustomerService {
 
             // 动态构建查询条件
             if (ownerUserId != null) {
-                customers = customerRepository.findByOwnerUserId(ownerUserId, pageable);
+                customers = customerRepository.findByBelongUserId(ownerUserId, pageable);
             } else if (customerLevel != null) {
                 customers = customerRepository.findByCustomerLevel(customerLevel, pageable);
             } else if (customerName != null) {

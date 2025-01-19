@@ -29,7 +29,7 @@ public class AttachmentService {
     /**
      * 根据条件筛选附件
      *
-     * @param ownerUserIds  所属用户ID列表
+     * @param belongUserId  所属用户ID列表
      * @param creatorId     创建人ID
      * @param status        附件状态
      * @param attachmentName 附件名称
@@ -38,7 +38,7 @@ public class AttachmentService {
      * @return 符合条件的附件列表（分页）
      */
     public Result<Page<Attachment>> findAttachmentsByCriteria(
-            List<String> ownerUserIds, String creatorId, Integer status,
+            List<String> belongUserId, String creatorId, Integer status,
             String attachmentName, int page, int size) {
         try {
             Page<Attachment> attachments;
@@ -47,8 +47,8 @@ public class AttachmentService {
             Pageable pageable = PageRequest.of(page, size);
 
             // 动态构建查询条件
-            if (ownerUserIds != null && !ownerUserIds.isEmpty()) {
-                attachments = attachmentRepository.findByOwnerUserIdsIn(ownerUserIds, pageable);
+            if (belongUserId != null && !belongUserId.isEmpty()) {
+                attachments = attachmentRepository.findByBelongUserIdIn(belongUserId, pageable);
             } else if (creatorId != null) {
                 attachments = attachmentRepository.findByCreatorId(creatorId, pageable);
             } else if (status != null) {

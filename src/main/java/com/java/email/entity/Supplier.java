@@ -16,10 +16,10 @@ import java.util.List;
 @AllArgsConstructor
 @Document(indexName = "suppliers")
 public class Supplier {
-    private List<String> acceptedEmailTypeIds;  // 接受的邮件类型ID列表，默认接受所有类型
-    private String ownerUserId;                // 所属用户ID
+    private List<String> acceptEmailTypeId;  // 接受的邮件类型ID列表，默认接受所有类型acceptedEmailTypeIds
+    private String belongUserid;                // 所属用户ID ownerUserId
     private String birth;                      // 出生日期
-    private List<String> commodityIds;         // 商品ID列表
+    private List<String> commodityId;         // 商品ID列表  commodityIds
     private String contactPerson;              // 联系人
     private String contactWay;                 // 联系方式
     private long createdAt;                    // 创建日期
@@ -35,58 +35,3 @@ public class Supplier {
     private int tradeType;               // 贸易类型 1:工厂 2:贸易商
     private long updatedAt;                    // 更新日期
 }
-
-///**
-// * 供应商状态枚举
-// */
-//enum SupplierStatus {
-//    UNASSIGNED(1),  // 未分配
-//    ASSIGNED(2);    // 已分配
-//
-//    private final int code;
-//
-//    SupplierStatus(int code) {
-//        this.code = code;
-//    }
-//
-//    public int getCode() {
-//        return code;
-//    }
-//}
-//
-///**
-// * 供应商等级枚举
-// */
-//enum SupplierLevel {
-//    PRIMARY(1),      // 初级
-//    INTERMEDIATE(2), // 中级
-//    ADVANCED(3);     // 高级
-//
-//    private final int code;
-//
-//    SupplierLevel(int code) {
-//        this.code = code;
-//    }
-//
-//    public int getCode() {
-//        return code;
-//    }
-//}
-//
-///**
-// * 贸易类型枚举
-// */
-//enum TradeType {
-//    FACTORY(1),  // 工厂
-//    TRADER(2);   // 贸易商
-//
-//    private final int code;
-//
-//    TradeType(int code) {
-//        this.code = code;
-//    }
-//
-//    public int getCode() {
-//        return code;
-//    }
-//}

@@ -37,7 +37,7 @@ public class SupplierService {
 
             // 动态构建查询条件
             if (ownerUserId != null) {
-                suppliers = supplierRepository.findByOwnerUserId(ownerUserId, pageable);
+                suppliers = supplierRepository.findByBelongUserid(ownerUserId, pageable);
             } else if (supplierLevel != null) {
                 suppliers = supplierRepository.findBySupplierLevel(supplierLevel, pageable);
             } else if (supplierName != null) {
