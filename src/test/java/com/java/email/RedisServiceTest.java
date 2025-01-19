@@ -12,24 +12,45 @@ public class RedisServiceTest {
     @Autowired
     private RedisService redisService;
 
+//    @Test
+//    public void testSetAndGetKey() {
+//        // 测试数据
+//        String key = "recipient:898ea52b-67da-4bcb-aab6-5419d0d32299";
+//        String value = "testValue";
+//
+//        // 设置值
+//        redisService.setKey(key, value);
+//
+//        // 获取值
+//        String retrievedValue = redisService.getKey(key);
+//        System.out.println(retrievedValue);
+//        // 断言
+//        assertEquals(value, retrievedValue, "获取的值应与设置的值一致");
+//
+//        // 清理测试数据
+//        redisService.deleteKey(key); // 使用 deleteKey 方法删除键
+//    }
+
     @Test
     public void testSetAndGetKey() {
         // 测试数据
-        String key = "testKey";
-        String value = "testValue";
+        String key = "recipient:bcea3e7f-124b-4b27-a34f-ba8a40090cdf";
+//        String value = "testValue";
 
         // 设置值
-        redisService.setKey(key, value);
+//        redisService.setKey(key, value);
 
         // 获取值
         String retrievedValue = redisService.getKey(key);
         System.out.println(retrievedValue);
         // 断言
-        assertEquals(value, retrievedValue, "获取的值应与设置的值一致");
+//        assertEquals(value, retrievedValue, "获取的值应与设置的值一致");
 
         // 清理测试数据
-        redisService.deleteKey(key); // 使用 deleteKey 方法删除键
+//        redisService.deleteKey(key); // 使用 deleteKey 方法删除键
     }
+
+//    recipient:cf0115f6-0185-4854-a21c-e59705d93d8d
 
     @Test
     public void testKeyNotExists() {

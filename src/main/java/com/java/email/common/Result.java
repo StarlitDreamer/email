@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 public class Result<T>{
     private Integer code;
-    private String message;
+    private String msg;
     private T data;
 
     public static <T> Result<T> success(T data){
@@ -20,7 +20,7 @@ public class Result<T>{
         return new Result(200,"success", null);
     }
 
-    public static Result error(String message){
-        return new Result(400,message, null);
+    public static Result error(String msg){
+        return new Result(400,msg, null);
     }
 }
