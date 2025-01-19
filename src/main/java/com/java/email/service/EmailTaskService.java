@@ -30,4 +30,32 @@ public class EmailTaskService {
         // 保存更新后的任务
         return emailTaskRepository.save(emailTask);
     }
+
+
+    /**
+     * 根据 emailTaskId 更新 operateStatus
+     *
+     * @param emailTaskId   邮件任务ID
+     * @param operateStatus 新的操作状态
+     * @return 更新后的邮件任务
+     * @throws IllegalArgumentException 如果邮件任务不存在或状态无效
+     */
+    public EmailTask resetOperateStatus(String emailTaskId, int operateStatus) {
+        // 查询邮件任务
+        EmailTask emailTask = emailTaskRepository.findByEmailTaskId(emailTaskId);
+        if (emailTask == null) {
+            throw new IllegalArgumentException("邮件任务不存在，emailTaskId: " + emailTaskId);
+        }
+
+        // 检查 operateStatus 是否有效（1: 开始态, 2: 暂停态, 3: 终止态, 4: 重置态）
+        if (operateStatus < 1 || operateStatus > 4) {
+            throw new IllegalArgumentException("无效的操作状态，operateStatus: " + operateStatus);
+        }
+
+        // 更新 operateStatus
+        emailTask.setOperateStatus(operateStatus);
+
+        // 保存更新后的邮件任务
+        return emailTaskRepository.save(emailTask);
+    }
 }

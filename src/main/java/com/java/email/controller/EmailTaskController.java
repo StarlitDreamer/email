@@ -33,4 +33,29 @@ public class EmailTaskController {
             return Result.error("更新任务操作状态失败");
         }
     }
+
+    /**
+     * 更新邮件任务的操作状态
+     *
+     * @param emailTaskId   邮件任务ID
+     * @param operateStatus 新的操作状态
+     * @return 更新结果
+     */
+    @PutMapping("/reset-operate-status")
+    public Result resetOperateStatus(
+            @RequestParam String emailTaskId,  // 邮件任务ID
+            @RequestParam int operateStatus) { // 新的操作状态
+        try {
+            // 调用服务层方法更新状态
+            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus);
+            // 返回成功结果
+            return Result.success(updatedTask);
+        } catch (IllegalArgumentException e) {
+            // 返回参数错误信息
+            return Result.error(e.getMessage());
+        } catch (Exception e) {
+            // 返回系统错误信息
+            return Result.error("更新任务操作状态失败");
+        }
+    }
 }
