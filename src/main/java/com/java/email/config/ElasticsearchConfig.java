@@ -1,27 +1,37 @@
 package com.java.email.config;
 
-import org.elasticsearch.client.RestHighLevelClient;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.json.jackson.JacksonJsonpMapper;
+import co.elastic.clients.transport.ElasticsearchTransport;
+import co.elastic.clients.transport.rest_client.RestClientTransport;
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RestClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.elasticsearch.client.ClientConfiguration;
-import org.springframework.data.elasticsearch.client.RestClients;
-import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 @Configuration
-@EnableElasticsearchRepositories(basePackages = "com.java.email.repository")
-public class ElasticsearchConfig extends AbstractElasticsearchConfiguration {
+@EnableElasticsearchRepositories(basePackages = "com.java.email.esdao.repository")
+public class ElasticsearchConfig {
     
     @Value("${spring.elasticsearch.uris}")
     private String elasticsearchUrl;
     
-    @Override
     @Bean
-    public RestHighLevelClient elasticsearchClient() {
-        ClientConfiguration clientConfiguration = ClientConfiguration.builder()
-                .connectedTo(elasticsearchUrl.replace("http://", ""))
-                .build();
-        return RestClients.create(clientConfiguration).rest();
+    public RestClient restClient() {
+        String host = elasticsearchUrl.replace("http://", "").split(":")[0];
+        int port = Integer.parseInt(elasticsearchUrl.replace("http://", "").split(":")[1]);
+        return RestClient.builder(new HttpHost(host, port)).build();
+    }
+
+    @Bean
+    public ElasticsearchTransport elasticsearchTransport(RestClient restClient) {
+        return new RestClientTransport(restClient, new JacksonJsonpMapper());
+    }
+
+    @Bean
+    public ElasticsearchClient elasticsearchClient(ElasticsearchTransport transport) {
+        return new ElasticsearchClient(transport);
     }
 }

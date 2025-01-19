@@ -3,7 +3,6 @@ package com.java.email.service.impl.file;
 import com.java.email.common.Response.PageResponse;
 import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
-import com.java.email.constant.AuthConstData;
 import com.java.email.constant.MagicMathConstData;
 import com.java.email.constant.UserConstData;
 import com.java.email.model.entity.UserDocument;
@@ -14,24 +13,18 @@ import com.java.email.esdao.repository.file.ImgAssignRepository;
 import com.java.email.esdao.repository.user.UserRepository;
 import com.java.email.service.file.ImgService;
 
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.search.sort.SortBuilders;
-import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQuery;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import com.java.email.utils.LogUtil;
-import com.java.email.common.userCommon.AuthValidation;
 import com.java.email.common.userCommon.SubordinateValidation;
 import com.java.email.common.userCommon.SubordinateValidation.ValidationResult;
 import com.java.email.common.userCommon.ThreadLocalUtil;
@@ -40,6 +33,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 
 @Service
 public class ImgServiceImpl implements ImgService {
@@ -363,42 +359,62 @@ public class ImgServiceImpl implements ImgService {
         if (status != 0 && status != 1 && status != 2) {
             return new Result(ResultCode.R_ParamError);
         }
-        // 如果belongUserName是公司名称，直接执行查询
-        if (StringUtils.hasText(belongUserName) && UserConstData.COMPANY_USER_NAME.equals(belongUserName)) {
-            // 创建主查询
-            BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
 
-            // 添加公司id条件
-            mainQuery.must(QueryBuilders.termQuery("belongUserId", UserConstData.COMPANY_USER_ID));
+        // 如果belongUserName是"公司"，直接执行查询
+        if (StringUtils.hasText(belongUserName) && "公司".equals(belongUserName)) {
+            BoolQuery.Builder mainQuery = new BoolQuery.Builder();
 
-            // 添加附件名称条件
+            // 公司id默认是1
+            mainQuery.must(m -> m
+                    .term(t -> t
+                            .field("belongUserId")
+                            .value(UserConstData.COMPANY_USER_ID)
+                    )
+            );
+
+            // 添加图片名称条件
             if (StringUtils.hasText(imgName)) {
-                mainQuery.must(QueryBuilders.matchQuery("imgName", imgName));
+                mainQuery.must(m -> m
+                    .wildcard(t -> t
+                    .field("imgName")
+                    .wildcard("*" + imgName + "*")
+                    )
+                );
             }
 
             // 添加创建者名称条件
             if (StringUtils.hasText(creatorName)) {
                 List<UserDocument> creators = userRepository.findByUserNameLike(creatorName);
                 if (!creators.isEmpty()) {
-                    BoolQueryBuilder creatorQuery = QueryBuilders.boolQuery();
+                    BoolQuery.Builder creatorQuery = new BoolQuery.Builder();
                     for (UserDocument creator : creators) {
-                        creatorQuery.should(QueryBuilders.termQuery("creatorId", creator.getUserId()));
+                        creatorQuery.should(s -> s
+                                .term(t -> t
+                                        .field("creatorId")
+                                        .value(creator.getUserId())
+                                )
+                        );
                     }
-                    creatorQuery.minimumShouldMatch(1);
-                    mainQuery.must(creatorQuery);
+                    creatorQuery.minimumShouldMatch("1");
+                    mainQuery.must(m -> m.bool(creatorQuery.build()));
                 }
             }
 
             // 添加状态条件
             if (status != null && status != 0) {
-                mainQuery.must(QueryBuilders.termQuery("status", status));
+                mainQuery.must(m -> m
+                        .term(t -> t
+                                .field("status")
+                                .value(status)
+                        )
+                );
             }
 
             // 执行查询
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
-            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                    .withQuery(mainQuery)
-                    .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+            NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q.bool(mainQuery.build()))
+                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
                     .withPageable(pageable)
                     .build();
 
@@ -431,84 +447,90 @@ public class ImgServiceImpl implements ImgService {
 
         // 角色2 - 大管理员
         if (userRole == 2) {
-            // 创建主查询
-            BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
-            int validConditions = 0;
+            BoolQuery.Builder mainQuery = new BoolQuery.Builder();
+            boolean hasValidConditions = false;  // 标记是否有有效的查询条件
 
-            // 添加附件名称条件
-            if (StringUtils.hasText(imgName)) {
-                mainQuery.should(QueryBuilders.matchQuery("imgName", imgName));
-                validConditions++;
-            }
-
-            // 添加所属用户条件
-            if (StringUtils.hasText(belongUserName)) {
-                List<UserDocument> belongUsers = userRepository.findByUserNameLike(belongUserName);
-                if (!belongUsers.isEmpty()) {
-                    BoolQueryBuilder belongUserQuery = QueryBuilders.boolQuery();
-                    for (UserDocument user : belongUsers) {
-                        belongUserQuery.should(QueryBuilders.termQuery("belongUserId", user.getUserId()));
-                    }
-                    belongUserQuery.minimumShouldMatch(1);
-                    mainQuery.should(belongUserQuery);
-                    validConditions++;
-                }
-            }
-
-            // 添加创建者条件
-            if (StringUtils.hasText(creatorName)) {
-                List<UserDocument> creators = userRepository.findByUserNameLike(creatorName);
-                if (!creators.isEmpty()) {
-                    BoolQueryBuilder creatorQuery = QueryBuilders.boolQuery();
-                    for (UserDocument creator : creators) {
-                        creatorQuery.should(QueryBuilders.termQuery("creatorId", creator.getUserId()));
-                    }
-                    creatorQuery.minimumShouldMatch(1);
-                    mainQuery.should(creatorQuery);
-                    validConditions++;
-                }
-            }
-
-            // 添加状态条件
-            if (status != null && status != 0) {
-                mainQuery.must(QueryBuilders.termQuery("status", status));
-                validConditions++;
-            }
-
-            // 如果没有任何有效条件，返回所有文档
-            if (validConditions == 0) {
-                Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
-                NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                        .withQuery(QueryBuilders.matchAllQuery())
-                        .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
-                        .withPageable(pageable)
-                        .build();
-
-                SearchHits<ImgDocument> searchHits = elasticsearchOperations.search(
-                        searchQuery,
-                        ImgDocument.class
+            // 检查是否有任何查询条件
+            if (!StringUtils.hasText(imgName) && 
+                !StringUtils.hasText(belongUserName) && 
+                !StringUtils.hasText(creatorName) && 
+                (status == null || status == 0)) {
+                // 没有查询条件时，直接查询所有数据
+                mainQuery.must(m -> m
+                        .matchAll(ma -> ma)
                 );
-
-                List<ImgDocument> content = searchHits.stream()
-                        .map(SearchHit::getContent)
-                        .collect(Collectors.toList());
-
-                return new Result(
-                        ResultCode.R_Ok,
-                        new PageResponse<>(
-                                searchHits.getTotalHits(),
-                                pageNum,
-                                pageSize,
-                                convertToResponseFormat(content)
+            } else {
+                // 有查询条件时的处理
+                if (StringUtils.hasText(imgName)) {
+                    mainQuery.must(m -> m
+                        .wildcard(t -> t
+                        .field("imgName")
+                        .wildcard("*" + imgName + "*")
                         )
-                );
+                    );
+                    hasValidConditions = true;
+                }
+
+                if (StringUtils.hasText(belongUserName)) {
+                    List<UserDocument> belongUsers = userRepository.findByUserNameLike(belongUserName);
+                    if (!belongUsers.isEmpty()) {
+                        BoolQuery.Builder belongUserQuery = new BoolQuery.Builder();
+                        for (UserDocument user : belongUsers) {
+                            belongUserQuery.should(s -> s
+                                    .term(t -> t
+                                            .field("belongUserId")
+                                            .value(user.getUserId())
+                                    )
+                            );
+                        }
+                        belongUserQuery.minimumShouldMatch("1");
+                        mainQuery.must(m -> m.bool(belongUserQuery.build()));
+                        hasValidConditions = true;
+                    }
+                }
+
+                if (StringUtils.hasText(creatorName)) {
+                    List<UserDocument> creators = userRepository.findByUserNameLike(creatorName);
+                    if (!creators.isEmpty()) {
+                        BoolQuery.Builder creatorQuery = new BoolQuery.Builder();
+                        for (UserDocument creator : creators) {
+                            creatorQuery.should(s -> s
+                                    .term(t -> t
+                                            .field("creatorId")
+                                            .value(creator.getUserId())
+                                    )
+                            );
+                        }
+                        creatorQuery.minimumShouldMatch("1");
+                        mainQuery.must(m -> m.bool(creatorQuery.build()));
+                        hasValidConditions = true;
+                    }
+                }
+
+                if (status != null && status != 0) {
+                    mainQuery.must(m -> m
+                            .term(t -> t
+                                    .field("status")
+                                    .value(status)
+                            )
+                    );
+                    hasValidConditions = true;
+                }
+
+                // 如果所有的查询条件都无效（比如都没找到对应的用户），返回空结果
+                if (!hasValidConditions) {
+                    return new Result(
+                            ResultCode.R_Ok,
+                            new PageResponse<>(0L, pageNum, pageSize, new ArrayList<>())
+                    );
+                }
             }
 
-            // 有查询条件时
+            // 执行查询
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
-            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                    .withQuery(mainQuery)
-                    .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+            NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q.bool(mainQuery.build()))
+                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
                     .withPageable(pageable)
                     .build();
 
@@ -517,7 +539,6 @@ public class ImgServiceImpl implements ImgService {
                     ImgDocument.class
             );
 
-            // 处理结果
             List<ImgDocument> content = searchHits.stream()
                     .map(SearchHit::getContent)
                     .collect(Collectors.toList());
@@ -534,88 +555,141 @@ public class ImgServiceImpl implements ImgService {
         }
         // 角色3 - 小管理员
         else if (userRole == 3) {
-            // 创建主查询
-            BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
+            BoolQuery.Builder mainQuery = new BoolQuery.Builder();
+            boolean hasValidConditions = false;  // 标记是否有有效的查询条件
 
-            // 1. 首先添加权限过滤（必须满足）
-            BoolQueryBuilder accessQuery = QueryBuilders.boolQuery();
+            // 检查是否有任何查询条件
+            if (!StringUtils.hasText(imgName) && 
+                !StringUtils.hasText(belongUserName) && 
+                !StringUtils.hasText(creatorName) && 
+                (status == null || status == 0)) {
+                // 没有查询条件时，直接查询所有有权限的数据
+                
+            } else {
+                // 有查询条件时的处理
+                if (StringUtils.hasText(imgName)) {
+                    mainQuery.must(m -> m
+                        .wildcard(t -> t
+                        .field("imgName")
+                        .wildcard("*" + imgName + "*")
+                        )
+                    );
+                    hasValidConditions = true;
+                }
 
+                if (StringUtils.hasText(belongUserName)) {
+                    ValidationResult belongValidation = subordinateValidation.findSubordinatesAndSelfByName(
+                            belongUserName,
+                            currentUserId
+                    );
+                    if (!belongValidation.isValid()) {
+                        return new Result(ResultCode.R_NotBelongToAdmin);
+                    }
+                    BoolQuery.Builder belongQuery = new BoolQuery.Builder();
+                    for (String id : belongValidation.getValidUserIds()) {
+                        belongQuery.should(s -> s
+                                .term(t -> t
+                                        .field("belongUserId")
+                                        .value(id)
+                                )
+                        );
+                    }
+                    mainQuery.must(m -> m.bool(belongQuery.build()));
+                    hasValidConditions = true;
+                }
+
+                if (StringUtils.hasText(creatorName)) {
+                    ValidationResult creatorValidation = subordinateValidation.findSubordinatesAndSelfByName(
+                            creatorName,
+                            currentUserId
+                    );
+                    if (!creatorValidation.isValid()) {
+                        return new Result(ResultCode.R_NotBelongToAdmin);
+                    }
+                    BoolQuery.Builder creatorQuery = new BoolQuery.Builder();
+                    for (String id : creatorValidation.getValidUserIds()) {
+                        creatorQuery.should(s -> s
+                                .term(t -> t
+                                        .field("creatorId")
+                                        .value(id)
+                                )
+                        );
+                    }
+                    mainQuery.must(m -> m.bool(creatorQuery.build()));
+                    hasValidConditions = true;
+                }
+
+                if (status != null && status != 0) {
+                    mainQuery.must(m -> m
+                            .term(t -> t
+                                    .field("status")
+                                    .value(status)
+                            )
+                    );
+                    hasValidConditions = true;
+                }
+
+                // 如果所有的查询条件都无效，返回空结果
+                if (!hasValidConditions) {
+                    return new Result(
+                            ResultCode.R_Ok,
+                            new PageResponse<>(0L, pageNum, pageSize, new ArrayList<>())
+                    );
+                }
+            }
+
+            // 添加权限过滤
+            BoolQuery.Builder accessQuery = new BoolQuery.Builder();
             // 创建者是自己或下属
-            BoolQueryBuilder creatorAccessQuery = QueryBuilders.boolQuery()
-                    .should(QueryBuilders.termQuery("creatorId", currentUserId));
-
+            BoolQuery.Builder creatorAccessQuery = new BoolQuery.Builder();
+            creatorAccessQuery.should(s -> s
+                    .term(t -> t
+                            .field("creatorId")
+                            .value(currentUserId)
+                    )
+            );
             // 添加下属的创建者条件
             List<UserDocument> subordinates = userRepository.findByBelongUserId(currentUserId);
             if (!subordinates.isEmpty()) {
                 for (UserDocument sub : subordinates) {
-                    creatorAccessQuery.should(QueryBuilders.termQuery("creatorId", sub.getUserId()));
+                    creatorAccessQuery.should(s -> s
+                            .term(t -> t
+                                    .field("creatorId")
+                                    .value(sub.getUserId())
+                            )
+                    );
                 }
             }
-            accessQuery.should(creatorAccessQuery);
-
+            accessQuery.should(s -> s.bool(creatorAccessQuery.build()));
             // 所属用户是自己或下属
-            BoolQueryBuilder belongAccessQuery = QueryBuilders.boolQuery()
-                    .should(QueryBuilders.termQuery("belongUserId", currentUserId));
+            BoolQuery.Builder belongAccessQuery = new BoolQuery.Builder();
+            belongAccessQuery.should(s -> s
+                    .term(t -> t
+                            .field("belongUserId")
+                            .value(currentUserId)
+                    )
+            );
 
             if (!subordinates.isEmpty()) {
                 for (UserDocument sub : subordinates) {
-                    belongAccessQuery.should(QueryBuilders.termQuery("belongUserId", sub.getUserId()));
+                    belongAccessQuery.should(s -> s
+                            .term(t -> t
+                                    .field("belongUserId")
+                                    .value(sub.getUserId())
+                            )
+                    );
                 }
             }
-            accessQuery.should(belongAccessQuery);
-
-            // 至少满足一个权限条件（创建者或所属用户）
-            accessQuery.minimumShouldMatch(1);
-            mainQuery.must(accessQuery);
-
-            // 2. 添加搜索条件（如果有）
-            // 添加图片名称条件
-            if (StringUtils.hasText(imgName)) {
-                mainQuery.must(QueryBuilders.matchQuery("imgName", imgName));
-            }
-
-            // 添加所属用户名称条件
-            if (StringUtils.hasText(belongUserName)) {
-                ValidationResult belongValidation = subordinateValidation.findSubordinatesAndSelfByName(
-                        belongUserName,
-                        currentUserId
-                );
-                if (!belongValidation.isValid()) {
-                    return new Result(ResultCode.R_NotBelongToAdmin);
-                }
-                BoolQueryBuilder belongQuery = QueryBuilders.boolQuery();
-                for (String id : belongValidation.getValidUserIds()) {
-                    belongQuery.should(QueryBuilders.termQuery("belongUserId", id));
-                }
-                mainQuery.must(belongQuery);
-            }
-
-            // 添加创建者名称条件
-            if (StringUtils.hasText(creatorName)) {
-                ValidationResult creatorValidation = subordinateValidation.findSubordinatesAndSelfByName(
-                        creatorName,
-                        currentUserId
-                );
-                if (!creatorValidation.isValid()) {
-                    return new Result(ResultCode.R_NotBelongToAdmin);
-                }
-                BoolQueryBuilder creatorQuery = QueryBuilders.boolQuery();
-                for (String id : creatorValidation.getValidUserIds()) {
-                    creatorQuery.should(QueryBuilders.termQuery("creatorId", id));
-                }
-                mainQuery.must(creatorQuery);
-            }
-
-            // 添加状态条件
-            if (status != null && status != 0) {
-                mainQuery.must(QueryBuilders.termQuery("status", status));
-            }
+            accessQuery.should(s -> s.bool(belongAccessQuery.build()));
+            // 至少满足一个权限条件
+            accessQuery.minimumShouldMatch("1");
+            mainQuery.must(m -> m.bool(accessQuery.build()));
 
             // 执行查询
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
-            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                    .withQuery(mainQuery)
-                    .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+            NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q.bool(mainQuery.build()))
+                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
                     .withPageable(pageable)
                     .build();
 
@@ -640,53 +714,58 @@ public class ImgServiceImpl implements ImgService {
         }
         // 角色4 - 普通用户
         else if (userRole == 4) {
-            // 创建主查询
-            BoolQueryBuilder mainQuery = QueryBuilders.boolQuery();
-            String currentUserName = ThreadLocalUtil.getUserName();
-
+            // 普通用户不允许查询创建者
+            if(StringUtils.hasText(creatorName)){
+                return new Result(ResultCode.R_ParamError);
+            }   
             // 状态只能为0
-            if (status == null || status != 0) {
+            if (status != 0) {
                 return new Result(ResultCode.R_ParamError);
             }
-
-            // 验证创建者名称（如果有）
-            if (StringUtils.hasText(creatorName)) {
-                // 获取当前用户信息
-                if (currentUserName == null || !currentUserName.equals(creatorName)) {
-                    return new Result(ResultCode.R_CreatorError);
-                }
-                mainQuery.must(QueryBuilders.termQuery("creatorId", currentUserId));
+            BoolQuery.Builder mainQuery = new BoolQuery.Builder();
+            String currentUserName = ThreadLocalUtil.getUserName();
+            if (currentUserName == null) {
+                return new Result(ResultCode.R_UserNotFound);
             }
 
-            // 添加附件名称条件
+            // 添加图片名称条件
             if (StringUtils.hasText(imgName)) {
-                mainQuery.must(QueryBuilders.matchQuery("imgName", imgName));
+                mainQuery.must(m -> m
+                    .wildcard(t -> t
+                    .field("imgName")
+                    .wildcard("*" + imgName + "*")
+                    )
+                );
             }
 
             // 处理belongUserName条件
             if (StringUtils.hasText(belongUserName)) {
-                if ("公司".equals(belongUserName)) {
-                    // 如果是"公司"，不添加belongUserId过滤
-                } else {
-                    // 验证belongUserName是否是自己
-                    if (!belongUserName.equals(currentUserName)) {
-                        return new Result(ResultCode.R_BelongUserError);
-                    }
-                    // 是自己，添加belongUserId条件
-                    mainQuery.must(QueryBuilders.termQuery("belongUserId", currentUserId));
+                // 验证belongUserName是否是自己
+                if (!belongUserName.equals(currentUserName)) {
+                    return new Result(ResultCode.R_BelongUserError);
                 }
+                // 是自己，添加belongUserId条件
+                mainQuery.must(m -> m
+                        .term(t -> t
+                                .field("belongUserId")
+                                .value(currentUserId)
+                        )
+                );
             }
 
             // 无论有没有其他条件，都必须确保所属用户包含自己
-            BoolQueryBuilder belongQuery = QueryBuilders.boolQuery()
-                    .must(QueryBuilders.termQuery("belongUserId", currentUserId));
-            mainQuery.must(belongQuery);
+            mainQuery.must(m -> m
+                    .term(t -> t
+                            .field("belongUserId")
+                            .value(currentUserId)
+                    )
+            );
 
             // 执行查询
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
-            NativeSearchQuery searchQuery = new NativeSearchQueryBuilder()
-                    .withQuery(mainQuery)
-                    .withSort(SortBuilders.fieldSort("createdAt").order(SortOrder.DESC))
+            NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q.bool(mainQuery.build()))
+                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
                     .withPageable(pageable)
                     .build();
 

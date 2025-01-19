@@ -34,9 +34,9 @@ public class ImgDocument {
     @Field(type = FieldType.Integer)
     private Integer status;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time)
+    @Field(type = FieldType.Date, format = DateFormat.basic_date_time)
     private String createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time)
+    @Field(type = FieldType.Date, format = DateFormat.basic_date_time)
     private String updatedAt;
 } 
