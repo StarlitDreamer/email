@@ -1,0 +1,12 @@
+#\u6570\u636E\u5E93\u914D\u7F6E
+spring:
+  config:
+    activate:
+      on-profile: dev
+  elasticsearch:
+    port: 9200
+    ip: 127.0.0.1
+    username: elastic
+    password: bV1hfVvLspBxv4JGycY1
+server:
+  port: 9898
