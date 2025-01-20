@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @Document(indexName = "users")
 public class User {
-    private String ownerUserId;        // 所属用户ID  ownerUserId
+    private String belongUserid;        // 所属用户ID  ownerUserId
     private long createdAt;            // 创建日期
     private String creatorId;          // 创建人ID
     private int status;         // 用户分配状态 1:未分配 2:已分配
