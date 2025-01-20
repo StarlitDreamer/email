@@ -49,11 +49,27 @@ public class TemplateController {
             @RequestParam(required = false) String templateName,
             @RequestParam(required = false) Integer templateType,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
+            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
 
         return templateService.findTemplatesByCriteria(
-                belongUserId, creator, creatorId, status, templateName, templateType, page, size);
+                currentUserId, currentUserRole, belongUserId, creator, creatorId, status, templateName, templateType, page, size);
     }
+//    @GetMapping("/search")
+//    public Result<Page<Template>> findTemplatesByCriteria(
+//            @RequestParam(required = false) List<String> belongUserId,
+//            @RequestParam(required = false) String creator,
+//            @RequestParam(required = false) String creatorId,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) String templateName,
+//            @RequestParam(required = false) Integer templateType,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        return templateService.findTemplatesByCriteria(
+//                belongUserId, creator, creatorId, status, templateName, templateType, page, size);
+//    }
 
     /**
      * 分页查询模板数据
@@ -65,8 +81,18 @@ public class TemplateController {
     @GetMapping
     public Result<List<Template>> getTemplates(
             @RequestParam(defaultValue = "0") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize) {
-        List<Template> templates = templateService.getTemplates(pageNum, pageSize);
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
+            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
+
+        List<Template> templates = templateService.getTemplates(currentUserId, currentUserRole, pageNum, pageSize);
         return Result.success(templates);
     }
+//    @GetMapping
+//    public Result<List<Template>> getTemplates(
+//            @RequestParam(defaultValue = "0") int pageNum,
+//            @RequestParam(defaultValue = "10") int pageSize) {
+//        List<Template> templates = templateService.getTemplates(pageNum, pageSize);
+//        return Result.success(templates);
+//    }
 }

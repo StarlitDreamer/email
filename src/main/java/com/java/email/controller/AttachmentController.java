@@ -43,16 +43,17 @@ public class AttachmentController {
      * @param size          每页大小
      * @return 符合条件的附件列表（分页）
      */
-    @GetMapping("/search")
-    public Result<Page<Attachment>> findAttachmentsByCriteria(
-            @RequestParam(required = false) List<String> belongUserId,
-            @RequestParam(required = false) String creatorId,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) String attachmentName,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
 
-        return attachmentService.findAttachmentsByCriteria(
-                belongUserId, creatorId, status, attachmentName, page, size);
-    }
+//    @GetMapping("/search")
+//    public Result<Page<Attachment>> findAttachmentsByCriteria(
+//            @RequestParam(required = false) List<String> belongUserId,
+//            @RequestParam(required = false) String creatorId,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) String attachmentName,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        return attachmentService.findAttachmentsByCriteria(
+//                belongUserId, creatorId, status, attachmentName, page, size);
+//    }
 }
