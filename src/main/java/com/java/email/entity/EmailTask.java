@@ -26,10 +26,12 @@ public class EmailTask {
     private long endDate;               // 结束时间，秒级时间戳
     private int operateStatus;          // 任务操作状态，使用数字1、2、3、4代表状态。1是开始态、2是暂停态、3是终止态、4是重置态
     private List<String> receiverIds;   // 收件人ID列表
+    private List<String> cancelReceiverIds;//取消收件的收件人ID列表             新加
+    private String receiverKey;         //收件人在redis中的key                 新加
     private List<String> senderIds;     // 发件人ID列表
     private long startDate;             // 开始时间，秒级时间戳
     private String subject;             // 主题
-    private Long taskCycle;             // 任务循环周期，如果是循环发送类型的任务才会填写这个字段
+    private long taskCycle;             // 任务循环周期，如果是循环发送类型的任务才会填写这个字段
     private int taskStatus;             // 任务状态，使用数字1、2、3、4、5、6代表任务状态。1是发送中、2是发送暂停、3是发送终止、4是发送重置、5是发送成功、6是发送失败
     private int taskType;               // 任务类型，使用数字1、2、3、4代表任务类型。1是手动发送、2是循环发送、3是节日发送、4是生日发送
     private String templateId;          // 模板ID

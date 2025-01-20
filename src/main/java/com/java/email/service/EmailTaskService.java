@@ -1,12 +1,15 @@
 package com.java.email.service;
 
+import com.java.email.Dto.CreateCycleEmailTaskRequest;
 import com.java.email.entity.Attachment;
 import com.java.email.entity.EmailTask;
 import com.java.email.repository.EmailTaskRepository;
+import com.java.email.Dto.CreateEmailTaskRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class EmailTaskService {
@@ -65,11 +68,11 @@ public class EmailTaskService {
     /**
      * 更新邮件任务的状态、主题、模板ID和附件
      *
-     * @param emailTaskId 邮件任务ID
+     * @param emailTaskId   邮件任务ID
      * @param operateStatus 新的操作状态
-     * @param subject 新的主题
-     * @param templateId 新的模板ID
-     * @param attachments 新的附件列表
+     * @param subject       新的主题
+     * @param templateId    新的模板ID
+     * @param attachments   新的附件列表
      * @return 更新后的邮件任务
      */
     public EmailTask updateBirthdayEmailTask(
@@ -116,5 +119,44 @@ public class EmailTaskService {
      */
     public List<EmailTask> findBirthdayTasks() {
         return emailTaskRepository.findByTaskType(4); // 4 表示生日发送
+    }
+
+    /**
+     * 创建手动昂发送的邮件任务
+     *
+     * @return 创建的任务对象
+     */
+    public EmailTask createEmailTask(CreateEmailTaskRequest request) {
+        EmailTask emailTask = new EmailTask();
+        emailTask.setEmailTaskId(UUID.randomUUID().toString());
+        emailTask.setSubject(request.getSubject());
+        emailTask.setEmailTypeId(request.getEmailTypeId());
+        emailTask.setTemplateId(request.getTemplateId());
+        emailTask.setEmailContent(request.getEmailContent());
+        emailTask.setReceiverIds(request.getReceiverIds());
+        emailTask.setReceiverKey(request.getReceiverKey());
+        emailTask.setCancelReceiverIds(request.getCancelReceiverIds());
+        emailTask.setAttachments(request.getAttachments());
+        emailTask.setCreatedAt(System.currentTimeMillis() / 1000);
+        emailTask.setOperateStatus(1); // 默认设置为开始态
+        emailTask.setTaskStatus(1); // 默认设置为发送中
+
+        return emailTaskRepository.save(emailTask);
+    }
+
+    public EmailTask createCycleEmailTask(CreateCycleEmailTaskRequest request) {
+        EmailTask emailTask = new EmailTask();
+        emailTask.setEmailTaskId(UUID.randomUUID().toString()); // 生成唯一ID
+        emailTask.setSubject(request.getSubject());
+        emailTask.setEmailTypeId(request.getEmailTypeId());
+        emailTask.setTemplateId(request.getTemplateId());
+        emailTask.setReceiverIds(request.getReceiverIds());
+        emailTask.setAttachments(request.getAttachments());
+        emailTask.setTaskCycle(request.getTaskCycle()); // 设置发送周期
+        emailTask.setCreatedAt(System.currentTimeMillis() / 1000); // 设置创建时间
+        emailTask.setOperateStatus(1); // 默认设置为开始态
+        emailTask.setTaskStatus(1); // 默认设置为发送中
+
+        return emailTaskRepository.save(emailTask);
     }
 }

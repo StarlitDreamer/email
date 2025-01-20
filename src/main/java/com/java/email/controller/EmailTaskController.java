@@ -1,10 +1,11 @@
 package com.java.email.controller;
 
+import com.java.email.Dto.CreateCycleEmailTaskRequest;
 import com.java.email.common.Result;
-import com.java.email.entity.Attachment;
 import com.java.email.entity.EmailTask;
+import com.java.email.Dto.CreateEmailTaskRequest;
+import com.java.email.Dto.UpdateBirthdayEmailTaskRequest;
 import com.java.email.service.EmailTaskService;
-import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -73,7 +74,7 @@ public class EmailTaskController {
     @PutMapping("/{emailTaskId}/update")
     public Result updateEmailTask(
             @PathVariable String emailTaskId,
-            @RequestBody UpdateEmailTaskRequest request) {
+            @RequestBody UpdateBirthdayEmailTaskRequest request) {
         try {
             // 调用服务层方法更新邮件任务
             EmailTask updatedTask = emailTaskService.updateBirthdayEmailTask(
@@ -113,12 +114,25 @@ public class EmailTaskController {
     public List<EmailTask> getBirthdayTasks() {
         return emailTaskService.findBirthdayTasks();
     }
+
+    /**
+     * 创建手动发送邮件的任务
+     *
+     * @return 该邮件任务对象
+     */
+    @PostMapping("/create")
+    public Result<EmailTask> createEmailTask(@RequestBody CreateEmailTaskRequest request) {
+        return Result.success(emailTaskService.createEmailTask(request));
+    }
+
+    /**
+     * 创建循环发送邮件的任务
+     *
+     * @return 该邮件任务对象
+     */
+    @PostMapping("/createCycle")
+    public Result<EmailTask> createEmailTask(@RequestBody CreateCycleEmailTaskRequest request) {
+        return Result.success(emailTaskService.createCycleEmailTask(request));
+    }
 }
 
-@Data
-class UpdateEmailTaskRequest {
-    private int operateStatus;  // 操作状态
-    private String subject;     // 主题
-    private String templateId;  // 模板ID
-    private List<Attachment> attachments; // 附件列表
-}
