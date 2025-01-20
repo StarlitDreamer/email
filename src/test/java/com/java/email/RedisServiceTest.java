@@ -75,3 +75,27 @@ public class RedisServiceTest {
         assertNull(retrievedValue, "删除键后应返回 null");
     }
 }
+/*{
+    "subject": "圣诞节快乐",
+    "template_id": "template_uuid",
+    "start_date": 1737025815,
+    "receiver": [
+        {
+            "receiver_id": "receiver_uuid"
+        },
+        {
+            "receiver_id": "receiver_uuid"
+        }
+    ],
+    "attachment": [
+        {
+            "attachment_id": "attachment_id",
+            "attachment_url": "attachment_url"
+        },
+        {
+            "attachment_id": "attachment_id",
+            "attachment_url": "attachment_url"
+        }
+    ]
+}
+* */

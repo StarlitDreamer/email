@@ -1,12 +1,11 @@
 package com.java.email.Dto;
 
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.java.email.entity.Attachment;
 import lombok.Data;
 
 import java.util.List;
-//手动发送
+//创建手动发送
 @Data
 public class CreateEmailTaskRequest {
     @JsonProperty("")
@@ -25,7 +24,7 @@ public class CreateEmailTaskRequest {
     private List<String> receiverIds;
 
     @JsonProperty("receiver_key")
-    private String receiverKey;
+    private String receiverKey;//redis_key
 
     @JsonProperty("cancel_receiver_ids")
     private List<String> cancelReceiverIds;

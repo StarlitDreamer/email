@@ -6,7 +6,7 @@ import lombok.Data;
 
 import java.util.List;
 
-//手动发送
+//创建循环发送
 @Data
 public class CreateCycleEmailTaskRequest {
     @JsonProperty("")

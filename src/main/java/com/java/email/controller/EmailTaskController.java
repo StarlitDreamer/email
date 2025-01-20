@@ -1,6 +1,7 @@
 package com.java.email.controller;
 
 import com.java.email.Dto.CreateCycleEmailTaskRequest;
+import com.java.email.Dto.CreateFestivalEmailTaskRequest;
 import com.java.email.common.Result;
 import com.java.email.entity.EmailTask;
 import com.java.email.Dto.CreateEmailTaskRequest;
@@ -133,6 +134,16 @@ public class EmailTaskController {
     @PostMapping("/createCycle")
     public Result<EmailTask> createEmailTask(@RequestBody CreateCycleEmailTaskRequest request) {
         return Result.success(emailTaskService.createCycleEmailTask(request));
+    }
+
+    /**
+     * 创建节日发送邮件的任务
+     *
+     * @return 该邮件任务对象
+     */
+    @PostMapping("/createFestival")
+    public Result<EmailTask> createFestivalEmailTask(@RequestBody CreateFestivalEmailTaskRequest request) {
+        return Result.success(emailTaskService.createFestivalEmailTask(request));
     }
 }
 

@@ -1,15 +1,19 @@
 package com.java.email.service;
 
 import com.java.email.Dto.CreateCycleEmailTaskRequest;
+import com.java.email.Dto.CreateFestivalEmailTaskRequest;
 import com.java.email.entity.Attachment;
 import com.java.email.entity.EmailTask;
+import com.java.email.entity.Receiver;
 import com.java.email.repository.EmailTaskRepository;
 import com.java.email.Dto.CreateEmailTaskRequest;
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class EmailTaskService {
@@ -122,7 +126,7 @@ public class EmailTaskService {
     }
 
     /**
-     * 创建手动昂发送的邮件任务
+     * 创建手动发送的邮件任务
      *
      * @return 创建的任务对象
      */
@@ -144,6 +148,11 @@ public class EmailTaskService {
         return emailTaskRepository.save(emailTask);
     }
 
+    /**
+     * 创建循环发送的邮件任务
+     *
+     * @return 创建的任务对象
+     */
     public EmailTask createCycleEmailTask(CreateCycleEmailTaskRequest request) {
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(UUID.randomUUID().toString()); // 生成唯一ID
@@ -156,6 +165,28 @@ public class EmailTaskService {
         emailTask.setCreatedAt(System.currentTimeMillis() / 1000); // 设置创建时间
         emailTask.setOperateStatus(1); // 默认设置为开始态
         emailTask.setTaskStatus(1); // 默认设置为发送中
+
+        return emailTaskRepository.save(emailTask);
+    }
+
+    public EmailTask createFestivalEmailTask(CreateFestivalEmailTaskRequest request) {
+        EmailTask emailTask = new EmailTask();
+        emailTask.setEmailTaskId(UUID.randomUUID().toString()); // 生成唯一ID
+        emailTask.setSubject(request.getSubject());
+        emailTask.setTemplateId(request.getTemplateId());
+        emailTask.setStartDate(request.getStartDate());
+        emailTask.setAttachments(request.getAttachments());
+
+        // 提取收件人ID列表
+        List<String> receiverIds = request.getReceivers().stream()
+                .map(Receiver::getReceiverId)
+                .collect(Collectors.toList());
+        emailTask.setReceiverIds(receiverIds);
+
+        emailTask.setCreatedAt(System.currentTimeMillis() / 1000); // 设置创建时间
+        emailTask.setOperateStatus(1); // 默认设置为开始态
+        emailTask.setTaskStatus(1); // 默认设置为发送中
+        emailTask.setTaskType(3); // 设置为节日发送类型
 
         return emailTaskRepository.save(emailTask);
     }
