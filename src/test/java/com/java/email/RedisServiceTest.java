@@ -1,9 +1,14 @@
 package com.java.email;
 
+import com.java.email.entity.Supplier;
 import com.java.email.service.RedisService;
+import com.java.email.service.SupplierService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -11,6 +16,29 @@ public class RedisServiceTest {
 
     @Autowired
     private RedisService redisService;
+
+    @Autowired
+    private SupplierService supplierService;
+
+//    @Test
+//    public void testGetSuppliersFromRedis() {
+//        // 替换为实际的 Redis Key
+//        String redisKey = "supplier:search:b1e9c1f3-6883-424d-ad66-70f9a59cc29d";
+//
+//        // 调用方法获取数据
+//        List<Supplier> suppliers = supplierService.getSuppliersFromRedis(redisKey);
+//
+//        // 断言结果不为空
+//        assertNotNull(suppliers, "Suppliers list should not be null");
+//        assertFalse(suppliers.isEmpty(), "Suppliers list should not be empty");
+//
+//        // 打印反序列化结果
+//        for (Supplier supplier : suppliers) {
+//            System.out.println("Supplier Name: " + supplier.getSupplierName());
+//            System.out.println("Emails: " + supplier.getEmails());
+//
+//        }
+//    }
 
 //    @Test
 //    public void testSetAndGetKey() {
@@ -34,7 +62,7 @@ public class RedisServiceTest {
     @Test
     public void testSetAndGetKey() {
         // 测试数据
-        String key = "recipient:bcea3e7f-124b-4b27-a34f-ba8a40090cdf";
+        String key = "customer:search:9617e3ae-f9ae-4e7e-a042-5be625fc9b0d";
 //        String value = "testValue";
 
         // 设置值

@@ -160,19 +160,19 @@ public class RecipientController {
      * @param size          每页大小
      * @return 符合条件的供应商分页结果
      */
-    @GetMapping("/suppliers/search")
-    public Result<Page<Supplier>> findSuppliersByCriteria(
-            @RequestParam(required = false) String ownerUserId,
-            @RequestParam(required = false) Integer supplierLevel,
-            @RequestParam(required = false) String supplierName,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-        return supplierService.findSuppliersByCriteria(
-                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
-    }
+//    @GetMapping("/suppliers/search")
+//    public Result<Page<Supplier>> findSuppliersByCriteria(
+//            @RequestParam(required = false) String ownerUserId,
+//            @RequestParam(required = false) Integer supplierLevel,
+//            @RequestParam(required = false) String supplierName,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) Integer tradeType,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        return supplierService.findSuppliersByCriteria(
+//                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
+//    }
 
     // 以下为保留的注释代码，方便后续扩展
     /*

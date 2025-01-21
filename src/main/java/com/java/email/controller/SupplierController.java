@@ -41,4 +41,18 @@ public class SupplierController {
         return supplierService.findSuppliersByCriteria(
                 ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
     }
+
+    @GetMapping("/search-redis")
+    public Result<String> findSuppliersByCriteriaRedis(
+            @RequestParam(required = false) String ownerUserId,
+            @RequestParam(required = false) Integer supplierLevel,
+            @RequestParam(required = false) String supplierName,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Integer tradeType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        return supplierService.findSuppliersByCriteriaRedis(
+                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
+    }
 }
