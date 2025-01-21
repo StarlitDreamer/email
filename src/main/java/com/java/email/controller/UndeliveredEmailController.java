@@ -42,6 +42,22 @@ public class UndeliveredEmailController {
                 emailTaskId, receiverIds, senderIds, resendStatus, errorCode, page, size);
     }
 
+//    @GetMapping("/search")
+//    public Result<Page<UndeliveredEmail>> findUndeliveredEmailsByCriteria(
+//            @RequestParam(required = false) String emailTaskId,
+//            @RequestParam(required = false) List<String> receiverIds,
+//            @RequestParam(required = false) List<String> senderIds,
+//            @RequestParam(required = false) Integer resendStatus,
+//            @RequestParam(required = false) Long errorCode,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size,
+//            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
+//            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
+//
+//        return undeliveredEmailService.findUndeliveredEmailsByCriteria(
+//                currentUserId, currentUserRole, emailTaskId, receiverIds, senderIds, resendStatus, errorCode, page, size);
+//    }
+
     /**
      * 分页查询未送达邮件数据
      *

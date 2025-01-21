@@ -19,6 +19,7 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+
         <!--es依赖-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -37,7 +38,6 @@
             <version>1.2.78</version>
         </dependency>
 
-
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -49,6 +49,7 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
     <dependencyManagement>
         <dependencies>

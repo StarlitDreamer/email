@@ -30,6 +30,10 @@ public interface SupplierRepository extends ElasticsearchRepository<Supplier, St
     // 分页查询所有供应商
     Page<Supplier> findAll(Pageable pageable);
 
+
+
+    Page<Supplier> findByBelongUseridIn(List<String> allowedUserIds, Pageable pageable);
+
     /**
      * 根据条件筛选供应商
      *

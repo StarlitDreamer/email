@@ -29,10 +29,15 @@ public class EmailTaskService {
      * @return 更新后的邮件任务
      * @throws IllegalArgumentException 如果任务操作状态无效或任务不存在
      */
-    public EmailTask updateOperateStatus(String emailTaskId, int operateStatus) {
+    public EmailTask updateOperateStatus(String emailTaskId, int operateStatus, String currentUserId) {
         // 查找邮件任务
         EmailTask emailTask = emailTaskRepository.findById(emailTaskId)
                 .orElseThrow(() -> new IllegalArgumentException("邮件任务不存在"));
+
+        // 检查当前用户是否有权限修改该任务
+        if (!emailTask.getSenderIds().contains(currentUserId)) {
+            throw new IllegalArgumentException("无权修改该邮件任务");
+        }
 
         // 更新任务操作状态
         emailTask.setOperateStatus(operateStatus);
@@ -40,6 +45,17 @@ public class EmailTaskService {
         // 保存更新后的任务
         return emailTaskRepository.save(emailTask);
     }
+//    public EmailTask updateOperateStatus(String emailTaskId, int operateStatus) {
+//        // 查找邮件任务
+//        EmailTask emailTask = emailTaskRepository.findById(emailTaskId)
+//                .orElseThrow(() -> new IllegalArgumentException("邮件任务不存在"));
+//
+//        // 更新任务操作状态
+//        emailTask.setOperateStatus(operateStatus);
+//
+//        // 保存更新后的任务
+//        return emailTaskRepository.save(emailTask);
+//    }
 
 
     /**

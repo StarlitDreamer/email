@@ -28,10 +28,12 @@ public class EmailTaskController {
      */
     @PutMapping("/operate-status")
     public Result updateOperateStatus(
-            @RequestParam String emailTaskId,  // 改为 @RequestParam
-            @RequestParam int operateStatus) {
+            @RequestParam String emailTaskId,  // 邮件任务ID
+            @RequestParam int operateStatus,   // 操作状态
+            @RequestHeader("currentUserId") String currentUserId) { // 从请求头中获取当前用户ID
         try {
-            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus);
+            // 调用服务层方法，传入当前用户ID进行权限校验
+            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus, currentUserId);
             return Result.success(updatedTask);
         } catch (IllegalArgumentException e) {
             return Result.error(e.getMessage());
@@ -39,6 +41,19 @@ public class EmailTaskController {
             return Result.error("更新任务操作状态失败");
         }
     }
+//    @PutMapping("/operate-status")
+//    public Result updateOperateStatus(
+//            @RequestParam String emailTaskId,  // 改为 @RequestParam
+//            @RequestParam int operateStatus) {
+//        try {
+//            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus);
+//            return Result.success(updatedTask);
+//        } catch (IllegalArgumentException e) {
+//            return Result.error(e.getMessage());
+//        } catch (Exception e) {
+//            return Result.error("更新任务操作状态失败");
+//        }
+//    }
 
     /**
      * 更新邮件任务的操作状态
@@ -50,10 +65,11 @@ public class EmailTaskController {
     @PutMapping("/reset-operate-status")
     public Result resetOperateStatus(
             @RequestParam String emailTaskId,  // 邮件任务ID
-            @RequestParam int operateStatus) { // 新的操作状态
+            @RequestParam int operateStatus,
+            @RequestHeader("currentUserId") String currentUserId) { // 新的操作状态
         try {
             // 调用服务层方法更新状态
-            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus);
+            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus, currentUserId);
             // 返回成功结果
             return Result.success(updatedTask);
         } catch (IllegalArgumentException e) {

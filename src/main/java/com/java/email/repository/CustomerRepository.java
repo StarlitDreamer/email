@@ -30,6 +30,10 @@ public interface CustomerRepository extends ElasticsearchRepository<Customer, St
     // 分页查询所有客户
     Page<Customer> findAll(Pageable pageable);
 
+
+
+    Page<Customer> findByBelongUserIdIn(List<String> allowedUserIds, Pageable pageable);
+
     /**
      * 根据条件筛选客户
      *

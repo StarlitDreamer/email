@@ -100,11 +100,27 @@ public class RecipientController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
+            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
 
         return recipientService.findRecipientsByCriteria(
-                type, ownerUserId, level, name, status, tradeType, page, size);
+                currentUserId, currentUserRole, type, ownerUserId, level, name, status, tradeType, page, size);
     }
+//    @GetMapping("/search")
+//    public Result<Page<?>> findRecipientsByCriteria(
+//            @RequestParam(required = false, defaultValue = "customer") String type,
+//            @RequestParam(required = false) String ownerUserId,
+//            @RequestParam(required = false) Integer level,
+//            @RequestParam(required = false) String name,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) Integer tradeType,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        return recipientService.findRecipientsByCriteria(
+//                type, ownerUserId, level, name, status, tradeType, page, size);
+//    }
 
     /**
      * 根据条件筛选客户

@@ -6,10 +6,13 @@ import com.java.email.entity.UndeliveredEmail;
 import com.java.email.repository.UndeliveredEmailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -18,6 +21,9 @@ public class UndeliveredEmailService {
     @Autowired
     private UndeliveredEmailRepository undeliveredEmailRepository;
 
+
+    @Autowired
+    private UserService userService;
     /**
      * 根据条件筛选未送达邮件
      *
@@ -57,6 +63,53 @@ public class UndeliveredEmailService {
             return Result.error("查询失败: " + e.getMessage());
         }
     }
+
+    //    public Result<Page<UndeliveredEmail>> findUndeliveredEmailsByCriteria(
+//            String currentUserId, // 当前用户的ID
+//            int currentUserRole,  // 当前用户的角色
+//            String emailTaskId,
+//            List<String> receiverIds,
+//            List<String> senderIds,
+//            Integer resendStatus,
+//            Long errorCode,
+//            int page,
+//            int size) {
+//
+//        try {
+//            // 创建分页对象
+//            Pageable pageable = PageRequest.of(page, size);
+//
+//            // 根据用户角色决定查询条件
+//            if (currentUserRole == 1) { // 公司角色，可以查看所有未送达邮件
+//                return Result.success(undeliveredEmailRepository.findAll(pageable));
+//            } else if (currentUserRole == 2) { // 大管理角色，可以查看所有未送达邮件
+//                return Result.success(undeliveredEmailRepository.findAll(pageable));
+//            } else if (currentUserRole == 3) { // 小管理角色，可以查看公司、自己、下属用户的未送达邮件
+//                List<String> allowedUserIds = new ArrayList<>();
+//                allowedUserIds.add("1"); // 公司用户ID
+//                allowedUserIds.add(currentUserId); // 自己
+//                // 假设有一个方法可以获取当前用户的下属用户ID列表
+//                allowedUserIds.addAll(getSubordinateUserIds(currentUserId));
+//                return Result.success(undeliveredEmailRepository.findBySenderIdsInOrReceiverIdsIn(allowedUserIds, allowedUserIds, pageable));
+//            } else if (currentUserRole == 4) { // 普通用户，只能查看自己的未送达邮件
+//                return Result.success(undeliveredEmailRepository.findBySenderIdsInOrReceiverIdsIn(
+//                        Collections.singletonList(currentUserId), Collections.singletonList(currentUserId), pageable));
+//            } else {
+//                // 如果没有匹配的角色，返回空结果
+//                return Result.success(new PageImpl<>(Collections.emptyList()));
+//            }
+//        } catch (Exception e) {
+//            // 返回错误结果
+//            return Result.error("查询失败: " + e.getMessage());
+//        }
+//    }
+//
+//    // 假设有一个方法可以获取当前用户的下属用户ID列表
+//    private List<String> getSubordinateUserIds(String userId) {
+//        // 这里实现获取下属用户ID的逻辑
+//        // 例如：从数据库或ES中查询
+//        return userService.getSubordinateUserIds(userId);
+//    }
 
     /**
      * 分页查询未送达邮件数据
