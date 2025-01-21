@@ -17,7 +17,7 @@ public class CustomerService {
     /**
      * 根据条件筛选客户
      *
-     * @param ownerUserId   所属用户ID
+     * @param belongUserId   所属用户ID
      * @param customerLevel 客户等级
      * @param customerName  客户名称
      * @param status        分配状态
@@ -26,7 +26,7 @@ public class CustomerService {
      * @param size          每页大小
      * @return 符合条件的客户分页结果
      */
-    public Result<Page<Customer>> findCustomersByCriteria(String ownerUserId, Integer customerLevel,
+    public Result<Page<Customer>> findCustomersByCriteria(String belongUserId, Integer customerLevel,
                                                           String customerName, Integer status, Integer tradeType,
                                                           int page, int size) {
         try {
@@ -36,8 +36,8 @@ public class CustomerService {
             Pageable pageable = PageRequest.of(page, size);
 
             // 动态构建查询条件
-            if (ownerUserId != null) {
-                customers = customerRepository.findByBelongUserId(ownerUserId, pageable);
+            if (belongUserId != null) {
+                customers = customerRepository.findByBelongUserId(belongUserId, pageable);
             } else if (customerLevel != null) {
                 customers = customerRepository.findByCustomerLevel(customerLevel, pageable);
             } else if (customerName != null) {
