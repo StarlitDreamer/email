@@ -55,6 +55,18 @@ public class SupplierController {
 //                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
 //    }
 
+    /**
+     * 根据条件筛选供应商,并存入redis返回rediskey
+     *
+     * @param ownerUserId   所属用户ID
+     * @param supplierLevel 供应商等级
+     * @param supplierName  供应商名称
+     * @param status        分配状态
+     * @param tradeType     贸易类型
+     * @param page          页码
+     * @param size          每页大小
+     * @return 符合条件的供应商分页结果
+     */
     @GetMapping("/search-redis")
     public Result<String> findSuppliersByCriteriaRedis(
             @RequestParam(required = false) String ownerUserId,
@@ -63,9 +75,25 @@ public class SupplierController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader("currentUserId") String currentUserId,
+            @RequestHeader("currentUserRole") int currentUserRole) {
 
         return supplierService.findSuppliersByCriteriaRedis(
-                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
+                ownerUserId, supplierLevel, supplierName, status, tradeType,
+                page, size, currentUserId, currentUserRole);
     }
+//    @GetMapping("/search-redis")
+//    public Result<String> findSuppliersByCriteriaRedis(
+//            @RequestParam(required = false) String ownerUserId,
+//            @RequestParam(required = false) Integer supplierLevel,
+//            @RequestParam(required = false) String supplierName,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) Integer tradeType,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        return supplierService.findSuppliersByCriteriaRedis(
+//                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
+//    }
 }

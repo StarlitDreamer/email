@@ -26,4 +26,6 @@ public interface UndeliveredEmailRepository extends ElasticsearchRepository<Unde
 
     // 分页查询所有未送达邮件
     Page<UndeliveredEmail> findAll(Pageable pageable);
+
+    Page<UndeliveredEmail> findBySenderIdsContaining(String currentUserId, Pageable pageable);
 }

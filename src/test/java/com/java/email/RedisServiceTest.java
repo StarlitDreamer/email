@@ -62,7 +62,7 @@ public class RedisServiceTest {
     @Test
     public void testSetAndGetKey() {
         // 测试数据
-        String key = "customer:search:9617e3ae-f9ae-4e7e-a042-5be625fc9b0d";
+        String key = "supplier:search:08ad1cf1-347f-48a1-8689-c0a42cbc907f";
 //        String value = "testValue";
 
         // 设置值

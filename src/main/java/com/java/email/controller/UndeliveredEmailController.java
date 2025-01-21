@@ -29,18 +29,33 @@ public class UndeliveredEmailController {
      * @return 符合条件的未送达邮件分页结果
      */
     @GetMapping("/search")
-    public Result<Page<UndeliveredEmail>> findUndeliveredEmailsByCriteria(
+    public Result<Page<UndeliveredEmail>> getUndeliveredEmails(
             @RequestParam(required = false) String emailTaskId,
             @RequestParam(required = false) List<String> receiverIds,
             @RequestParam(required = false) List<String> senderIds,
             @RequestParam(required = false) Integer resendStatus,
             @RequestParam(required = false) Long errorCode,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader("currentUserId") String currentUserId,
+            @RequestHeader("currentUserRole") int currentUserRole) {
         return undeliveredEmailService.findUndeliveredEmailsByCriteria(
-                emailTaskId, receiverIds, senderIds, resendStatus, errorCode, page, size);
+                emailTaskId, receiverIds, senderIds, resendStatus, errorCode,
+                page, size, currentUserId, currentUserRole);
     }
+//    @GetMapping("/search")
+//    public Result<Page<UndeliveredEmail>> findUndeliveredEmailsByCriteria(
+//            @RequestParam(required = false) String emailTaskId,
+//            @RequestParam(required = false) List<String> receiverIds,
+//            @RequestParam(required = false) List<String> senderIds,
+//            @RequestParam(required = false) Integer resendStatus,
+//            @RequestParam(required = false) Long errorCode,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        return undeliveredEmailService.findUndeliveredEmailsByCriteria(
+//                emailTaskId, receiverIds, senderIds, resendStatus, errorCode, page, size);
+//    }
 
 //    @GetMapping("/search")
 //    public Result<Page<UndeliveredEmail>> findUndeliveredEmailsByCriteria(

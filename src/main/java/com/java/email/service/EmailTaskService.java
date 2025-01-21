@@ -185,6 +185,11 @@ public class EmailTaskService {
         return emailTaskRepository.save(emailTask);
     }
 
+    /**
+     * 创建节日发送的邮件任务
+     *
+     * @return 创建的任务对象
+     */
     public EmailTask createFestivalEmailTask(CreateFestivalEmailTaskRequest request) {
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(UUID.randomUUID().toString()); // 生成唯一ID

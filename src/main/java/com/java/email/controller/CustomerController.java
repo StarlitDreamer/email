@@ -76,9 +76,26 @@ public class CustomerController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
+            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
 
+        // 调用服务层方法，传递当前用户ID和角色
         return customerService.findCustomersByCriteriaRedis(
-                belongUserId, customerLevel, customerName, status, tradeType, page, size);
+                belongUserId, customerLevel, customerName, status, tradeType,
+                page, size, currentUserId, currentUserRole);
     }
+//    @GetMapping("/search-redis")
+//    public Result<String> findCustomersByCriteriaRedis(
+//            @RequestParam(required = false) String belongUserId,
+//            @RequestParam(required = false) Integer customerLevel,
+//            @RequestParam(required = false) String customerName,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) Integer tradeType,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        return customerService.findCustomersByCriteriaRedis(
+//                belongUserId, customerLevel, customerName, status, tradeType, page, size);
+//    }
 }

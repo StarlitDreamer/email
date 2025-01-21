@@ -38,31 +38,81 @@ public class UndeliveredEmailService {
      */
     public Result<Page<UndeliveredEmail>> findUndeliveredEmailsByCriteria(
             String emailTaskId, List<String> receiverIds, List<String> senderIds,
-            Integer resendStatus, Long errorCode, int page, int size) {
+            Integer resendStatus, Long errorCode, int page, int size,
+            String currentUserId, int currentUserRole) {
         try {
             // 创建分页对象
             Pageable pageable = PageRequest.of(page, size);
 
-            // 动态构建查询条件
-            if (emailTaskId != null) {
-                return Result.success(undeliveredEmailRepository.findByEmailTaskId(emailTaskId, pageable));
-            } else if (receiverIds != null && !receiverIds.isEmpty()) {
-                return Result.success(undeliveredEmailRepository.findByReceiverIdsIn(receiverIds, pageable));
-            } else if (senderIds != null && !senderIds.isEmpty()) {
-                return Result.success(undeliveredEmailRepository.findBySenderIdsIn(senderIds, pageable));
-            } else if (resendStatus != null) {
-                return Result.success(undeliveredEmailRepository.findByResendStatus(resendStatus, pageable));
-            } else if (errorCode != null) {
-                return Result.success(undeliveredEmailRepository.findByErrorCode(errorCode, pageable));
+            // 根据用户角色动态构建查询条件
+            if (currentUserRole == 4) { // 普通用户
+                // 只能查看 senderIds 中包含自己 userid 的未送达邮件
+                return Result.success(undeliveredEmailRepository.findBySenderIdsContaining(currentUserId, pageable));
+            } else if (currentUserRole == 3) { // 小管理
+                // 可以查看自己和附属用户的未送达邮件
+                List<String> allowedUserIds = new ArrayList<>();
+                allowedUserIds.add(currentUserId); // 自己
+                allowedUserIds.addAll(getSubordinateUserIds(currentUserId)); // 附属用户
+                return Result.success(undeliveredEmailRepository.findBySenderIdsIn(allowedUserIds, pageable));
+            } else if (currentUserRole == 2 || currentUserRole == 1) { // 大管理或公司
+                // 可以查看所有未送达邮件
+                if (emailTaskId != null) {
+                    return Result.success(undeliveredEmailRepository.findByEmailTaskId(emailTaskId, pageable));
+                } else if (receiverIds != null && !receiverIds.isEmpty()) {
+                    return Result.success(undeliveredEmailRepository.findByReceiverIdsIn(receiverIds, pageable));
+                } else if (senderIds != null && !senderIds.isEmpty()) {
+                    return Result.success(undeliveredEmailRepository.findBySenderIdsIn(senderIds, pageable));
+                } else if (resendStatus != null) {
+                    return Result.success(undeliveredEmailRepository.findByResendStatus(resendStatus, pageable));
+                } else if (errorCode != null) {
+                    return Result.success(undeliveredEmailRepository.findByErrorCode(errorCode, pageable));
+                } else {
+                    // 如果没有条件，返回所有未送达邮件（分页）
+                    return Result.success(undeliveredEmailRepository.findAll(pageable));
+                }
             } else {
-                // 如果没有条件，返回所有未送达邮件（分页）
-                return Result.success(undeliveredEmailRepository.findAll(pageable));
+                // 其他角色，返回空结果
+                return Result.success(new PageImpl<>(Collections.emptyList()));
             }
         } catch (Exception e) {
             // 返回错误结果
             return Result.error("查询失败: " + e.getMessage());
         }
     }
+
+    // 假设有一个方法可以获取当前用户的下属用户ID列表
+    private List<String> getSubordinateUserIds(String userId) {
+        // 这里实现获取下属用户ID的逻辑
+        // 例如：从数据库或ES中查询
+        return userService.getSubordinateUserIds(userId);
+    }
+//    public Result<Page<UndeliveredEmail>> findUndeliveredEmailsByCriteria(
+//            String emailTaskId, List<String> receiverIds, List<String> senderIds,
+//            Integer resendStatus, Long errorCode, int page, int size) {
+//        try {
+//            // 创建分页对象
+//            Pageable pageable = PageRequest.of(page, size);
+//
+//            // 动态构建查询条件
+//            if (emailTaskId != null) {
+//                return Result.success(undeliveredEmailRepository.findByEmailTaskId(emailTaskId, pageable));
+//            } else if (receiverIds != null && !receiverIds.isEmpty()) {
+//                return Result.success(undeliveredEmailRepository.findByReceiverIdsIn(receiverIds, pageable));
+//            } else if (senderIds != null && !senderIds.isEmpty()) {
+//                return Result.success(undeliveredEmailRepository.findBySenderIdsIn(senderIds, pageable));
+//            } else if (resendStatus != null) {
+//                return Result.success(undeliveredEmailRepository.findByResendStatus(resendStatus, pageable));
+//            } else if (errorCode != null) {
+//                return Result.success(undeliveredEmailRepository.findByErrorCode(errorCode, pageable));
+//            } else {
+//                // 如果没有条件，返回所有未送达邮件（分页）
+//                return Result.success(undeliveredEmailRepository.findAll(pageable));
+//            }
+//        } catch (Exception e) {
+//            // 返回错误结果
+//            return Result.error("查询失败: " + e.getMessage());
+//        }
+//    }
 
     //    public Result<Page<UndeliveredEmail>> findUndeliveredEmailsByCriteria(
 //            String currentUserId, // 当前用户的ID
