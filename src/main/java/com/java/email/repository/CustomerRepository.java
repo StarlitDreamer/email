@@ -34,6 +34,14 @@ public interface CustomerRepository extends ElasticsearchRepository<Customer, St
 
     Page<Customer> findByBelongUserIdIn(List<String> allowedUserIds, Pageable pageable);
 
+    Page<Customer> findByCustomerLevelAndBelongUserIdIn(Integer customerLevel, List<String> list, Pageable pageable);
+
+    Page<Customer> findByCustomerNameAndBelongUserIdIn(String customerName, List<String> list, Pageable pageable);
+
+    Page<Customer> findByStatusAndBelongUserIdIn(Integer status, List<String> list, Pageable pageable);
+
+    Page<Customer> findByTradeTypeAndBelongUserIdIn(Integer tradeType, List<String> list, Pageable pageable);
+
     /**
      * 根据条件筛选客户
      *

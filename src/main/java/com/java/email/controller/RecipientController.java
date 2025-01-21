@@ -134,19 +134,19 @@ public class RecipientController {
      * @param size          每页大小
      * @return 符合条件的客户分页结果
      */
-    @GetMapping("/customers/search")
-    public Result<Page<Customer>> findCustomersByCriteria(
-            @RequestParam(required = false) String ownerUserId,
-            @RequestParam(required = false) Integer customerLevel,
-            @RequestParam(required = false) String customerName,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-        return customerService.findCustomersByCriteria(
-                ownerUserId, customerLevel, customerName, status, tradeType, page, size);
-    }
+//    @GetMapping("/customers/search")
+//    public Result<Page<Customer>> findCustomersByCriteria(
+//            @RequestParam(required = false) String ownerUserId,
+//            @RequestParam(required = false) Integer customerLevel,
+//            @RequestParam(required = false) String customerName,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) Integer tradeType,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//
+//        return customerService.findCustomersByCriteria(
+//                ownerUserId, customerLevel, customerName, status, tradeType, page, size);
+//    }
 
     /**
      * 根据条件筛选供应商

@@ -32,7 +32,24 @@ public interface SupplierRepository extends ElasticsearchRepository<Supplier, St
 
 
 
-    Page<Supplier> findByBelongUseridIn(List<String> allowedUserIds, Pageable pageable);
+
+
+
+    // 根据 supplierLevel 和 belongUserid 列表查询
+    Page<Supplier> findBySupplierLevelAndBelongUseridIn(Integer supplierLevel, List<String> belongUserids, Pageable pageable);
+
+    // 根据 supplierName 和 belongUserid 列表查询
+    Page<Supplier> findBySupplierNameAndBelongUseridIn(String supplierName, List<String> belongUserids, Pageable pageable);
+
+    // 根据 status 和 belongUserid 列表查询
+    Page<Supplier> findByStatusAndBelongUseridIn(Integer status, List<String> belongUserids, Pageable pageable);
+
+    // 根据 tradeType 和 belongUserid 列表查询
+    Page<Supplier> findByTradeTypeAndBelongUseridIn(Integer tradeType, List<String> belongUserids, Pageable pageable);
+
+    // 根据 belongUserid 列表查询
+    Page<Supplier> findByBelongUseridIn(List<String> belongUserids, Pageable pageable);
+
 
     /**
      * 根据条件筛选供应商

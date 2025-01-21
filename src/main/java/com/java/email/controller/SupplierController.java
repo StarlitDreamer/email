@@ -5,10 +5,7 @@ import com.java.email.entity.Supplier;
 import com.java.email.service.SupplierService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/suppliers")
@@ -36,11 +33,27 @@ public class SupplierController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
+            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
 
+        // 调用服务层方法，传递当前用户ID和角色
         return supplierService.findSuppliersByCriteria(
-                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
+                ownerUserId, supplierLevel, supplierName, status, tradeType,
+                page, size, currentUserId, currentUserRole);
     }
+//    @GetMapping("/search")
+//    public Result<Page<Supplier>> findSuppliersByCriteria(
+//            @RequestParam(required = false) String ownerUserId,
+//            @RequestParam(required = false) Integer supplierLevel,
+//            @RequestParam(required = false) String supplierName,
+//            @RequestParam(required = false) Integer status,
+//            @RequestParam(required = false) Integer tradeType,
+//            @RequestParam(defaultValue = "0") int page,
+//            @RequestParam(defaultValue = "10") int size) {
+//        return supplierService.findSuppliersByCriteria(
+//                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
+//    }
 
     @GetMapping("/search-redis")
     public Result<String> findSuppliersByCriteriaRedis(
