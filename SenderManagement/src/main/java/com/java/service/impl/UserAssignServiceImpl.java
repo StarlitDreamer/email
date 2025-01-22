@@ -46,7 +46,7 @@ public class UserAssignServiceImpl implements UserAssignService {
         }
         String assignorName = ThreadLocalUtil.getUserName();  // 获取分配者名称
         String assigneeName = Objects.requireNonNull(Objects.requireNonNull(userService.getUserById(belong_user_id).source()).getUserName());  // 获取被分配者名称
-        String currentTime = DateUtil.now();
+        String currentTime = UserServiceImpl.setTimestamps();
         AssignProcess assignProcess = new AssignProcess(currentUser_id, assignorName, belong_user_id, assigneeName, currentTime);
         UserAssign userAssign = new UserAssign(currentUser_id, List.of(assignProcess));
         esClient.update(u -> u

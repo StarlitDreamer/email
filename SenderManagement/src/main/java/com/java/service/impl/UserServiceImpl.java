@@ -325,8 +325,8 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    public String setTimestamps() {
+    public static String setTimestamps() {
         LocalDateTime currentTime = LocalDateTime.now();
-        return currentTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
+        return currentTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
     }
 }

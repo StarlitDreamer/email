@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,9 +57,9 @@ public class User {
     @Field(type = FieldType.Integer)
     private int status; // 用户分配的状态
 
-    @Field(type = FieldType.Date)
+    @Field(type = FieldType.Keyword)
     private String createdAt; // 创建时间
 
-    @Field(type = FieldType.Date)
+    @Field(type = FieldType.Keyword)
     private String updatedAt; // 更新时间
 }

@@ -22,6 +22,6 @@ public class AssignProcess {
     @Field(type = FieldType.Text)
     private String assigneeName; // 被分配者名称
 
-    @Field(type = FieldType.Date)
+    @Field(type = FieldType.Keyword)
     private String assignDate;  // 分配日期
 }
