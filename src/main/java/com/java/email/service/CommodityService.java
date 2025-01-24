@@ -8,6 +8,7 @@ import com.java.email.model.CommodityCreateRequest;
 import com.java.email.model.CommodityFilterRequest;
 import com.java.email.model.CommodityDeleteRequest;
 import com.java.email.model.CommodityUpdateRequest;
+import com.java.email.model.CategoryUpdateRequest;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface CommodityService {
@@ -20,4 +21,5 @@ public interface CommodityService {
     Result<?> filterCommodity(CommodityFilterRequest request);
     Result<?> deleteCommodity(CommodityDeleteRequest request);
     Result<?> updateCommodity(CommodityUpdateRequest request);
+    Result<?> updateCategory(CategoryUpdateRequest request);
 } 

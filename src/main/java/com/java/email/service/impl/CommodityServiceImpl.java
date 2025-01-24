@@ -18,6 +18,7 @@ import com.java.email.model.CommodityFilterResponse;
 import com.java.email.model.CommodityVO;
 import com.java.email.model.CommodityDeleteRequest;
 import com.java.email.model.CommodityUpdateRequest;
+import com.java.email.model.CategoryUpdateRequest;
 import com.java.email.service.CommodityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -534,6 +535,48 @@ public class CommodityServiceImpl implements CommodityService {
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("更新商品失败：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<?> updateCategory(CategoryUpdateRequest request) {
+        try {
+            // 检查参数
+            if (request.getCategory_id() == null || request.getCategory_id().trim().isEmpty()) {
+                return Result.error("品类ID不能为空");
+            }
+            if (request.getCategory_name() == null || request.getCategory_name().trim().isEmpty()) {
+                return Result.error("品类名称不能为空");
+            }
+
+            // 先检查品类是否存在
+            boolean exists = elasticsearchClient.exists(e -> e
+                    .index("category_index")
+                    .id(request.getCategory_id())
+            ).value();
+
+            if (!exists) {
+                return Result.error("品类不存在，ID: " + request.getCategory_id());
+            }
+
+            // 构建更新文档
+            Map<String, Object> document = new HashMap<>();
+            document.put("category_name", request.getCategory_name());
+
+            // 执行更新操作
+            elasticsearchClient.update(u -> u
+                    .index("category_index")
+                    .id(request.getCategory_id())
+                    .doc(document),
+                    Map.class
+            );
+
+            // 构建响应数据
+            Map<String, Object> resultData = new HashMap<>();
+            resultData.put("category_id", request.getCategory_id());
+            return Result.success(resultData);
+        } catch (Exception e) {
+            return Result.error("更新品类失败：" + e.getMessage());
         }
     }
 } 
