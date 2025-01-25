@@ -8,11 +8,14 @@
         <version>3.4.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
+    <!-- 子模块的基本信息 -->
     <groupId>com.java</groupId>
-    <artifactId>email</artifactId>
+    <artifactId>FileAndReceiver</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>email</name>
-    <description>email</description>
+    <name>FileAndReceiver</name>
+    <description>Spring Boot FileAndReceiver module</description>
+
     <url/>
     <licenses>
         <license/>
