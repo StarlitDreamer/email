@@ -1,5 +1,6 @@
 package com.java.email.common.userCommon;
 
+import com.java.email.constant.UserConstData;
 import com.java.email.esdao.repository.user.UserRepository;
 import com.java.email.utils.LogUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,6 +62,10 @@ public class ThreadLocalUtil {
                 logUtil.error("ThreadLocalUtil getUserRole error: userMap is null or role not found");
                 return null;
             }
+            if ((Integer) userMap.get("role") != UserConstData.ROLE_ADMIN_LARGE && (Integer) userMap.get("role") != UserConstData.ROLE_ADMIN_SMALL && (Integer) userMap.get("role") != UserConstData.ROLE_USER) {
+                logUtil.error("ThreadLocalUtil getUserRole error: user role is error");
+                return null;
+            }
             return (Integer) userMap.get("role");
         } catch (Exception e) {
             logUtil.error("ThreadLocalUtil getUserRole error: " + e);
@@ -76,7 +81,12 @@ public class ThreadLocalUtil {
                 logUtil.error("ThreadLocalUtil getUserName error: userMap is null or name not found");
                 return null;
             }
-            return (String) userMap.get("name");
+            String userName = (String) userMap.get("name");
+            if (userName == null || userName.isEmpty()) {
+                logUtil.error("ThreadLocalUtil getUserName error: userName is null or empty");
+                return null;
+            }
+            return userName;
         } catch (Exception e) {
             logUtil.error("ThreadLocalUtil getUserName error: " + e);
             return null;

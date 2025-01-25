@@ -1,32 +1,37 @@
-package com.java.email.model.entity.file;
+package com.java.email.model.entity.template;
 
-import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
+import lombok.Data;
+
 import java.util.List;
 
 @Data
-@Document(indexName = "img")
-public class ImgDocument {
-    
+@Document(indexName = "template")
+public class TemplateDocument {
+
     @Id
-    private String imgId;
-
     @Field(type = FieldType.Keyword)
-    private String imgUrl;
-
-    @Field(type = FieldType.Keyword)
-    private String imgSize;
+    private String templateId;
 
     @Field(type = FieldType.Text, analyzer = "ik_max_word")
-    private String imgName;
+    private String templateName;
+
+    @Field(type = FieldType.Keyword)
+    private String templateTypeId;
+
+    @Field(type = FieldType.Text)
+    private String templateContent;
 
     @Field(type = FieldType.Keyword)
     private String creatorId;
+
+    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    private String creatorName;
 
     @Field(type = FieldType.Keyword)
     private List<String> belongUserId;
@@ -39,4 +44,5 @@ public class ImgDocument {
 
     @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
     private String updatedAt;
+
 } 

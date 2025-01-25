@@ -34,9 +34,9 @@ public class AttachmentDocument {
     @Field(type = FieldType.Integer)
     private Integer status;
 
-    @Field(type = FieldType.Date, format = DateFormat.basic_date_time)
+    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
     private String createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.basic_date_time)
+    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
     private String updatedAt;
 } 

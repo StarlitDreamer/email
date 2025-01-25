@@ -1,7 +1,8 @@
-package com.java.email.model.entity;
+package com.java.email.model.entity.user;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
@@ -45,9 +46,9 @@ public class UserDocument {
     @Field(type = FieldType.Integer)
     private Integer status;
 
-    @Field(type = FieldType.Date, index = false)
+    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
     private String createdAt;
 
-    @Field(type = FieldType.Date,index = false)
+    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
     private String updatedAt;
 } 
