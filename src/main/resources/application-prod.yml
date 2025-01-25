@@ -1,6 +1,6 @@
 spring:
   elasticsearch:
-    uris: http://112.35.176.43:9200
+    uris: http://localhost:9200
   # data:
   #   redis:
   #     host: 112.35.176.43  # Redis服务器地址
