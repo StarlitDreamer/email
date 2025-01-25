@@ -1,0 +1,9 @@
+spring:
+  elasticsearch:
+    uris: http://localhost:9200
+    username: elastic
+    password: your_password
+
+logging:
+  level:
+    org.easyarch.email: DEBUG 

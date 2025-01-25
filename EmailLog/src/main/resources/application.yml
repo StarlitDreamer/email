@@ -1,0 +1,13 @@
+netty:
+  port: 8888
+  bossThreads: 1
+  workerThreads: 4
+  backlog: 128
+  keepAlive: true
+  maxContentLength: 65536
+
+spring:
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 5000
+    socket-timeout: 5000
