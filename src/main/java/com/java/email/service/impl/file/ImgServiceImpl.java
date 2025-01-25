@@ -5,9 +5,9 @@ import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
 import com.java.email.constant.MagicMathConstData;
 import com.java.email.constant.UserConstData;
-import com.java.email.model.entity.UserDocument;
 import com.java.email.model.entity.file.ImgAssignDocument;
 import com.java.email.model.entity.file.ImgDocument;
+import com.java.email.model.entity.user.UserDocument;
 import com.java.email.esdao.repository.file.ImgRepository;
 import com.java.email.esdao.repository.file.ImgAssignRepository;
 import com.java.email.esdao.repository.user.UserRepository;
@@ -65,6 +65,10 @@ public class ImgServiceImpl implements ImgService {
             if (userId == null) {
                 return new Result(ResultCode.R_UserNotFound);
             }
+            Integer userRole = ThreadLocalUtil.getUserRole();
+            if (userRole == null) {
+                return new Result(ResultCode.R_UserNotFound);
+            }
             // 参数校验
             if (request == null || !request.containsKey("img")) {
                 return new Result(ResultCode.R_ParamError);
@@ -92,7 +96,12 @@ public class ImgServiceImpl implements ImgService {
                 doc.setImgName(img.get("img_name"));
                 doc.setCreatorId(userId);
                 doc.setBelongUserId(belongUserIds);
-                doc.setStatus(MagicMathConstData.IMG_STATUS_UNASSIGNED);
+                // 普通用户上传的附件默认是已分配
+                if (userRole == 4) {
+                    doc.setStatus(MagicMathConstData.IMG_STATUS_ASSIGNED);
+                } else {
+                    doc.setStatus(MagicMathConstData.IMG_STATUS_UNASSIGNED);
+                }
                 doc.setCreatedAt(currentTime);
                 doc.setUpdatedAt(currentTime);
                 imgDocuments.add(doc);
@@ -152,9 +161,9 @@ public class ImgServiceImpl implements ImgService {
 
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
-                if (!belongUserIds.contains("1")) {
+                if (!belongUserIds.contains(UserConstData.COMPANY_USER_ID)) {
                     for (UserDocument userDoc : userDocs.values()) {
-                        if (!userDoc.getBelongUserId().equals(assignId)) {
+                        if (!userDoc.getBelongUserId().equals(assignId) && !userDoc.getUserId().equals(assignId)) {
                             return new Result(ResultCode.R_NotBelongToAdmin);
                         }
                     }
@@ -252,91 +261,6 @@ public class ImgServiceImpl implements ImgService {
     }
 
     @Override
-    public Result deleteImg(Map<String, Object> request) {
-        // 参数校验
-        if (!request.containsKey("img_id")) {
-            return new Result(ResultCode.R_ParamError);
-        }
-        String imgId = (String) request.get("img_id");
-        ImgDocument imgDoc = imgRepository.findById(imgId).orElse(null);
-        if (imgDoc == null) {
-            return new Result(ResultCode.R_ImgNotFound);
-        }
-        // 获取当前用户信息
-        String currentUserId = ThreadLocalUtil.getUserId();
-        Integer userRole = ThreadLocalUtil.getUserRole();
-        if (currentUserId == null || userRole == null) {
-            return new Result(ResultCode.R_UserNotFound);
-        }
-
-        // 角色2可以直接删除
-        if (userRole == 2) {
-            // Continue to delete
-        }
-        // 角色3需要检查创建者和所属用户
-        else if (userRole == 3) {
-            String creatorId = imgDoc.getCreatorId();
-            List<String> belongUserIds = imgDoc.getBelongUserId();
-
-            // 检查是否为创建者且在所属用户中
-            boolean isCreatorAndBelongs = currentUserId.equals(creatorId) &&
-                    (belongUserIds != null && belongUserIds.contains(currentUserId));
-
-            // 如果是创建者且在所属用户中，直接删除
-            if (isCreatorAndBelongs) {
-                try {
-                    imgRepository.deleteById(imgId);
-                    return new Result(ResultCode.R_Ok);
-                } catch (Exception e) {
-                    logUtil.error("Error deleting img: " + e.getMessage());
-                    return new Result(ResultCode.R_DeleteFileError);
-                }
-            }
-
-            // 检查创建者和所属用户是否都包含下属
-            boolean hasSubordinates = false;
-            // 检查创建者是否为下属
-            UserDocument creator = userRepository.findByUserId(creatorId).orElse(null);
-            boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
-
-            // 检查所属用户是否包含下属
-            boolean hasBelongUserSubordinate = false;
-            if (belongUserIds != null && !belongUserIds.isEmpty()) {
-                hasBelongUserSubordinate = belongUserIds.stream()
-                        .map(id -> userRepository.findByUserId(id).orElse(null))
-                        .filter(user -> user != null)
-                        .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
-            }
-
-            hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
-            if (!hasSubordinates) {
-                return new Result(ResultCode.R_NoAuth);
-            }
-        }
-        // 角色4需要检查是否为创建者且是所属用户
-        else if (userRole == 4) {
-            String creatorId = imgDoc.getCreatorId();
-            List<String> belongUserIds = imgDoc.getBelongUserId();
-
-            if (!currentUserId.equals(creatorId) ||
-                    belongUserIds == null ||
-                    !belongUserIds.contains(currentUserId)) {
-                return new Result(ResultCode.R_NoAuth);
-            }
-        } else {
-            return new Result(ResultCode.R_NoAuth);
-        }
-        // 删除附件
-        try {
-            imgRepository.deleteById(imgId);
-            return new Result(ResultCode.R_Ok);
-        } catch (Exception e) {
-            logUtil.error("Error deleting img: " + e.getMessage());
-            return new Result(ResultCode.R_DeleteFileError);
-        }
-    }
-
-    @Override
     public Result filterImg(Map<String, Object> request) {
         // 参数校验
         if (request == null) {
@@ -360,8 +284,8 @@ public class ImgServiceImpl implements ImgService {
             return new Result(ResultCode.R_ParamError);
         }
 
-        // 如果belongUserName是"公司"，直接执行查询
-        if (StringUtils.hasText(belongUserName) && "公司".equals(belongUserName)) {
+        // 如果所属用户是"公司"，直接执行查询
+        if (StringUtils.hasText(belongUserName) && UserConstData.COMPANY_USER_NAME.equals(belongUserName)) {
             BoolQuery.Builder mainQuery = new BoolQuery.Builder();
 
             // 公司id默认是1
@@ -375,10 +299,10 @@ public class ImgServiceImpl implements ImgService {
             // 添加图片名称条件
             if (StringUtils.hasText(imgName)) {
                 mainQuery.must(m -> m
-                    .wildcard(t -> t
-                    .field("imgName")
-                    .wildcard("*" + imgName + "*")
-                    )
+                        .match(t -> t
+                                .field("imgName")
+                                .query(imgName)
+                        )
                 );
             }
 
@@ -451,10 +375,10 @@ public class ImgServiceImpl implements ImgService {
             boolean hasValidConditions = false;  // 标记是否有有效的查询条件
 
             // 检查是否有任何查询条件
-            if (!StringUtils.hasText(imgName) && 
-                !StringUtils.hasText(belongUserName) && 
-                !StringUtils.hasText(creatorName) && 
-                (status == null || status == 0)) {
+            if (!StringUtils.hasText(imgName) &&
+                    !StringUtils.hasText(belongUserName) &&
+                    !StringUtils.hasText(creatorName) &&
+                    (status == null || status == 0)) {
                 // 没有查询条件时，直接查询所有数据
                 mainQuery.must(m -> m
                         .matchAll(ma -> ma)
@@ -463,10 +387,10 @@ public class ImgServiceImpl implements ImgService {
                 // 有查询条件时的处理
                 if (StringUtils.hasText(imgName)) {
                     mainQuery.must(m -> m
-                        .wildcard(t -> t
-                        .field("imgName")
-                        .wildcard("*" + imgName + "*")
-                        )
+                            .match(t -> t
+                                    .field("imgName")
+                                    .query(imgName)
+                            )
                     );
                     hasValidConditions = true;
                 }
@@ -559,20 +483,20 @@ public class ImgServiceImpl implements ImgService {
             boolean hasValidConditions = false;  // 标记是否有有效的查询条件
 
             // 检查是否有任何查询条件
-            if (!StringUtils.hasText(imgName) && 
-                !StringUtils.hasText(belongUserName) && 
-                !StringUtils.hasText(creatorName) && 
-                (status == null || status == 0)) {
+            if (!StringUtils.hasText(imgName) &&
+                    !StringUtils.hasText(belongUserName) &&
+                    !StringUtils.hasText(creatorName) &&
+                    (status == null || status == 0)) {
                 // 没有查询条件时，直接查询所有有权限的数据
-                
+
             } else {
                 // 有查询条件时的处理
                 if (StringUtils.hasText(imgName)) {
                     mainQuery.must(m -> m
-                        .wildcard(t -> t
-                        .field("imgName")
-                        .wildcard("*" + imgName + "*")
-                        )
+                            .match(t -> t
+                                    .field("imgName")
+                                    .query(imgName)
+                            )
                     );
                     hasValidConditions = true;
                 }
@@ -648,7 +572,6 @@ public class ImgServiceImpl implements ImgService {
                             .value(currentUserId)
                     )
             );
-            // 添加下属的创建者条件
             List<UserDocument> subordinates = userRepository.findByBelongUserId(currentUserId);
             if (!subordinates.isEmpty()) {
                 for (UserDocument sub : subordinates) {
@@ -669,7 +592,6 @@ public class ImgServiceImpl implements ImgService {
                             .value(currentUserId)
                     )
             );
-
             if (!subordinates.isEmpty()) {
                 for (UserDocument sub : subordinates) {
                     belongAccessQuery.should(s -> s
@@ -681,6 +603,7 @@ public class ImgServiceImpl implements ImgService {
                 }
             }
             accessQuery.should(s -> s.bool(belongAccessQuery.build()));
+
             // 至少满足一个权限条件
             accessQuery.minimumShouldMatch("1");
             mainQuery.must(m -> m.bool(accessQuery.build()));
@@ -715,9 +638,9 @@ public class ImgServiceImpl implements ImgService {
         // 角色4 - 普通用户
         else if (userRole == 4) {
             // 普通用户不允许查询创建者
-            if(StringUtils.hasText(creatorName)){
+            if (StringUtils.hasText(creatorName)) {
                 return new Result(ResultCode.R_ParamError);
-            }   
+            }
             // 状态只能为0
             if (status != 0) {
                 return new Result(ResultCode.R_ParamError);
@@ -731,10 +654,10 @@ public class ImgServiceImpl implements ImgService {
             // 添加图片名称条件
             if (StringUtils.hasText(imgName)) {
                 mainQuery.must(m -> m
-                    .wildcard(t -> t
-                    .field("imgName")
-                    .wildcard("*" + imgName + "*")
-                    )
+                        .match(t -> t
+                                .field("imgName")
+                                .query(imgName)
+                        )
                 );
             }
 
@@ -806,7 +729,75 @@ public class ImgServiceImpl implements ImgService {
         return new Result(ResultCode.R_Fail);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result deleteImg(Map<String, Object> request) {
+        // 参数校验
+        if (!request.containsKey("img_id")) {
+            return new Result(ResultCode.R_ParamError);
+        }
+        String imgId = (String) request.get("img_id");
+        ImgDocument imgDoc = imgRepository.findById(imgId).orElse(null);
+        if (imgDoc == null) {
+            return new Result(ResultCode.R_ImgNotFound);
+        }
+        // 获取当前用户信息
+        String currentUserId = ThreadLocalUtil.getUserId();
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (currentUserId == null || userRole == null) {
+            return new Result(ResultCode.R_UserNotFound);
+        }
 
+        // 角色3需要检查创建者和所属用户
+        if (userRole == 3) {
+            String creatorId = imgDoc.getCreatorId();
+            List<String> belongUserIds = imgDoc.getBelongUserId();
+
+            // 检查是否为创建者
+            boolean isCreator = currentUserId.equals(creatorId);
+
+            // 检查创建者和所属用户是否都包含下属
+            // 检查创建者是否为下属
+            UserDocument creator = userRepository.findByUserId(creatorId).orElse(null);
+            boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
+            // 检查所属用户是否包含下属
+            boolean hasBelongUserSubordinate = false;
+            if (belongUserIds != null && !belongUserIds.isEmpty()) {
+                hasBelongUserSubordinate = belongUserIds.stream()
+                        .map(id -> userRepository.findByUserId(id).orElse(null))
+                        .filter(user -> user != null)
+                        .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
+            }
+            boolean hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
+
+            // 如果既不是创建人，也不是下属，则无权删除
+            if (!isCreator && !hasSubordinates) {
+                return new Result(ResultCode.R_NoAuth);
+            }
+        }
+        // 角色4需要检查是否为创建者且是所属用户
+        if (userRole == 4) {
+            String creatorId = imgDoc.getCreatorId();
+            List<String> belongUserIds = imgDoc.getBelongUserId();
+
+            if (!currentUserId.equals(creatorId) ||
+                    belongUserIds == null ||
+                    !belongUserIds.contains(currentUserId)) {
+                return new Result(ResultCode.R_NoAuth);
+            }
+        } 
+        // 删除附件
+        try {
+            imgRepository.deleteById(imgId);
+            imgAssignRepository.deleteById(imgId);
+            return new Result(ResultCode.R_Ok);
+        } catch (Exception e) {
+            logUtil.error("Error deleting img: " + e.getMessage());
+            return new Result(ResultCode.R_DeleteFileError);
+        }
+    }
+
+    
     // 处理查询结果，转换为所需格式
     private List<Map<String, Object>> convertToResponseFormat(List<ImgDocument> documents) {
         return documents.stream().map(doc -> {

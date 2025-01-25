@@ -5,7 +5,6 @@ import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.constant.UserConstData;
-import com.java.email.model.entity.UserDocument;
 import com.java.email.service.file.FileService;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +15,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import com.java.email.esdao.repository.user.UserRepository;
+import com.java.email.model.entity.user.UserDocument;
 
 @Service
 public class FileServiceImpl implements FileService {
@@ -55,23 +55,23 @@ public class FileServiceImpl implements FileService {
         userName = userName != null ? userName : "";
         userAccount = userAccount != null ? userAccount : "";
         userEmail = userEmail != null ? userEmail : "";
-        
+
         // 根据角色判断查询逻辑
         if (userRole == 2) {
             // 角色2可以直接查询所有符合条件的用户
             List<UserDocument> users = userRepository.findByUserNameLikeAndUserAccountLikeAndUserEmailLike(
-                userName, userAccount, userEmail);
+                    userName, userAccount, userEmail);
 
             // 过滤掉userId为1的用户，并且只返回id和name
             List<Map<String, String>> filteredUsers = users.stream()
-                .filter(u -> !UserConstData.COMPANY_USER_ID.equals(u.getUserId()))
-                .map(user -> {
-                    Map<String, String> filtered = new HashMap<>();
-                    filtered.put("id", user.getUserId());
-                    filtered.put("name", user.getUserName());
-                    return filtered;
-                })
-                .collect(Collectors.toList());
+                    .filter(u -> !UserConstData.COMPANY_USER_ID.equals(u.getUserId()))
+                    .map(user -> {
+                        Map<String, String> filtered = new HashMap<>();
+                        filtered.put("id", user.getUserId());
+                        filtered.put("name", user.getUserName());
+                        return filtered;
+                    })
+                    .collect(Collectors.toList());
 
             // 计算总数
             int total = filteredUsers.size();
@@ -86,29 +86,29 @@ public class FileServiceImpl implements FileService {
 
             // 构建分页响应
             PageResponse<Map<String, String>> pageResponse = new PageResponse<>();
-            pageResponse.setTotalItems(total);
-            pageResponse.setPageNum(pageNum);
-            pageResponse.setPageSize(pageSize);
-            pageResponse.setItems(pagedUsers);
+            pageResponse.setTotal_items(total);
+            pageResponse.setPage_num(pageNum);
+            pageResponse.setPage_size(pageSize);
+            pageResponse.setData(pagedUsers);
 
             return new Result(ResultCode.R_Ok, pageResponse);
-                        
+
         } else if (userRole == 3) {
             // 角色3需要过滤,只返回自己和下属
             List<UserDocument> users = userRepository.findByUserNameLikeAndUserAccountLikeAndUserEmailLike(
-                userName, userAccount, userEmail);
-                
+                    userName, userAccount, userEmail);
+
             // 过滤结果,只保留自己和下属
             List<Map<String, String>> filteredUsers = users.stream()
-                .filter(u -> currentUserId.equals(u.getUserId()) || // 是自己
-                           currentUserId.equals(u.getBelongUserId())) // 是下属
-                .map(user -> {
-                    Map<String, String> filtered = new HashMap<>();
-                    filtered.put("id", user.getUserId());
-                    filtered.put("name", user.getUserName());
-                    return filtered;
-                })
-                .collect(Collectors.toList());
+                    .filter(u -> currentUserId.equals(u.getUserId()) || // 是自己
+                            currentUserId.equals(u.getBelongUserId())) // 是下属
+                    .map(user -> {
+                        Map<String, String> filtered = new HashMap<>();
+                        filtered.put("id", user.getUserId());
+                        filtered.put("name", user.getUserName());
+                        return filtered;
+                    })
+                    .collect(Collectors.toList());
 
             // 计算总数
             int total = filteredUsers.size();
@@ -121,13 +121,13 @@ public class FileServiceImpl implements FileService {
 
             // 构建分页响应
             PageResponse<Map<String, String>> pageResponse = new PageResponse<>();
-            pageResponse.setTotalItems(total);
-            pageResponse.setPageNum(pageNum);
-            pageResponse.setPageSize(pageSize);
-            pageResponse.setItems(pagedUsers);
+            pageResponse.setTotal_items(total);
+            pageResponse.setPage_num(pageNum);
+            pageResponse.setPage_size(pageSize);
+            pageResponse.setData(pagedUsers);
 
             return new Result(ResultCode.R_Ok, pageResponse);
-            
+
         } else {
             return new Result(ResultCode.R_NoAuth);
         }

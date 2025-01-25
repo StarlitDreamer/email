@@ -36,13 +36,15 @@ public enum ResultCode {
     R_CreatorError(419,"创建人错误"),
     R_BelongUserError(420,"所属用户错误"),
     R_ImgNotFound(421,"图片不存在"),
-
-
-
-
+    R_TemplateNotFound(422,"模板不存在"),
+    R_BelongUserNotFound(423,"所属用户不存在"),
+    R_CommodityNotFound(424,"商品不存在"),
+    R_CountryNotFound(425,"国家不存在"),
+    R_SupplierNotFound(426,"供应商不存在"),
+    R_CustomerNotFound(427,"客户不存在"),
     //-----------------------系统相关错误 401-500---------------------
     R_SaveFileError(503,"文件保存异常"),
-    R_DeleteFileError(504,"文件删除异常"),  
+    R_DeleteFileError(504,"文件删除异常"), 
     ;
 
     private int code;

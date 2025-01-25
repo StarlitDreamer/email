@@ -1,21 +1,5 @@
-package com.java.email.service.impl.file;
+package com.java.email.service.impl.email;
 
-import com.java.email.common.Response.PageResponse;
-import com.java.email.common.Response.Result;
-import com.java.email.common.Response.ResultCode;
-import com.java.email.constant.MagicMathConstData;
-import com.java.email.constant.UserConstData;
-import com.java.email.model.entity.file.AttachmentAssignDocument;
-import com.java.email.model.entity.file.AttachmentDocument;
-import com.java.email.model.entity.user.UserDocument;
-import com.java.email.esdao.repository.file.AttachmentAssignRepository;
-import com.java.email.esdao.repository.file.AttachmentRepository;
-import com.java.email.esdao.repository.user.UserRepository;
-import com.java.email.service.file.AttachmentService;
-import com.java.email.utils.LogUtil;
-import com.java.email.common.userCommon.ThreadLocalUtil;
-import com.java.email.common.userCommon.SubordinateValidation;
-import com.java.email.common.userCommon.SubordinateValidation.ValidationResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +9,27 @@ import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+
+import com.java.email.service.email.TemplateService;
+import com.java.email.utils.LogUtil;
+import com.java.email.common.Response.PageResponse;
+import com.java.email.common.Response.Result;
+import com.java.email.common.Response.ResultCode;
+import com.java.email.common.userCommon.SubordinateValidation;
+import com.java.email.common.userCommon.SubordinateValidation.ValidationResult;
+import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.email.constant.MagicMathConstData;
+import com.java.email.constant.UserConstData;
+import com.java.email.model.entity.dictionary.EmailTypeDocument;
+import com.java.email.model.entity.file.AttachmentAssignDocument;
+import com.java.email.model.entity.file.AttachmentDocument;
+import com.java.email.model.entity.template.TemplateAssignDocument;
+import com.java.email.model.entity.template.TemplateDocument;
+import com.java.email.model.entity.user.UserDocument;
+import com.java.email.esdao.repository.template.TemplateRepository;
+import com.java.email.esdao.repository.user.UserRepository;
+import com.java.email.esdao.repository.dictionary.EmailTypeRepository;
+import com.java.email.esdao.repository.template.TemplateAssignRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -33,22 +37,29 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.util.StringUtils;
+
 import java.util.stream.Collectors;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 
 @Service
-public class AttachmentServiceImpl implements AttachmentService {
+public class TemplateServiceImpl implements TemplateService {
+    @Autowired
+    private TemplateRepository templateRepository;
 
     @Autowired
-    private AttachmentRepository attachmentRepository;
+    private TemplateAssignRepository templateAssignRepository;
 
-    @Autowired
-    private AttachmentAssignRepository attachmentAssignRepository;
+    private static final LogUtil logUtil = LogUtil.getLogger(TemplateServiceImpl.class);
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EmailTypeRepository emailTypeRepository;
 
     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
@@ -56,104 +67,138 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Autowired
     private SubordinateValidation subordinateValidation;
 
-    private static final LogUtil logUtil = LogUtil.getLogger(AttachmentServiceImpl.class);
-
-
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result uploadAttachment(Map<String, List<Map<String, String>>> request) {
+    public Result saveTemplate(Map<String, Object> request) {
+        // 参数校验
+        if (request == null) {
+            return new Result(ResultCode.R_ParamError);
+        }
+
+        String templateId = (String) request.get("template_id");
+        String templateName = (String) request.get("template_name");
+        String templateTypeId = (String) request.get("template_type_id");
+        String templateContent = (String) request.get("template_content");
+
+        // 验证模板类型id
+        EmailTypeDocument emailTypeDoc = emailTypeRepository.findById(templateTypeId).orElse(null);
+        if (emailTypeDoc == null) {
+            return new Result(ResultCode.R_ParamError);
+        }
+
+        // 校验必填字段
+        if (!StringUtils.hasText(templateName) ||
+                !StringUtils.hasText(templateTypeId) ||
+                !StringUtils.hasText(templateContent)) {
+            return new Result(ResultCode.R_ParamError);
+        }
+
+        // 获取当前时间
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        String currentTime = LocalDateTime.now().format(formatter);
+
+        // 获取当前用户ID
+        String userId = ThreadLocalUtil.getUserId();
+        if (userId == null) {
+            return new Result(ResultCode.R_UserNotFound);
+        }
+        String userName = ThreadLocalUtil.getUserName();
+        if (userName == null) {
+            return new Result(ResultCode.R_UserNotFound);
+        }
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (userRole == null) {
+            return new Result(ResultCode.R_UserNotFound);
+        }
+        // 创建模板文档对象
+        TemplateDocument templateDoc = new TemplateDocument();
+        templateDoc.setTemplateName(templateName);
+        templateDoc.setTemplateTypeId(templateTypeId);
+        templateDoc.setTemplateContent(templateContent);
+
         try {
-            // 角色验证
-            String userId = ThreadLocalUtil.getUserId();
-            if (userId == null) {
-                return new Result(ResultCode.R_UserNotFound);
-            }
-            Integer userRole = ThreadLocalUtil.getUserRole();
-            if (userRole == null) {
-                return new Result(ResultCode.R_Error);
-            }
-            // 参数校验
-            if (request == null || !request.containsKey("attachment")) {
-                return new Result(ResultCode.R_ParamError);
-            }
-            List<Map<String, String>> attachments = request.get("attachment");
-            if (attachments == null || attachments.isEmpty()) {
-                return new Result(ResultCode.R_ParamError);
-            }
-
-            // 获取当前时间
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            String currentTime = LocalDateTime.now().format(formatter);
-
-            // 获取当前用户ID
-            List<String> belongUserIds = new ArrayList<>();
-            belongUserIds.add(userId);
-
-            // 插入附件
-            List<AttachmentDocument> attachmentDocuments = new ArrayList<>();
-            for (Map<String, String> attachment : attachments) {
-                AttachmentDocument doc = new AttachmentDocument();
-                doc.setAttachmentId(attachment.get("attachment_id"));
-                doc.setAttachmentUrl(attachment.get("attachment_url"));
-                doc.setAttachmentSize(attachment.get("attachment_size"));
-                doc.setAttachmentName(attachment.get("attachment_name"));
-                doc.setCreatorId(userId);
-                doc.setBelongUserId(belongUserIds);
-                // 普通用户上传的附件默认是已分配
+            if (!StringUtils.hasText(templateId)) {
+                // 新建记录
+                List<String> belongUserId = new ArrayList<>();
+                belongUserId.add(userId);
+                templateDoc.setBelongUserId(belongUserId);
+                templateDoc.setTemplateId(java.util.UUID.randomUUID().toString());
+                templateDoc.setCreatorId(userId);
+                templateDoc.setCreatorName(userName);
                 if (userRole == 4) {
-                    doc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_ASSIGNED);
+                    templateDoc.setStatus(MagicMathConstData.TEMPLATE_STATUS_ASSIGNED);
                 } else {
-                    doc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_UNASSIGNED);
+                    templateDoc.setStatus(MagicMathConstData.TEMPLATE_STATUS_UNASSIGNED);
                 }
-                doc.setCreatedAt(currentTime);
-                doc.setUpdatedAt(currentTime);
-                attachmentDocuments.add(doc);
+                templateDoc.setCreatedAt(currentTime);
+                templateDoc.setUpdatedAt(currentTime);
+                templateRepository.save(templateDoc);
+                return new Result(ResultCode.R_Ok);
+            } else {
+                // 更新记录
+                TemplateDocument existingDoc = templateRepository.findById(templateId).orElse(null);
+                if (existingDoc == null) {
+                    return new Result(ResultCode.R_TemplateNotFound);
+                }
+                if (userRole == 4) {
+                    // 检查当前用户是否在模板的所属用户列表中且是创建人
+                    List<String> belongUserIds = existingDoc.getBelongUserId();
+                    String creatorId = existingDoc.getCreatorId();
+                    if (belongUserIds == null || !belongUserIds.contains(userId) || !userId.equals(creatorId)) {
+                        return new Result(ResultCode.R_NoAuth);
+                    }
+                }
+                existingDoc.setTemplateName(templateName);
+                existingDoc.setTemplateTypeId(templateTypeId);
+                existingDoc.setTemplateContent(templateContent);
+                existingDoc.setUpdatedAt(currentTime);
+                templateRepository.save(existingDoc);
+                return new Result(ResultCode.R_Ok);
             }
-
-            attachmentRepository.saveAll(attachmentDocuments);
-            return new Result(ResultCode.R_Ok);
         } catch (Exception e) {
-            logUtil.error("Error saving attachments: " + e.getMessage());
-            throw e;
+            logUtil.error("Error saving template: " + e.getMessage());
+            return new Result(ResultCode.R_Error);
         }
     }
 
-
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result assignAttachment(Map<String, Object> request) {
+    public Result assignTemplate(Map<String, Object> request) {
         try {
             // 获取当前用户角色
             Integer userRole = ThreadLocalUtil.getUserRole();
             if (userRole == null || (userRole != 2 && userRole != 3)) {
                 return new Result(ResultCode.R_NoAuth);
             }
-
+            String currentUserName = ThreadLocalUtil.getUserName();
+            if (currentUserName == null) {
+                return new Result(ResultCode.R_UserNotFound);
+            }
             // 检查参数
-            if (!request.containsKey("attachment_id") || !request.containsKey("belong_user_id")) {
+            if (!request.containsKey("template_id") || !request.containsKey("belong_user_id")) {
                 return new Result(ResultCode.R_ParamError);
             }
 
-            String attachmentId = (String) request.get("attachment_id");
+            String templateId = (String) request.get("template_id");
             @SuppressWarnings("unchecked")
             List<String> belongUserIds = (List<String>) request.get("belong_user_id");
 
-            if (attachmentId == null || belongUserIds == null || belongUserIds.isEmpty()) {
+            if (templateId == null || belongUserIds == null || belongUserIds.isEmpty()) {
                 return new Result(ResultCode.R_ParamError);
             }
 
-            // 检查附件是否存在
-            AttachmentDocument attachmentDoc = attachmentRepository.findById(attachmentId).orElse(null);
-            if (attachmentDoc == null) {
-                return new Result(ResultCode.R_AttachmentNotFound);
+            // 检查模板是否存在
+            TemplateDocument templateDoc = templateRepository.findById(templateId).orElse(null);
+            if (templateDoc == null) {
+                return new Result(ResultCode.R_TemplateNotFound);
             }
 
-            // 检查所有用户ID是否存在
-            String assignId = ThreadLocalUtil.getUserId();
-            if (assignId == null) {
-                return new Result(ResultCode.R_Error);
+            // 获取当前用户ID
+            String currentUserId = ThreadLocalUtil.getUserId();
+            if (currentUserId == null) {
+                return new Result(ResultCode.R_UserNotFound);
             }
-            // 先查询并验证所有用户,如果全部合格，则保存起来可以直接用，不用每次都查询
+            // 验证所有用户
             Map<String, UserDocument> userDocs = new HashMap<>();
             for (String userId : belongUserIds) {
                 UserDocument userDoc = userRepository.findByUserId(userId).orElse(null);
@@ -162,29 +207,27 @@ public class AttachmentServiceImpl implements AttachmentService {
                 }
                 userDocs.put(userId, userDoc);
             }
-
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
                 if (!belongUserIds.contains(UserConstData.COMPANY_USER_ID)) {
                     for (UserDocument userDoc : userDocs.values()) {
-                        if (!userDoc.getBelongUserId().equals(assignId) && !userDoc.getUserId().equals(assignId)) {
+                        // 检查用户是否属于自己管理或者是自己
+                        if (!userDoc.getBelongUserId().equals(currentUserId) && !userDoc.getUserId().equals(currentUserId)) {
                             return new Result(ResultCode.R_NotBelongToAdmin);
                         }
                     }
                 }
-
             }
-
-            // 更新附件的归属用户
-            attachmentDoc.setBelongUserId(belongUserIds);
-            attachmentDoc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_ASSIGNED);
-            attachmentDoc.setUpdatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
-            attachmentRepository.save(attachmentDoc);
+            // 更新模板的归属用户
+            templateDoc.setBelongUserId(belongUserIds);
+            templateDoc.setStatus(MagicMathConstData.TEMPLATE_STATUS_ASSIGNED);
+            templateDoc.setUpdatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+            templateRepository.save(templateDoc);
 
             // 创建分配记录
             Map<String, Object> process = new HashMap<>();
-            process.put("assignor_id", assignId);
-            process.put("assignor_name", ThreadLocalUtil.getUserName());
+            process.put("assignor_id", currentUserId);
+            process.put("assignor_name", currentUserName);
 
             List<Map<String, String>> assigneeList = new ArrayList<>();
             for (UserDocument userDoc : userDocs.values()) {
@@ -197,49 +240,49 @@ public class AttachmentServiceImpl implements AttachmentService {
             process.put("assign_date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
 
             // 查找现有的分配记录进行追加，没有则创建新的。
-            AttachmentAssignDocument existingAssignDoc = attachmentAssignRepository.findById(attachmentId).orElse(null);
+            TemplateAssignDocument existingAssignDoc = templateAssignRepository.findById(templateId).orElse(null);
             List<Map<String, Object>> processList;
             if (existingAssignDoc != null) {
                 processList = existingAssignDoc.getAssignProcess();
                 processList.add(0, process);
                 existingAssignDoc.setAssignProcess(processList);
-                attachmentAssignRepository.save(existingAssignDoc);
+                templateAssignRepository.save(existingAssignDoc);
             } else {
                 processList = new ArrayList<>();
                 processList.add(process);
-                AttachmentAssignDocument assignDoc = new AttachmentAssignDocument();
-                assignDoc.setAttachmentId(attachmentId);
+                TemplateAssignDocument assignDoc = new TemplateAssignDocument();
+                assignDoc.setTemplateId(templateId);
                 assignDoc.setAssignProcess(processList);
-                attachmentAssignRepository.save(assignDoc);
+                templateAssignRepository.save(assignDoc);
             }
             return new Result(ResultCode.R_Ok);
-
         } catch (Exception e) {
-            logUtil.error("Error assigning attachment: " + e.getMessage());
-            throw e;
+            logUtil.error("Error assigning template: " + e.getMessage());
+            return new Result(ResultCode.R_Error);
         }
     }
 
-
     @Override
-    public Result assignAttachmentDetails(Map<String, Object> request) {
+    public Result assignTemplateDetails(Map<String, Object> request) {
         // 参数校验
-        if (!request.containsKey("attachment_id") || !request.containsKey("page_num") || !request.containsKey("page_size")) {
+        if (!request.containsKey("template_id") || !request.containsKey("page_num") || !request.containsKey("page_size")) {
             return new Result(ResultCode.R_ParamError);
         }
+
+        String templateId = (String) request.get("template_id");
         Integer pageNum = (Integer) request.get("page_num");
         Integer pageSize = (Integer) request.get("page_size");
         if (pageNum <= 0 || pageSize <= 0) {
             return new Result(ResultCode.R_PageError);
         }
-        String attachmentId = (String) request.get("attachment_id");
-        AttachmentAssignDocument assignDoc = attachmentAssignRepository.findById(attachmentId).orElse(null);
+
+        // 查找模板分配记录
+        TemplateAssignDocument assignDoc = templateAssignRepository.findById(templateId).orElse(null);
         if (assignDoc == null) {
-            return new Result(ResultCode.R_AttachmentNotFound);
+            return new Result(ResultCode.R_TemplateNotFound);
         }
 
         try {
-            // 查找附件分配记录
             List<Map<String, Object>> processList = assignDoc.getAssignProcess();
             if (processList == null || processList.isEmpty()) {
                 return new Result(ResultCode.R_Ok, new PageResponse<>(0, pageNum, pageSize, new ArrayList<>()));
@@ -260,54 +303,53 @@ public class AttachmentServiceImpl implements AttachmentService {
             return new Result(ResultCode.R_Ok, new PageResponse<>(total, pageNum, pageSize, pageData));
 
         } catch (Exception e) {
-            logUtil.error("Error getting attachment assign details: " + e.getMessage());
-            return new Result(ResultCode.R_Error, "Error getting attachment assign details: " + e.getMessage());
+            logUtil.error("Error getting template assign details: " + e.getMessage());
+            return new Result(ResultCode.R_Error);
         }
     }
 
     @Override
-    public Result filterAttachment(Map<String, Object> request) {
+    public Result filterTemplate(Map<String, Object> request) {
         try {
-            // 参数校验
-            if (request == null) {
-                return new Result(ResultCode.R_ParamError);
+            // 获取当前用户角色和ID
+            Integer userRole = ThreadLocalUtil.getUserRole();
+            String currentUserId = ThreadLocalUtil.getUserId();
+            if (userRole == null || currentUserId == null) {
+                return new Result(ResultCode.R_UserNotFound);
             }
 
-            String attachmentName = (String) request.get("attachment_name");
-            String belongUserName = (String) request.get("belong_user_name");
-            String creatorName = (String) request.get("creator_name");
-            Integer status = request.get("status") != null ? (Integer) request.get("status") : 0;
-            Integer pageNum = request.get("page_num") != null ? (Integer) request.get("page_num") : 1;
-            Integer pageSize = request.get("page_size") != null ? (Integer) request.get("page_size") : 50;
-
-            // 校验分页参数
-            if (pageNum < 1 || pageSize < 1) {
+            // 参数校验
+            if (!request.containsKey("page_num") || !request.containsKey("page_size")) {
+                return new Result(ResultCode.R_ParamError);
+            }
+            Integer pageNum = (Integer) request.get("page_num");
+            Integer pageSize = (Integer) request.get("page_size");
+            if (pageNum <= 0 || pageSize <= 0) {
                 return new Result(ResultCode.R_PageError);
             }
 
-            // 校验状态参数
-            if (status != 0 && status != 1 && status != 2) {
-                return new Result(ResultCode.R_ParamError);
-            }
+            String templateName = (String) request.get("template_name");
+            String creatorName = (String) request.get("creator_name");
+            String belongUserName = (String) request.get("belong_user_name");
+            String templateTypeId = (String) request.get("template_type_id");
+            Integer status = (Integer) request.get("status");
+
 
             // 如果belongUserName是"公司"，直接执行查询
             if (StringUtils.hasText(belongUserName) && "公司".equals(belongUserName)) {
                 BoolQuery.Builder mainQuery = new BoolQuery.Builder();
-
-                // 公司id默认是1
                 mainQuery.must(m -> m
                         .term(t -> t
                                 .field("belongUserId")
                                 .value(UserConstData.COMPANY_USER_ID)
                         )
                 );
-
-                // 添加附件名称条件
-                if (StringUtils.hasText(attachmentName)) {
+                // 添加模板名称条件
+                if (StringUtils.hasText(templateName)) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("attachmentName")
-                                    .query(attachmentName)
+                                    .field("templateName")
+                                    .query(templateName)
                             )
                     );
                 }
@@ -339,7 +381,6 @@ public class AttachmentServiceImpl implements AttachmentService {
                             )
                     );
                 }
-
                 // 执行查询
                 Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
                 NativeQuery searchQuery = NativeQuery.builder()
@@ -348,12 +389,12 @@ public class AttachmentServiceImpl implements AttachmentService {
                         .withPageable(pageable)
                         .build();
 
-                SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                SearchHits<TemplateDocument> searchHits = elasticsearchOperations.search(
                         searchQuery,
-                        AttachmentDocument.class
+                        TemplateDocument.class
                 );
 
-                List<AttachmentDocument> content = searchHits.stream()
+                List<TemplateDocument> content = searchHits.stream()
                         .map(SearchHit::getContent)
                         .collect(Collectors.toList());
 
@@ -368,57 +409,35 @@ public class AttachmentServiceImpl implements AttachmentService {
                 );
             }
 
-            // 获取当前用户信息
-            String currentUserId = ThreadLocalUtil.getUserId();
-            Integer userRole = ThreadLocalUtil.getUserRole();
-            if (currentUserId == null || userRole == null) {
-                return new Result(ResultCode.R_UserNotFound);
-            }
-
             // 角色2 - 大管理员
             if (userRole == 2) {
+                // 构建查询
                 BoolQuery.Builder mainQuery = new BoolQuery.Builder();
-                boolean hasValidConditions = false;  // 标记是否有有效的查询条件
+                boolean hasValidConditions = false;
 
                 // 检查是否有任何查询条件
-                if (!StringUtils.hasText(attachmentName) &&
-                        !StringUtils.hasText(belongUserName) &&
+                if (!StringUtils.hasText(templateName) &&
                         !StringUtils.hasText(creatorName) &&
+                        !StringUtils.hasText(belongUserName) &&
+                        !StringUtils.hasText(templateTypeId) &&
                         (status == null || status == 0)) {
                     // 没有查询条件时，直接查询所有数据
                     mainQuery.must(m -> m
                             .matchAll(ma -> ma)
                     );
                 } else {
-                    // 有查询条件时的处理
-                    if (StringUtils.hasText(attachmentName)) {
+                    // 添加模板名称条件
+                    if (StringUtils.hasText(templateName)) {
                         mainQuery.must(m -> m
                                 .match(t -> t
-                                        .field("attachmentName")
-                                        .query(attachmentName)
+                                        .field("templateName")
+                                        .query(templateName)
                                 )
                         );
                         hasValidConditions = true;
                     }
 
-                    if (StringUtils.hasText(belongUserName)) {
-                        List<UserDocument> belongUsers = userRepository.findByUserNameLike(belongUserName);
-                        if (!belongUsers.isEmpty()) {
-                            BoolQuery.Builder belongUserQuery = new BoolQuery.Builder();
-                            for (UserDocument user : belongUsers) {
-                                belongUserQuery.should(s -> s
-                                        .term(t -> t
-                                                .field("belongUserId")
-                                                .value(user.getUserId())
-                                        )
-                                );
-                            }
-                            belongUserQuery.minimumShouldMatch("1");
-                            mainQuery.must(m -> m.bool(belongUserQuery.build()));
-                            hasValidConditions = true;
-                        }
-                    }
-
+                    // 添加创建者名称条件
                     if (StringUtils.hasText(creatorName)) {
                         List<UserDocument> creators = userRepository.findByUserNameLike(creatorName);
                         if (!creators.isEmpty()) {
@@ -437,6 +456,37 @@ public class AttachmentServiceImpl implements AttachmentService {
                         }
                     }
 
+                    // 添加所属用户名称条件
+                    if (StringUtils.hasText(belongUserName)) {
+                        List<UserDocument> belongUsers = userRepository.findByUserNameLike(belongUserName);
+                        if (!belongUsers.isEmpty()) {
+                            BoolQuery.Builder belongUserQuery = new BoolQuery.Builder();
+                            for (UserDocument user : belongUsers) {
+                                belongUserQuery.should(s -> s
+                                        .term(t -> t
+                                                .field("belongUserId")
+                                                .value(user.getUserId())
+                                        )
+                                );
+                            }
+                            belongUserQuery.minimumShouldMatch("1");
+                            mainQuery.must(m -> m.bool(belongUserQuery.build()));
+                            hasValidConditions = true;
+                        }
+                    }
+
+                    // 添加模板类型条件
+                    if (StringUtils.hasText(templateTypeId)) {
+                        mainQuery.must(m -> m
+                                .term(t -> t
+                                        .field("templateTypeId")
+                                        .value(templateTypeId)
+                                )
+                        );
+                        hasValidConditions = true;
+                    }
+
+                    // 添加状态条件
                     if (status != null && status != 0) {
                         mainQuery.must(m -> m
                                 .term(t -> t
@@ -447,7 +497,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                         hasValidConditions = true;
                     }
 
-                    // 如果所有的查询条件都无效（比如都没找到对应的用户），返回空结果
+                    // 如果所有的查询条件都无效，返回空结果
                     if (!hasValidConditions) {
                         return new Result(
                                 ResultCode.R_Ok,
@@ -455,7 +505,6 @@ public class AttachmentServiceImpl implements AttachmentService {
                         );
                     }
                 }
-
                 // 执行查询
                 Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
                 NativeQuery searchQuery = NativeQuery.builder()
@@ -464,12 +513,12 @@ public class AttachmentServiceImpl implements AttachmentService {
                         .withPageable(pageable)
                         .build();
 
-                SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                SearchHits<TemplateDocument> searchHits = elasticsearchOperations.search(
                         searchQuery,
-                        AttachmentDocument.class
+                        TemplateDocument.class
                 );
 
-                List<AttachmentDocument> content = searchHits.stream()
+                List<TemplateDocument> content = searchHits.stream()
                         .map(SearchHit::getContent)
                         .collect(Collectors.toList());
 
@@ -483,51 +532,31 @@ public class AttachmentServiceImpl implements AttachmentService {
                         )
                 );
             }
+
             // 角色3 - 小管理员
-            else if (userRole == 3) {
+            if (userRole == 3) {
                 BoolQuery.Builder mainQuery = new BoolQuery.Builder();
                 boolean hasValidConditions = false;  // 标记是否有有效的查询条件
-
                 // 检查是否有任何查询条件
-                if (!StringUtils.hasText(attachmentName) &&
-                        !StringUtils.hasText(belongUserName) &&
+                if (!StringUtils.hasText(templateName) &&
                         !StringUtils.hasText(creatorName) &&
+                        !StringUtils.hasText(belongUserName) &&
+                        !StringUtils.hasText(templateTypeId) &&
                         (status == null || status == 0)) {
                     // 没有查询条件时，直接查询所有有权限的数据
-
                 } else {
-                    // 有查询条件时的处理
-                    if (StringUtils.hasText(attachmentName)) {
+                    // 有查询条件时的处理  
+                    if (StringUtils.hasText(templateName)) {
                         mainQuery.must(m -> m
                                 .match(t -> t
-                                        .field("attachmentName")
-                                        .query(attachmentName)
+                                        .field("templateName")
+                                        .query(templateName)
                                 )
                         );
                         hasValidConditions = true;
                     }
 
-                    if (StringUtils.hasText(belongUserName)) {
-                        ValidationResult belongValidation = subordinateValidation.findSubordinatesAndSelfByName(
-                                belongUserName,
-                                currentUserId
-                        );
-                        if (!belongValidation.isValid()) {
-                            return new Result(ResultCode.R_NotBelongToAdmin);
-                        }
-                        BoolQuery.Builder belongQuery = new BoolQuery.Builder();
-                        for (String id : belongValidation.getValidUserIds()) {
-                            belongQuery.should(s -> s
-                                    .term(t -> t
-                                            .field("belongUserId")
-                                            .value(id)
-                                    )
-                            );
-                        }
-                        mainQuery.must(m -> m.bool(belongQuery.build()));
-                        hasValidConditions = true;
-                    }
-
+                    // 添加创建者名称条件
                     if (StringUtils.hasText(creatorName)) {
                         ValidationResult creatorValidation = subordinateValidation.findSubordinatesAndSelfByName(
                                 creatorName,
@@ -549,6 +578,40 @@ public class AttachmentServiceImpl implements AttachmentService {
                         hasValidConditions = true;
                     }
 
+                    // 添加所属用户名称条件
+                    if (StringUtils.hasText(belongUserName)) {
+                        ValidationResult belongValidation = subordinateValidation.findSubordinatesAndSelfByName(
+                                belongUserName,
+                                currentUserId
+                        );
+                        if (!belongValidation.isValid()) {
+                            return new Result(ResultCode.R_NotBelongToAdmin);
+                        }
+                        BoolQuery.Builder belongQuery = new BoolQuery.Builder();
+                        for (String id : belongValidation.getValidUserIds()) {
+                            belongQuery.should(s -> s
+                                    .term(t -> t
+                                            .field("belongUserId")
+                                            .value(id)
+                                    )
+                            );
+                        }
+                        mainQuery.must(m -> m.bool(belongQuery.build()));
+                        hasValidConditions = true;
+                    }
+
+                    // 添加模板类型条件
+                    if (StringUtils.hasText(templateTypeId)) {
+                        mainQuery.must(m -> m
+                                .term(t -> t
+                                        .field("templateTypeId")
+                                        .value(templateTypeId)
+                                )
+                        );
+                        hasValidConditions = true;
+                    }
+
+                    // 添加状态条件
                     if (status != null && status != 0) {
                         mainQuery.must(m -> m
                                 .term(t -> t
@@ -567,7 +630,6 @@ public class AttachmentServiceImpl implements AttachmentService {
                         );
                     }
                 }
-
                 // 添加权限过滤
                 BoolQuery.Builder accessQuery = new BoolQuery.Builder();
                 // 创建者是自己或下属
@@ -622,12 +684,12 @@ public class AttachmentServiceImpl implements AttachmentService {
                         .withPageable(pageable)
                         .build();
 
-                SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                SearchHits<TemplateDocument> searchHits = elasticsearchOperations.search(
                         searchQuery,
-                        AttachmentDocument.class
+                        TemplateDocument.class
                 );
 
-                List<AttachmentDocument> content = searchHits.stream()
+                List<TemplateDocument> content = searchHits.stream()
                         .map(SearchHit::getContent)
                         .collect(Collectors.toList());
 
@@ -641,8 +703,9 @@ public class AttachmentServiceImpl implements AttachmentService {
                         )
                 );
             }
+
             // 角色4 - 普通用户
-            else if (userRole == 4) {
+            if (userRole == 4) {
                 // 普通用户不允许查询创建者
                 if (StringUtils.hasText(creatorName)) {
                     return new Result(ResultCode.R_ParamError);
@@ -656,12 +719,12 @@ public class AttachmentServiceImpl implements AttachmentService {
                 if (currentUserName == null) {
                     return new Result(ResultCode.R_UserNotFound);
                 }
-                // 添加附件名称条件
-                if (StringUtils.hasText(attachmentName)) {
+                // 添加模板名称条件
+                if (StringUtils.hasText(templateName)) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("attachmentName")
-                                    .query(attachmentName)
+                                    .field("templateName")
+                                    .query(templateName)
                             )
                     );
                 }
@@ -697,25 +760,25 @@ public class AttachmentServiceImpl implements AttachmentService {
                         .withPageable(pageable)
                         .build();
 
-                SearchHits<AttachmentDocument> searchHits = elasticsearchOperations.search(
+                SearchHits<TemplateDocument> searchHits = elasticsearchOperations.search(
                         searchQuery,
-                        AttachmentDocument.class
+                        TemplateDocument.class
                 );
-
                 // 处理结果，只返回指定字段
                 List<Map<String, Object>> content = searchHits.stream()
                         .map(hit -> {
-                            AttachmentDocument doc = hit.getContent();
+                            TemplateDocument doc = hit.getContent();
                             Map<String, Object> item = new HashMap<>();
-                            item.put("id", doc.getAttachmentId());
-                            item.put("name", doc.getAttachmentName());
-
-                            // 查询创建者名称
-                            String responseCreatorName = userRepository.findByUserId(doc.getCreatorId())
-                                    .map(UserDocument::getUserName)
-                                    .orElse("");
-                            item.put("creator_name", responseCreatorName);
-
+                            item.put("id", doc.getTemplateId());
+                            item.put("name", doc.getTemplateName());
+                            item.put("creator_name", doc.getCreatorName());
+                            // 通过templateTypeId查询templateTypeName
+                            EmailTypeDocument emailTypeDoc = emailTypeRepository.findById(doc.getTemplateTypeId()).orElse(null);
+                            if (emailTypeDoc == null) {
+                                item.put("template_type_name", "无");
+                            } else {
+                                item.put("template_type_name", emailTypeDoc.getEmailTypeName());
+                            }
                             return item;
                         })
                         .collect(Collectors.toList());
@@ -730,29 +793,30 @@ public class AttachmentServiceImpl implements AttachmentService {
                         )
                 );
             }
-
+            
             return new Result(ResultCode.R_Error);
         } catch (Exception e) {
-            logUtil.error("Error filtering attachments: " + e.getMessage());
+            logUtil.error("Error filtering templates: " + e.getMessage());
             return new Result(ResultCode.R_Error);
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result deleteAttachment(Map<String, Object> request) {
+    public Result deleteTemplate(Map<String, Object> request) {
         // 参数校验
         if (request == null) {
             return new Result(ResultCode.R_ParamError);
         }
-        if (!request.containsKey("attachment_id")) {
+        if (!request.containsKey("template_id")) {
             return new Result(ResultCode.R_ParamError);
         }
-        String attachmentId = (String) request.get("attachment_id");
-        AttachmentDocument attachmentDoc = attachmentRepository.findById(attachmentId).orElse(null);
-        if (attachmentDoc == null) {
-            return new Result(ResultCode.R_AttachmentNotFound);
+        String templateId = (String) request.get("template_id");
+        TemplateDocument templateDoc = templateRepository.findById(templateId).orElse(null);
+        if (templateDoc == null) {
+            return new Result(ResultCode.R_TemplateNotFound);
         }
+
         // 获取当前用户信息
         String currentUserId = ThreadLocalUtil.getUserId();
         Integer userRole = ThreadLocalUtil.getUserRole();
@@ -760,19 +824,36 @@ public class AttachmentServiceImpl implements AttachmentService {
             return new Result(ResultCode.R_UserNotFound);
         }
 
-
+        // 角色2可以直接删除
+        if (userRole == 2) {
+            // Continue to delete
+        }
         // 角色3需要检查创建者和所属用户
-        if (userRole == 3) {
-            String creatorId = attachmentDoc.getCreatorId();
-            List<String> belongUserIds = attachmentDoc.getBelongUserId();
+        else if (userRole == 3) {
+            String creatorId = templateDoc.getCreatorId();
+            List<String> belongUserIds = templateDoc.getBelongUserId();
 
             // 检查是否为创建者
             boolean isCreator = currentUserId.equals(creatorId);
 
+            // 如果是创建者,直接删除
+            if (isCreator) {
+                try {
+                    templateRepository.deleteById(templateId);
+                    templateAssignRepository.deleteById(templateId);
+                    return new Result(ResultCode.R_Ok);
+                } catch (Exception e) {
+                    logUtil.error("Error deleting template: " + e.getMessage());
+                    return new Result(ResultCode.R_Error);
+                }
+            }
+
             // 检查创建者和所属用户是否都包含下属
+            boolean hasSubordinates = false;
             // 检查创建者是否为下属
             UserDocument creator = userRepository.findByUserId(creatorId).orElse(null);
             boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
+
             // 检查所属用户是否包含下属
             boolean hasBelongUserSubordinate = false;
             if (belongUserIds != null && !belongUserIds.isEmpty()) {
@@ -781,49 +862,46 @@ public class AttachmentServiceImpl implements AttachmentService {
                         .filter(user -> user != null)
                         .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
             }
-            boolean hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
 
-            // 如果既不是创建人，也不是下属，则无权删除
-            if (!isCreator && !hasSubordinates) {
+            hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
+            if (!hasSubordinates) {
                 return new Result(ResultCode.R_NoAuth);
             }
         }
         // 角色4需要检查是否为创建者且是所属用户
-        if (userRole == 4) {
-            String creatorId = attachmentDoc.getCreatorId();
-            List<String> belongUserIds = attachmentDoc.getBelongUserId();
+        else if (userRole == 4) {
+            String creatorId = templateDoc.getCreatorId();
+            List<String> belongUserIds = templateDoc.getBelongUserId();
 
             if (!currentUserId.equals(creatorId) ||
                     belongUserIds == null ||
                     !belongUserIds.contains(currentUserId)) {
                 return new Result(ResultCode.R_NoAuth);
             }
+        } else {
+            return new Result(ResultCode.R_NoAuth);
         }
-        // 删除附件
+
+        // 删除模板
         try {
-            attachmentRepository.deleteById(attachmentId);
-            attachmentAssignRepository.deleteById(attachmentId);
+            templateRepository.deleteById(templateId);
+            templateAssignRepository.deleteById(templateId);
             return new Result(ResultCode.R_Ok);
         } catch (Exception e) {
-            logUtil.error("Error deleting attachment: " + e.getMessage());
-            return new Result(ResultCode.R_DeleteFileError);
+            logUtil.error("Error deleting template: " + e.getMessage());
+            return new Result(ResultCode.R_Error);
         }
     }
 
+
     // 处理查询结果，转换为所需格式
-    private List<Map<String, Object>> convertToResponseFormat(List<AttachmentDocument> documents) {
+    private List<Map<String, Object>> convertToResponseFormat(List<TemplateDocument> documents) {
         return documents.stream().map(doc -> {
             Map<String, Object> item = new HashMap<>();
-            item.put("id", doc.getAttachmentId());
-            item.put("name", doc.getAttachmentName());
-
-            // 查询创建者名称
-            String creatorName = userRepository.findByUserId(doc.getCreatorId())
-                    .map(UserDocument::getUserName)
-                    .orElse("");
-            item.put("creator_name", creatorName);
-
-            // 查询所属用户名称列表
+            item.put("id", doc.getTemplateId());
+            item.put("name", doc.getTemplateName());
+            item.put("creator_name", doc.getCreatorName());
+            // 获取归属用户名称列表
             List<String> belongUserNames = new ArrayList<>();
             if (doc.getBelongUserId() != null && !doc.getBelongUserId().isEmpty()) {
                 belongUserNames = doc.getBelongUserId().stream()
@@ -834,10 +912,16 @@ public class AttachmentServiceImpl implements AttachmentService {
                         .collect(Collectors.toList());
             }
             item.put("belong_user_name", belongUserNames);
-
+            // 通过templateTypeId查询templateTypeName
+            EmailTypeDocument emailTypeDoc = emailTypeRepository.findById(doc.getTemplateTypeId()).orElse(null);
+            if (emailTypeDoc == null) {
+                item.put("template_type_name", "无");
+            } else {
+                item.put("template_type_name", emailTypeDoc.getEmailTypeName());
+            }
             item.put("status", doc.getStatus());
             return item;
         }).collect(Collectors.toList());
     }
 
-}
+} 

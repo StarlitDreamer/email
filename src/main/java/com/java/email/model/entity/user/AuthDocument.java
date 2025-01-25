@@ -1,4 +1,4 @@
-package com.java.email.model.entity;
+package com.java.email.model.entity.user;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;

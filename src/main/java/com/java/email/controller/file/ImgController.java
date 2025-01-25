@@ -12,7 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/file/img")
-@AuthPermission(permission = AuthConstData.FILE_MANAGE)
+//@AuthPermission(permission = AuthConstData.FILE_MANAGE)
 public class ImgController {
 
     @Autowired

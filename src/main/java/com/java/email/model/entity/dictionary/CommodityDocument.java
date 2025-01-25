@@ -1,38 +1,26 @@
-package com.java.email.model.entity.file;
+package com.java.email.model.entity.dictionary;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.DateFormat;
 
-import java.util.List;
+import java.util.Date;
 
 @Data
-@Document(indexName = "img")
-public class ImgDocument {
-    
+@Document(indexName = "commodity")
+public class CommodityDocument {
     @Id
-    private String imgId;
+    @Field(type = FieldType.Keyword)
+    private String commodityId;
 
     @Field(type = FieldType.Keyword)
-    private String imgUrl;
-
-    @Field(type = FieldType.Keyword)
-    private String imgSize;
+    private String categoryId;
 
     @Field(type = FieldType.Text, analyzer = "ik_max_word")
-    private String imgName;
-
-    @Field(type = FieldType.Keyword)
-    private String creatorId;
-
-    @Field(type = FieldType.Keyword)
-    private List<String> belongUserId;
-
-    @Field(type = FieldType.Integer)
-    private Integer status;
+    private String commodityName;
 
     @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
     private String createdAt;

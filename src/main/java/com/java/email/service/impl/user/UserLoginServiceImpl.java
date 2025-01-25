@@ -5,10 +5,10 @@ import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
 import com.java.email.constant.MagicMathConstData;
 import com.java.email.constant.RedisConstData;
-import com.java.email.model.entity.AuthDocument;
-import com.java.email.model.entity.UserDocument;
 import com.java.email.model.domain.User;
-import com.java.email.esdao.repository.AuthRepository;
+import com.java.email.model.entity.user.AuthDocument;
+import com.java.email.model.entity.user.UserDocument;
+import com.java.email.esdao.repository.user.AuthRepository;
 import com.java.email.esdao.repository.user.UserRepository;
 import com.java.email.service.user.UserLoginService;
 import com.java.email.utils.JwtUtil;
@@ -33,11 +33,11 @@ public class UserLoginServiceImpl implements UserLoginService {
 
     @Autowired
     private RedisService redisService;
-    
+
     @Override
     public Result login(User user) {
         // 检查参数
-        if (user == null || Strings.isEmpty(user.getUserAccount()) || Strings.isEmpty(user.getUserPassword()) || user.getUserRole()==1){
+        if (user == null || Strings.isEmpty(user.getUserAccount()) || Strings.isEmpty(user.getUserPassword()) || user.getUserRole() == 1) {
             return new Result(ResultCode.R_ParamError);
         }
         Integer userRole = user.getUserRole();
@@ -60,11 +60,11 @@ public class UserLoginServiceImpl implements UserLoginService {
         //存入信息生成token
         String userId = userDoc.getUserId();
         if (userId == null) {
-            return new Result(ResultCode.R_Fail,"用户信息有误");
+            return new Result(ResultCode.R_Fail, "用户信息有误");
         }
         String userName = userDoc.getUserName();
         if (userName == null) {
-            return new Result(ResultCode.R_Fail,"用户信息有误");
+            return new Result(ResultCode.R_Fail, "用户信息有误");
         }
         Map<String, Object> userMap = new HashMap<>();
         userMap.put("id", userId);
@@ -77,9 +77,9 @@ public class UserLoginServiceImpl implements UserLoginService {
         }
         // 响应参数
         Map<String, Object> userRep = new HashMap<>();
-        userRep.put("user_id",userId);
-        userRep.put("user_name",userName); // Using userName already declared above
-        userRep.put("user_token",token);
+        userRep.put("user_id", userId);
+        userRep.put("user_name", userName); // Using userName already declared above
+        userRep.put("user_token", token);
         List<Map<String, String>> userAuths = new ArrayList<>();
         if (userDoc.getUserAuthId() != null) {
             for (String authId : userDoc.getUserAuthId()) {
@@ -88,12 +88,12 @@ public class UserLoginServiceImpl implements UserLoginService {
                 // TODO: 这里需要通过authId查询权限名称
                 AuthDocument userAuth = authRepository.findByAuthId(authId);
                 if (userAuth != null) {
-                    authMap.put("user_auth_name", userAuth.getAuthName()); 
+                    authMap.put("user_auth_name", userAuth.getAuthName());
                 }
                 userAuths.add(authMap);
             }
         }
         userRep.put("user_auth", userAuths);
-        return new Result(ResultCode.R_Ok,userRep);
+        return new Result(ResultCode.R_Ok, userRep);
     }
 }
