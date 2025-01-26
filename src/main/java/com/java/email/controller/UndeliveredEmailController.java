@@ -96,7 +96,7 @@ public class UndeliveredEmailController {
      * @param resendTimes 重发次数
      * @return 操作结果
      */
-    @PutMapping("/{emailId}/resend-strategy")
+    @PutMapping("/resend-strategy/{emailId}")
     public Result updateResendStrategy(
             @PathVariable String emailId,
             @RequestParam long resendGap,
@@ -118,7 +118,7 @@ public class UndeliveredEmailController {
      * @param emailId 邮件 ID
      * @return 操作结果
      */
-    @PutMapping("/{emailId}/resend-status")
+    @PutMapping("/resend-status/{emailId}")
     public Result updateResendStatus(@PathVariable String emailId) {
         try {
             UndeliveredEmail updatedEmail = undeliveredEmailService.updateResendStatus(emailId, 2);

@@ -26,7 +26,7 @@ public class EmailTaskController {
      * @param operateStatus 新的任务操作状态
      * @return 操作结果
      */
-    @PutMapping("/operate-status")
+    @PutMapping("/update-status")
     public Result updateOperateStatus(
             @RequestParam String emailTaskId,  // 邮件任务ID
             @RequestParam int operateStatus,   // 操作状态
@@ -62,7 +62,7 @@ public class EmailTaskController {
      * @param operateStatus 新的操作状态
      * @return 更新结果
      */
-    @PutMapping("/reset-operate-status")
+    @PutMapping("/reset-status")
     public Result resetOperateStatus(
             @RequestParam String emailTaskId,  // 邮件任务ID
             @RequestParam int operateStatus,
@@ -88,7 +88,7 @@ public class EmailTaskController {
      * @param request     请求体，包含 operateStatus、subject、templateId 和 attachments
      * @return 更新结果
      */
-    @PutMapping("/{emailTaskId}/update")
+    @PutMapping("/{emailTaskId}")
     public Result updateEmailTask(
             @PathVariable String emailTaskId,
             @RequestBody UpdateBirthdayEmailTaskRequest request) {

@@ -67,7 +67,7 @@ public class SupplierController {
      * @param size          每页大小
      * @return 符合条件的供应商分页结果
      */
-    @GetMapping("/search-redis")
+    @GetMapping("/search-all")
     public Result<String> findSuppliersByCriteriaRedis(
             @RequestParam(required = false) String ownerUserId,
             @RequestParam(required = false) Integer supplierLevel,

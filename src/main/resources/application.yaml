@@ -1,0 +1,26 @@
+mail:
+  servers:
+    server1:
+      host: smtp.example1.com
+      port: 587
+      username: user1@example1.com
+      password: password1
+      protocol: smtp
+      properties:
+        mail:
+          smtp:
+            auth: true
+            starttls:
+              enable: true
+    server2:
+      host: smtp.example2.com
+      port: 465
+      username: user2@example2.com
+      password: password2
+      protocol: smtp
+      properties:
+        mail:
+          smtp:
+            auth: true
+            ssl:
+              enable: true

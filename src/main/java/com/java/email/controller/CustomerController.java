@@ -68,7 +68,7 @@ public class CustomerController {
      * @param size          每页大小
      * @return 符合条件的客户分页结果
      */
-    @GetMapping("/search-redis")
+    @GetMapping("/search-all")
     public Result<String> findCustomersByCriteriaRedis(
             @RequestParam(required = false) String belongUserId,
             @RequestParam(required = false) Integer customerLevel,
