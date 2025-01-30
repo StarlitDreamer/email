@@ -14,19 +14,19 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 public class MailServerConfig {
 
     @Id
-    private String id;
+    private String id;//邮件服务器配置id
 
     @Field(type = FieldType.Keyword)
-    private String name;
+    private String name;//邮件服务器配置name
 
     @Field(type = FieldType.Keyword)
-    private String host;
+    private String host;//邮件服务器配置主机
 
     @Field(type = FieldType.Integer)
-    private int port;
+    private int port;//邮件服务器配置port
 
     @Field(type = FieldType.Keyword)
-    private String username;
+    private String username;//邮件服务器配置username
 
     @Field(type = FieldType.Keyword)
     private String encryptedPassword;// 存储加密后的密码
