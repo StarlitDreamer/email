@@ -1,6 +1,7 @@
 package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.java.email.common.Result;
@@ -34,10 +35,10 @@ public class AreaServiceImpl implements AreaService {
 
     private void createAreaIndexIfNotExists() {
         try {
-            boolean exists = elasticsearchClient.indices().exists(e -> e.index("area_index")).value();
+            boolean exists = elasticsearchClient.indices().exists(e -> e.index("area")).value();
             if (!exists) {
                 elasticsearchClient.indices().create(c -> c
-                        .index("area_index")
+                        .index("area")
                         .mappings(m -> m
                                 .properties("area_name", p -> p
                                         .text(t -> t
@@ -60,40 +61,25 @@ public class AreaServiceImpl implements AreaService {
     @Override
     public Result<?> createArea(AreaCreateRequest request) {
         try {
-            // 检查参数
-            if (request.getArea_name() == null || request.getArea_name().trim().isEmpty()) {
-                return Result.error("区域名称不能为空");
-            }
-            if (request.getCountry_id() == null || request.getCountry_id().isEmpty()) {
-                return Result.error("国家ID不能为空");
-            }
-
-            // 检查所有国家是否存在
-            for (String countryId : request.getCountry_id()) {
-                boolean exists = elasticsearchClient.exists(e -> e
-                        .index("country_index")
-                        .id(countryId)
-                ).value();
-
-                if (!exists) {
-                    return Result.error("国家不存在，ID: " + countryId);
-                }
-            }
+            // 获取当前时间的 ISO 格式字符串
+            String now = java.time.Instant.now().toString();
 
             // 构建文档
             Map<String, Object> document = new HashMap<>();
             document.put("area_name", request.getArea_name());
-            document.put("country_id", request.getCountry_id());
+            document.put("area_country", request.getArea_country());
+            document.put("created_at", now);
+            document.put("updated_at", now);
 
             // 保存到 Elasticsearch
-            elasticsearchClient.index(i -> i
-                    .index("area_index")
+            IndexResponse response = elasticsearchClient.index(i -> i
+                    .index("area")
                     .document(document)
             );
 
             // 构建响应数据
             Map<String, Object> resultData = new HashMap<>();
-            resultData.put("area_name", request.getArea_name());
+            resultData.put("area_id", response.id());
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建区域失败：" + e.getMessage());
@@ -108,7 +94,7 @@ public class AreaServiceImpl implements AreaService {
 
             // 检查索引是否存在，不存在则返回空结果
             boolean exists = elasticsearchClient.indices().exists(e -> e
-                    .index("area_index")
+                    .index("area")
             ).value();
 
             if (!exists) {
@@ -123,7 +109,7 @@ public class AreaServiceImpl implements AreaService {
 
             // 构建搜索请求
             SearchResponse<Map> response = elasticsearchClient.search(s -> s
-                    .index("area_index")
+                    .index("area")
                     .query(q -> {
                         if (StringUtils.hasText(request.getArea_name()) && StringUtils.hasText(request.getCountry_id())) {
                             return q.bool(b -> b
@@ -170,29 +156,9 @@ public class AreaServiceImpl implements AreaService {
                 AreaVO area = new AreaVO();
                 area.setArea_id(hit.id());
                 area.setArea_name((String) hit.source().get("area_name"));
-                
-                // 获取国家名称列表
-                List<String> countryIds = (List<String>) hit.source().get("country_id");
-                List<String> countryNames = new ArrayList<>();
-                
-                if (countryIds != null) {
-                    for (String countryId : countryIds) {
-                        try {
-                            Map<String, Object> country = elasticsearchClient.get(g -> g
-                                    .index("country_index")
-                                    .id(countryId),
-                                    Map.class
-                            ).source();
-                            if (country != null) {
-                                countryNames.add((String) country.get("country_name"));
-                            }
-                        } catch (Exception e) {
-                            // 如果获取国家失败，跳过
-                        }
-                    }
-                }
-                
-                area.setCountry_name(countryNames);
+                area.setArea_country((List<String>) hit.source().get("area_country"));
+                area.setCreated_at((String) hit.source().get("created_at"));
+                area.setUpdated_at((String) hit.source().get("updated_at"));
                 areas.add(area);
             }
             filterResponse.setArea(areas);
@@ -219,7 +185,7 @@ public class AreaServiceImpl implements AreaService {
 
             // 先检查文档是否存在
             boolean exists = elasticsearchClient.exists(e -> e
-                    .index("area_index")
+                    .index("area")
                     .id(request.getArea_id())
             ).value();
 
@@ -229,7 +195,7 @@ public class AreaServiceImpl implements AreaService {
 
             // 执行删除操作
             elasticsearchClient.delete(d -> d
-                    .index("area_index")
+                    .index("area")
                     .id(request.getArea_id())
             );
 
@@ -252,7 +218,7 @@ public class AreaServiceImpl implements AreaService {
 
             // 先检查区域是否存在
             boolean exists = elasticsearchClient.exists(e -> e
-                    .index("area_index")
+                    .index("area")
                     .id(request.getArea_id())
             ).value();
 
@@ -274,6 +240,9 @@ public class AreaServiceImpl implements AreaService {
                 }
             }
 
+            // 获取当前时间的 ISO 格式字符串
+            String now = java.time.Instant.now().toString();
+
             // 构建更新文档
             Map<String, Object> document = new HashMap<>();
             if (StringUtils.hasText(request.getArea_name())) {
@@ -282,10 +251,11 @@ public class AreaServiceImpl implements AreaService {
             if (request.getCountry_id() != null) {
                 document.put("country_id", request.getCountry_id());
             }
+            document.put("updated_at", now);
 
             // 执行更新操作
             elasticsearchClient.update(u -> u
-                    .index("area_index")
+                    .index("area")
                     .id(request.getArea_id())
                     .doc(document),
                     Map.class

@@ -39,10 +39,10 @@ public class CountryServiceImpl implements CountryService {
 
     private void createCountryIndexIfNotExists() {
         try {
-            boolean exists = elasticsearchClient.indices().exists(e -> e.index("country_index")).value();
+            boolean exists = elasticsearchClient.indices().exists(e -> e.index("country")).value();
             if (!exists) {
                 elasticsearchClient.indices().create(c -> c
-                        .index("country_index")
+                        .index("country")
                         .mappings(m -> m
                                 .properties("country_name", p -> p
                                         .text(t -> t
@@ -84,7 +84,7 @@ public class CountryServiceImpl implements CountryService {
                         
                         // 保存到 Elasticsearch
                         elasticsearchClient.index(i -> i
-                                .index("country_index")
+                                .index("country")
                                 .document(document)
                         );
                         
@@ -116,7 +116,7 @@ public class CountryServiceImpl implements CountryService {
 
             // 检查索引是否存在，不存在则返回空结果
             boolean exists = elasticsearchClient.indices().exists(e -> e
-                    .index("country_index")
+                    .index("country")
             ).value();
 
             if (!exists) {
@@ -131,7 +131,7 @@ public class CountryServiceImpl implements CountryService {
 
             // 构建搜索请求
             SearchResponse<Map> response = elasticsearchClient.search(s -> s
-                    .index("country_index")
+                    .index("country")
                     .query(q -> {
                         if (StringUtils.hasText(request.getCountry_code()) && StringUtils.hasText(request.getCountry_name())) {
                             return q.bool(b -> b
@@ -176,8 +176,11 @@ public class CountryServiceImpl implements CountryService {
             List<CountryVO> countries = new ArrayList<>();
             for (Hit<Map> hit : response.hits().hits()) {
                 CountryVO country = new CountryVO();
-                country.setCountry_code(hit.id());
+                country.setCountry_id(hit.id());
+                country.setCountry_code((String) hit.source().get("country_code"));
                 country.setCountry_name((String) hit.source().get("country_name"));
+                country.setCreated_at((String) hit.source().get("created_at"));
+                country.setUpdated_at((String) hit.source().get("updated_at"));
                 countries.add(country);
             }
             filterResponse.setCountry(countries);
@@ -197,22 +200,19 @@ public class CountryServiceImpl implements CountryService {
     @Override
     public Result<?> createCountry(CountryCreateRequest request) {
         try {
-            // 检查参数
-            if (request.getCountry_code() == null || request.getCountry_code().trim().isEmpty()) {
-                return Result.error("国家代码不能为空");
-            }
-            if (request.getCountry_name() == null || request.getCountry_name().trim().isEmpty()) {
-                return Result.error("国家名称不能为空");
-            }
+            // 获取当前时间的 ISO 格式字符串
+            String now = java.time.Instant.now().toString();
 
             // 构建文档
             Map<String, Object> document = new HashMap<>();
             document.put("country_code", request.getCountry_code());
             document.put("country_name", request.getCountry_name());
+            document.put("created_at", now);
+            document.put("updated_at", now);
 
             // 保存到 Elasticsearch
             elasticsearchClient.index(i -> i
-                    .index("country_index")
+                    .index("country")
                     .id(request.getCountry_code())  // 使用国家代码作为文档ID
                     .document(document)
             );
@@ -236,7 +236,7 @@ public class CountryServiceImpl implements CountryService {
 
             // 先检查文档是否存在
             boolean exists = elasticsearchClient.exists(e -> e
-                    .index("country_index")
+                    .index("country")
                     .id(request.getCountry_id())
             ).value();
 
@@ -246,7 +246,7 @@ public class CountryServiceImpl implements CountryService {
 
             // 执行删除操作
             elasticsearchClient.delete(d -> d
-                    .index("country_index")
+                    .index("country")
                     .id(request.getCountry_id())
             );
 
@@ -269,13 +269,16 @@ public class CountryServiceImpl implements CountryService {
 
             // 先检查文档是否存在
             boolean exists = elasticsearchClient.exists(e -> e
-                    .index("country_index")
+                    .index("country")
                     .id(request.getCountry_id())
             ).value();
 
             if (!exists) {
                 return Result.error("国家不存在，ID: " + request.getCountry_id());
             }
+
+            // 获取当前时间的 ISO 格式字符串
+            String now = java.time.Instant.now().toString();
 
             // 构建更新文档
             Map<String, Object> document = new HashMap<>();
@@ -285,10 +288,11 @@ public class CountryServiceImpl implements CountryService {
             if (StringUtils.hasText(request.getCountry_name())) {
                 document.put("country_name", request.getCountry_name());
             }
+            document.put("updated_at", now);
 
             // 执行更新操作
             elasticsearchClient.update(u -> u
-                    .index("country_index")
+                    .index("countrycountry")
                     .id(request.getCountry_id())
                     .doc(document),
                     Map.class

@@ -3,9 +3,11 @@ package com.java.email.model;
 import java.util.List;
 
 public class AreaVO {
-    private String area_id;
-    private String area_name;
-    private List<String> country_name;
+    private String area_id;           // 区域ID
+    private String area_name;         // 区域名称，例如：欧洲、亚洲等
+    private List<String> area_country; // 区域包含的国家ID列表
+    private String created_at;        // ISO 格式的创建时间
+    private String updated_at;        // ISO 格式的更新时间
 
     public String getArea_id() {
         return area_id;
@@ -23,11 +25,27 @@ public class AreaVO {
         this.area_name = area_name;
     }
 
-    public List<String> getCountry_name() {
-        return country_name;
+    public List<String> getArea_country() {
+        return area_country;
     }
 
-    public void setCountry_name(List<String> country_name) {
-        this.country_name = country_name;
+    public void setArea_country(List<String> area_country) {
+        this.area_country = area_country;
+    }
+
+    public String getCreated_at() {
+        return created_at;
+    }
+
+    public void setCreated_at(String created_at) {
+        this.created_at = created_at;
+    }
+
+    public String getUpdated_at() {
+        return updated_at;
+    }
+
+    public void setUpdated_at(String updated_at) {
+        this.updated_at = updated_at;
     }
 } 

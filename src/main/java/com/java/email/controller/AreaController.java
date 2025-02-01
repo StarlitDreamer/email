@@ -25,8 +25,8 @@ public class AreaController {
         if (request.getArea_name() == null || request.getArea_name().trim().isEmpty()) {
             return Result.error("区域名称不能为空");
         }
-        if (request.getCountry_id() == null || request.getCountry_id().isEmpty()) {
-            return Result.error("国家ID不能为空");
+        if (request.getArea_country() == null || request.getArea_country().isEmpty()) {
+            return Result.error("区域包含的国家不能为空");
         }
         return areaService.createArea(request);
     }

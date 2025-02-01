@@ -29,14 +29,22 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public Result<?> createEmail(String emailTypeName) {
         try {
+            // 获取当前时间的 ISO 格式字符串
+            String now = java.time.Instant.now().toString();
+            
+            // 构建文档
             Map<String, Object> document = new HashMap<>();
             document.put("email_type_name", emailTypeName);
+            document.put("created_at", now);
+            document.put("updated_at", now);
 
+            // 保存到 Elasticsearch
             IndexResponse response = elasticsearchClient.index(i -> i
-                    .index("email_index")
+                    .index("email_type_index")
                     .document(document)
             );
 
+            // 构建响应数据
             Map<String, Object> resultData = new HashMap<>();
             resultData.put("email_type_id", response.id());
             return Result.success(resultData);
@@ -53,7 +61,7 @@ public class EmailServiceImpl implements EmailService {
 
             // 构建搜索请求
             SearchResponse<Map> response = elasticsearchClient.search(s -> s
-                    .index("email_index")
+                    .index("email_type")
                     .query(q -> {
                         if (StringUtils.hasText(request.getEmail_type_name())) {
                             return q.match(m -> m
@@ -80,6 +88,8 @@ public class EmailServiceImpl implements EmailService {
                 EmailTypeVO emailType = new EmailTypeVO();
                 emailType.setEmail_type_id(hit.id());
                 emailType.setEmail_type_name((String) hit.source().get("email_type_name"));
+                emailType.setCreated_at((String) hit.source().get("created_at"));
+                emailType.setUpdated_at((String) hit.source().get("updated_at"));
                 emailTypes.add(emailType);
             }
             filterResponse.setEmail_type(emailTypes);
@@ -103,7 +113,7 @@ public class EmailServiceImpl implements EmailService {
 
             // 先检查文档是否存在
             boolean exists = elasticsearchClient.exists(e -> e
-                    .index("email_index")
+                    .index("email_type_index")
                     .id(request.getEmail_type_id())
             ).value();
 
@@ -111,18 +121,23 @@ public class EmailServiceImpl implements EmailService {
                 return Result.error("邮件类型不存在，ID: " + request.getEmail_type_id());
             }
 
+            // 获取当前时间的 ISO 格式字符串
+            String now = java.time.Instant.now().toString();
+
             // 构建更新文档
             Map<String, Object> document = new HashMap<>();
             document.put("email_type_name", request.getEmail_type_name());
+            document.put("updated_at", now);
 
             // 执行更新操作
             elasticsearchClient.update(u -> u
-                    .index("email_index")
+                    .index("email_type_index")
                     .id(request.getEmail_type_id())
                     .doc(document),
                     Map.class
             );
 
+            // 构建响应数据
             Map<String, Object> resultData = new HashMap<>();
             resultData.put("email_type_id", request.getEmail_type_id());
             return Result.success(resultData);
@@ -141,7 +156,7 @@ public class EmailServiceImpl implements EmailService {
 
             // 先检查文档是否存在
             boolean exists = elasticsearchClient.exists(e -> e
-                    .index("email_index")
+                    .index("email_type")
                     .id(request.getEmail_type_id())
             ).value();
 
@@ -151,7 +166,7 @@ public class EmailServiceImpl implements EmailService {
 
             // 执行删除操作
             elasticsearchClient.delete(d -> d
-                    .index("email_index")
+                    .index("email_type")
                     .id(request.getEmail_type_id())
             );
 

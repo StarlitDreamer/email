@@ -3,8 +3,8 @@ package com.java.email.model;
 import java.util.List;
 
 public class AreaCreateRequest {
-    private String area_name;
-    private List<String> country_id;
+    private String area_name;         // 区域名称，例如：欧洲、亚洲等
+    private List<String> area_country; // 区域包含的国家ID列表
 
     public String getArea_name() {
         return area_name;
@@ -14,11 +14,11 @@ public class AreaCreateRequest {
         this.area_name = area_name;
     }
 
-    public List<String> getCountry_id() {
-        return country_id;
+    public List<String> getArea_country() {
+        return area_country;
     }
 
-    public void setCountry_id(List<String> country_id) {
-        this.country_id = country_id;
+    public void setArea_country(List<String> area_country) {
+        this.area_country = area_country;
     }
 } 
