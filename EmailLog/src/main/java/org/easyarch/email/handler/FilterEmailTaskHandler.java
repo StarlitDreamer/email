@@ -50,12 +50,15 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                         .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0)));
 
                 // 获取分页参数
-                int page = Integer.parseInt(params.getOrDefault("page", "0"));
-                int size = Integer.parseInt(params.getOrDefault("size", "5"));
-
+                int page = Integer.parseInt(params.getOrDefault("page_num", "0"));
+                int size = Integer.parseInt(params.getOrDefault("page_size", "5"));
+                if(params.containsKey("senderName")){
+                    //senderId存放的是用户的邮箱
+                    params.put("senderId",userService.findUserEmailByUserName(params.get("senderName")));
+                }
                 // 移除分页参数
-                params.remove("page");
-                params.remove("size");
+                params.remove("page_num");
+                params.remove("page_size");
 
                 // 使用动态参数查询
                 FilterTaskVo filterTaskVo =new FilterTaskVo();
@@ -67,7 +70,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                     filterTaskVo.setPage(page);
                     filterTaskVo.setSize(size);
                     try {
-                        User user=userService.findByUserId(emailTask.getSenderId()[0]);
+                        User user=userService.findByUserEmail(emailTask.getSenderId()[0]);
                         filterTaskVo.setSenderName(user.getUserName());
                         filterTaskVo.setSenderEmail(user.getUserEmail());
                     } catch (IOException e) {

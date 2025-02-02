@@ -47,7 +47,7 @@ public class EmailLogService {
         return emailTaskService.findById(id);
     }
 
-    public List<Email> findAllEmail(String emailTaskId) throws IOException {
+    public List<UndeliveredEmail> findAllEmail(String emailTaskId) throws IOException {
         return emailService.findAllEmail(emailTaskId);
     }
 
@@ -59,7 +59,7 @@ public class EmailLogService {
         return emailTaskService.findByDynamicQueryEmailTask(params, page, size);
     }
 
-    public List<Email> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException {
+    public List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException {
 
         return emailService.findByDynamicQueryEmail(params, page, size);
     }
@@ -70,6 +70,7 @@ public class EmailLogService {
     }
 
 
-
-
-} 
+    public List<EmailTask> findByEmailTasks(Map<String, String> params) throws IOException {
+        return emailTaskService.findByEmailTasks(params);
+    }
+}

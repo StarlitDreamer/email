@@ -8,6 +8,7 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import lombok.extern.slf4j.Slf4j;
 import org.easyarch.email.pojo.Email;
+import org.easyarch.email.pojo.UndeliveredEmail;
 import org.easyarch.email.service.EmailService;
 import org.springframework.stereotype.Service;
 
@@ -63,29 +64,32 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public List<Email> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException {
-        SearchResponse<Email> response = esClient.search(s -> {
+    public List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException {
+        SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
             s.index(INDEX_NAME);
             s.from(page * size);
             s.size(size);
 
-            // 如果参数不为空，则构造查询条件
-            if (!params.isEmpty()) {
-                s.query(q -> q.bool(b -> {
+            s.query(q -> q.bool(b -> {
+                // 首先添加 errcode 为 5 的条件
+                b.must(m -> m.term(t -> t.field("errcode").value("5")));
+
+                // 处理其他查询条件
+                if (!params.isEmpty()) {
                     params.forEach((key, value) -> {
-                        if (value != null) {
+                        if (value != null && !key.equals("errcode")) { // 跳过errcode参数
                             switch (key) {
-                                case "emailStatus":
-                                    b.must(m -> m.term(t -> t.field("emailStatus").value(Long.parseLong(value))));
+                                case "emailId":
+                                    b.must(m -> m.term(t -> t.field("emailId").value(value)));
                                     break;
                                 case "emailTaskId":
                                     b.must(m -> m.term(t -> t.field("emailTaskId").value(value)));
                                     break;
                                 case "receiverId":
-                                    b.must(m -> m.term(t -> t.field("receiverid").value(value)));
+                                    b.must(m -> m.term(t -> t.field("receiverId").value(value)));
                                     break;
                                 case "senderId":
-                                    b.must(m -> m.term(t -> t.field("senderid").value(value)));
+                                    b.must(m -> m.match(t -> t.field("senderId").query(value)));
                                     break;
                                 case "startDate":
                                     b.must(m -> m.range(r -> r.field("startDate").gte(JsonData.of(Long.parseLong(value)))));
@@ -93,31 +97,22 @@ public class EmailServiceImpl implements EmailService {
                                 case "endDate":
                                     b.must(m -> m.range(r -> r.field("endDate").lte(JsonData.of(Long.parseLong(value)))));
                                     break;
-                                case "createdAt":
-                                    b.must(m -> m.range(r -> r.field("createdAt").gte(JsonData.of(Long.parseLong(value)))));
-                                    break;
                                 default:
-                                    // 忽略未定义的字段
                                     break;
                             }
                         }
                     });
-                    return b;
-                }));
-            } else {
-                // 如果没有任何查询参数，则查询所有数据
-                s.query(q -> q.matchAll(m -> m));
-            }
+                }
+                return b;
+            }));
 
             return s;
-        }, Email.class);
+        }, UndeliveredEmail.class);
 
-        // 返回查询结果，映射为 Email 对象列表
         return response.hits().hits().stream()
                 .map(Hit::source)
                 .collect(Collectors.toList());
     }
-
 
     @Override
     public Email findById(String id) throws IOException {
@@ -130,8 +125,8 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public List<Email> findAllEmail(String emailTaskId) throws IOException {
-        SearchResponse<Email> response= esClient.search(s -> {
+    public List<UndeliveredEmail> findAllEmail(String emailTaskId) throws IOException {
+        SearchResponse<UndeliveredEmail> response= esClient.search(s -> {
             s.index(INDEX_NAME);
             if(emailTaskId!=null){
                 s.query(q->q.match(t->t.field("emailTaskId").query(emailTaskId)));
@@ -139,7 +134,7 @@ public class EmailServiceImpl implements EmailService {
                 s.query(q -> q.matchAll(m -> m));
             }
             return s;
-        },Email.class);
+        },UndeliveredEmail.class);
         return response.hits().hits().stream().map(Hit::source).collect(Collectors.toList());
 
     }

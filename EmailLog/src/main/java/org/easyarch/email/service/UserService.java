@@ -9,6 +9,7 @@ public interface UserService {
 
     void saveUser(User user) throws IOException;
     User findById(String id) throws IOException;
-    User findByUserId(String userId) throws IOException;
+    User findByUserEmail(String email) throws IOException;
 
+    String findUserEmailByUserName(String senderName) throws IOException;
 }

@@ -48,12 +48,12 @@ public class QueryLogHandler extends SimpleChannelInboundHandler<FullHttpRequest
                         .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0)));
                 
                 // 获取分页参数
-                int page = Integer.parseInt(params.getOrDefault("page", "0"));
-                int size = Integer.parseInt(params.getOrDefault("size", "5"));
+                int page = Integer.parseInt(params.getOrDefault("page_num", "0"));
+                int size = Integer.parseInt(params.getOrDefault("page_size", "5"));
                 
                 // 移除分页参数
-                params.remove("page");
-                params.remove("size");
+                params.remove("page_num");
+                params.remove("page_size");
                 
                 // 使用动态参数查询
                 EmailTaskVo emailTaskVo=new EmailTaskVo();
@@ -70,7 +70,7 @@ public class QueryLogHandler extends SimpleChannelInboundHandler<FullHttpRequest
                     String formattedDate = dateTime.format(formatter);
                     emailTaskVo.setCreatedAt(formattedDate);
                     try {
-                        emailTaskVo.setSenderName(userService.findByUserId(emailTask.getSenderId()[0]).getUserName());
+                        emailTaskVo.setSenderName(userService.findByUserEmail(emailTask.getSenderId()[0]).getUserName());
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }return emailTaskVo;

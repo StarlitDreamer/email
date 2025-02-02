@@ -52,8 +52,8 @@ public class FailLogHandler extends SimpleChannelInboundHandler<FullHttpRequest>
 
             int page = 0, size = 10;
             try {
-                page = Integer.parseInt(params.getOrDefault("page", "0"));
-                size = Integer.parseInt(params.getOrDefault("size", "10"));
+                page = Integer.parseInt(params.getOrDefault("page_num", "0"));
+                size = Integer.parseInt(params.getOrDefault("page_size", "10"));
                 if (page < 0 || size <= 0) {
                     sendResponse(ctx, HttpResponseStatus.BAD_REQUEST,
                             "Page must be >= 0 and size must be > 0.");
@@ -65,9 +65,8 @@ public class FailLogHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                 return;
             }
 
-            params.remove("page");
-            params.remove("size");
-            params.put("errcode","3");
+            params.remove("page_num");
+            params.remove("page_size");
 
             List<UndeliveredEmail> logList = emailLogService.findByDynamicQueryFailEmail(params, page, size);
 
@@ -85,13 +84,14 @@ public class FailLogHandler extends SimpleChannelInboundHandler<FullHttpRequest>
                     emailVo.setEmailType(emailTask.getSubject());
                     BeanUtils.copyProperties(email, emailVo);
                     emailVo.setLevel("高级");
+                    emailVo.setErrorMsg(email.getErrorMsg());
                     emailVo.setStartDate(dateTimeFormatter(email.getStartDate()));
                     emailVo.setEndDate(dateTimeFormatter(email.getEndDate()));
 
                 User sender = null;
                 try {
-                    sender = userService.findByUserId(email.getSenderId()[0]);
-                    User receiver = userService.findByUserId(email.getReceiverId()[0]);
+                    sender = userService.findByUserEmail(email.getSenderId()[0]);
+                    User receiver = userService.findByUserEmail(email.getReceiverId()[0]);
                     emailVo.setSenderEmail(sender.getUserEmail());
                     emailVo.setSenderName(sender.getUserName());
                     emailVo.setReceiverEmail(receiver.getUserEmail());

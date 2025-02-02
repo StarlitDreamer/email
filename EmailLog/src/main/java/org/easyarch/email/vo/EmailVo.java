@@ -24,6 +24,6 @@ public class EmailVo implements Serializable {
     private String level;
     private String startDate;
     private String endDate;
-    private String emailStatus;
+    private Integer errorCode;
     private String errorMsg;
 }

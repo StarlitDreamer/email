@@ -69,15 +69,29 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User findByUserId(String userId) throws IOException {
+    public User findByUserEmail(String email) throws IOException {
         SearchResponse<User> response= esClient.search(s -> {
             s.index(INDEX_NAME);
-            if(userId!=null){
-                s.query(q->q.term(t->t.field("userid").value(userId)));
+            if(email!=null){
+                s.query(q->q.term(t->t.field("userEmail").value(email)));
             }
             return s;
         },User.class);
 
         return response.hits().hits().get(0).source();
     }
+
+    @Override
+    public String findUserEmailByUserName(String senderName) throws IOException {
+        SearchResponse<User> response= esClient.search(s -> {
+            s.index(INDEX_NAME);
+            if(senderName!=null){
+                s.query(q->q.term(t->t.field("userName").value(senderName)));
+            }
+            return s;
+        },User.class);
+
+        return response.hits().hits().get(0).source().getUserEmail();
+    }
+
 }

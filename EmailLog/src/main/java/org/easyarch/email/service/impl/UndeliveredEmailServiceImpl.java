@@ -39,15 +39,15 @@ public class UndeliveredEmailServiceImpl implements UndeliveredEmailService {
             s.from(page * size);
             s.size(size);
 
-            // 如果参数不为空，则构造查询条件
-            if (!params.isEmpty()) {
-                s.query(q -> q.bool(b -> {
+            s.query(q -> q.bool(b -> {
+                // 首先添加 errcode 为 5 的条件
+                b.must(m -> m.term(t -> t.field("errcode").value("6")));
+
+                // 处理其他查询条件
+                if (!params.isEmpty()) {
                     params.forEach((key, value) -> {
-                        if (value != null) {
+                        if (value != null && !key.equals("errcode")) { // 跳过errcode参数
                             switch (key) {
-                                case "errcode":
-                                    b.must(m -> m.term(t -> t.field("errcode").value(value)));
-                                    break;
                                 case "emailId":
                                     b.must(m -> m.term(t -> t.field("emailId").value(value)));
                                     break;
@@ -57,7 +57,7 @@ public class UndeliveredEmailServiceImpl implements UndeliveredEmailService {
                                 case "receiverId":
                                     b.must(m -> m.term(t -> t.field("receiverId").value(value)));
                                     break;
-                                case "senderId": // 查询数组中是否包含指定值
+                                case "senderId":
                                     b.must(m -> m.match(t -> t.field("senderId").query(value)));
                                     break;
                                 case "startDate":
@@ -66,26 +66,18 @@ public class UndeliveredEmailServiceImpl implements UndeliveredEmailService {
                                 case "endDate":
                                     b.must(m -> m.range(r -> r.field("endDate").lte(JsonData.of(Long.parseLong(value)))));
                                     break;
-                                case "createdAt":
-                                    b.must(m -> m.range(r -> r.field("createdAt").gte(JsonData.of(Long.parseLong(value)))));
-                                    break;
                                 default:
-                                    // 忽略未定义的字段
                                     break;
                             }
                         }
                     });
-                    return b;
-                }));
-            } else {
-                // 如果没有任何查询参数，则查询所有数据
-                s.query(q -> q.matchAll(m -> m));
-            }
+                }
+                return b;
+            }));
 
             return s;
         }, UndeliveredEmail.class);
 
-        // 返回查询结果，映射为 UndeliveredEmail 对象列表
         return response.hits().hits().stream()
                 .map(Hit::source)
                 .collect(Collectors.toList());

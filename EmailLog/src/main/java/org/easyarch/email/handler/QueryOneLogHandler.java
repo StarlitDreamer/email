@@ -9,6 +9,7 @@ import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.easyarch.email.pojo.Email;
 import org.easyarch.email.pojo.EmailTask;
+import org.easyarch.email.pojo.UndeliveredEmail;
 import org.easyarch.email.pojo.User;
 import org.easyarch.email.result.EmailStatusEnum;
 import org.easyarch.email.service.EmailLogService;
@@ -49,18 +50,18 @@ public class QueryOneLogHandler extends SimpleChannelInboundHandler<FullHttpRequ
                         .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0)));
 
                 // 获取分页参数
-                int page = Integer.parseInt(params.getOrDefault("page", "0"));
-                int size = Integer.parseInt(params.getOrDefault("size", "10"));
+                int page = Integer.parseInt(params.getOrDefault("page_num", "0"));
+                int size = Integer.parseInt(params.getOrDefault("page_size", "10"));
 
                 String emailTaskId =params.get("emailTaskId");
 
                 // 移除分页参数
-                params.remove("page");
-                params.remove("size");
+                params.remove("page_num");
+                params.remove("page_size");
 
                 // 使用动态参数查询
 
-                List<Email> logList = emailLogService.findByDynamicQueryEmail(params, page, size);
+                List<UndeliveredEmail> logList = emailLogService.findByDynamicQueryEmail(params, page, size);
                 EmailTask emailTask=emailLogService.findByEmailTaskId(emailTaskId);
                 List<EmailVo> emailVoList=logList.stream().map(email -> {
                     EmailVo emailVo=new EmailVo();
@@ -68,12 +69,13 @@ public class QueryOneLogHandler extends SimpleChannelInboundHandler<FullHttpRequ
                     emailVo.setTaskType(emailTask.getSubject());
                     BeanUtils.copyProperties(email, emailVo);
                     emailVo.setLevel("高级");
-                    emailVo.setEmailStatus(EmailStatusEnum.getMessageByCode(email.getEmailStatus()));
+                    emailVo.setErrorCode(email.getErrorCode());
+                    emailVo.setErrorMsg(email.getErrorMsg());
                     emailVo.setStartDate(dateTimeFormatter(email.getStartDate()));
                     emailVo.setEndDate(dateTimeFormatter(email.getEndDate()));
                     try {
-                        User sender=userService.findByUserId(email.getSenderId()[0]);
-                        User receiver=userService.findByUserId(email.getReceiverId()[0]);
+                        User sender=userService.findByUserEmail(email.getSenderId()[0]);
+                        User receiver=userService.findByUserEmail(email.getReceiverId()[0]);
                         emailVo.setSenderEmail(sender.getUserEmail());
                         emailVo.setSenderName(sender.getUserName());
                         emailVo.setReceiverEmail(receiver.getUserEmail());

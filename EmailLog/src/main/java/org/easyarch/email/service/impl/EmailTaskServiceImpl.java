@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -74,9 +75,6 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                                     break;
                                 case "subject":
                                     b.must(m -> m.match(t -> t.field("subject").query(value)));
-                                    break;
-                                case "templateId": // 修正字段名
-                                    b.must(m -> m.term(t -> t.field("templateId").value(value)));
                                     break;
                                 case "taskStatus":
                                     b.must(m -> m.term(t -> t.field("taskStatus").value(value)));
@@ -157,4 +155,52 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                 .id(id)
         );
     }
+
+    @Override
+    public List<EmailTask> findByEmailTasks(Map<String, String> params) throws IOException {
+        SearchResponse<EmailTask> response = esClient.search(s -> {
+            s.index(INDEX_NAME);
+
+            // 如果参数不为空，则构造查询条件
+            if (!params.isEmpty()) {
+                s.query(q -> q.bool(b -> {
+                    params.forEach((key, value) -> {
+                        if (value != null) {
+                            switch (key) {
+                                case "emailTaskId":
+                                    b.must(m -> m.term(t -> t.field("emailTaskId").value(value)));
+                                    break;
+                                case "emailTypeId": // 修正字段名
+                                    b.must(m -> m.term(t -> t.field("emailTypeId").value(value)));
+                                    break;
+                                case "subject":
+                                    b.must(m -> m.match(t -> t.field("subject").query(value)));
+                                    break;
+                                case "taskStatus":
+                                    b.must(m -> m.term(t -> t.field("taskStatus").value(value)));
+                                    break;
+                                case "taskType":
+                                    b.must(m -> m.term(t -> t.field("taskType").value(value)));
+                                    break;
+                                default:
+                                    // 忽略未定义的查询字段
+                                    break;
+                            }
+                        }
+                    });
+                    return b;
+                }));
+            } else {
+                // 如果没有任何查询参数，则查询所有数据
+                s.query(q -> q.matchAll(m -> m));
+            }
+
+            return s;
+        }, EmailTask.class);
+        return response.hits().hits().stream()
+                .map(Hit::source)
+                .collect(Collectors.toList());
+    }
+
+
 }

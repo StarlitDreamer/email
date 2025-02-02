@@ -9,6 +9,7 @@ import io.netty.util.CharsetUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.easyarch.email.pojo.Email;
 import org.easyarch.email.pojo.EmailTask;
+import org.easyarch.email.pojo.UndeliveredEmail;
 import org.easyarch.email.result.Result;
 import org.easyarch.email.service.EmailLogService;
 import org.easyarch.email.vo.ReportVo;
@@ -56,7 +57,7 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         // 获取数据
         EmailTask emailTask = emailLogService.findByEmailTaskId(emailTaskId);
-        List<Email> emailList = emailLogService.findAllEmail(emailTaskId);
+        List<UndeliveredEmail> emailList = emailLogService.findAllEmail(emailTaskId);
         
         // 计算统计数据
         ReportVo reportVo = calculateReport(emailTask, emailList);
@@ -83,11 +84,11 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
                 .doubleValue();
     }
 
-    private ReportVo calculateReport(EmailTask emailTask, List<Email> emailList) {
+    private ReportVo calculateReport(EmailTask emailTask, List<UndeliveredEmail> emailList) {
         ReportVo reportVo = new ReportVo();
         long emailTotal = emailList.size();
-        long sendNum = emailList.stream().filter(email -> email.getEmailStatus() == 1).count();
-        long openNum = emailList.stream().filter(email -> email.getEmailStatus() == 2).count();
+        long sendNum = emailList.stream().filter(email -> email.getErrorCode() == 5).count();
+        //long openNum = emailList.stream().filter(email -> email.getEmailStatus() == 2).count();
         
         // 设置投递率
         ReportVo.Delivery delivery = new ReportVo.Delivery();
@@ -96,12 +97,12 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         delivery.setTotal(emailTotal);
         reportVo.setDelivery(delivery);
         
-        // 设置打开率
-        ReportVo.Open open = new ReportVo.Open();
-        open.setRate(calculateRate(openNum, sendNum));
-        open.setOpenAmount(formatAmount(openNum));
-        open.setTotal(sendNum);
-        reportVo.setOpen(open);
+//        // 设置打开率
+//        ReportVo.Open open = new ReportVo.Open();
+//        open.setRate(calculateRate(openNum, sendNum));
+//        open.setOpenAmount(formatAmount(openNum));
+//        open.setTotal(sendNum);
+//        reportVo.setOpen(open);
         
         // 设置退信率
         ReportVo.Bounce bounce = new ReportVo.Bounce();

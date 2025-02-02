@@ -1,6 +1,7 @@
 package org.easyarch.email.service;
 
 import org.easyarch.email.pojo.Email;
+import org.easyarch.email.pojo.UndeliveredEmail;
 
 import java.io.IOException;
 import java.util.List;
@@ -10,11 +11,11 @@ public interface EmailService {
 
      void saveEmail(Email emailTask) throws IOException;
 
-     List<Email> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException;
+     List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException;
 
      Email findById(String id) throws IOException;
 
-     List<Email> findAllEmail(String emaIlTaskId) throws IOException;
+     List<UndeliveredEmail> findAllEmail(String emaIlTaskId) throws IOException;
 
      List<Email> findAll() throws IOException;
 
