@@ -93,7 +93,7 @@ public class EmailTask {
     /**
      * 任务类型，0 普通邮件 1 循环邮件 2 定时发送 3
      */
-    private long taskType;
+    private Integer taskType;
 
     /**
      * 模板id
