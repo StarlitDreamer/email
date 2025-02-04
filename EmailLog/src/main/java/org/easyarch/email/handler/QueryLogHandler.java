@@ -56,9 +56,10 @@ public class QueryLogHandler extends SimpleChannelInboundHandler<FullHttpRequest
                 params.remove("page_size");
                 
                 // 使用动态参数查询
-                EmailTaskVo emailTaskVo=new EmailTaskVo();
+
                 List<EmailTask> emailTaskList = emailLogService.findByDynamicQueryEmailTask(params, page, size);
                 List<EmailTaskVo> emailTaskVoList = emailTaskList.stream().map(emailTask -> {
+                    EmailTaskVo emailTaskVo=new EmailTaskVo();
                     BeanUtils.copyProperties(emailTask,emailTaskVo);
                     long secondsTimestamp = emailTask.getCreatedAt();
 

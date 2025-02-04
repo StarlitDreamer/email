@@ -9,7 +9,6 @@ import java.util.Map;
 
 public interface EmailService {
 
-     void saveEmail(Email emailTask) throws IOException;
 
      List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException;
 

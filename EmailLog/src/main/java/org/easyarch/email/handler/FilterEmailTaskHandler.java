@@ -61,9 +61,10 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                 params.remove("page_size");
 
                 // 使用动态参数查询
-                FilterTaskVo filterTaskVo =new FilterTaskVo();
+
                 List<EmailTask> emailTaskList = emailLogService.findByDynamicQueryEmailTask(params, page, size);
                 List<FilterTaskVo> emailFilterTaskVoList = emailTaskList.stream().map(emailTask -> {
+                    FilterTaskVo filterTaskVo =new FilterTaskVo();
                     BeanUtils.copyProperties(emailTask, filterTaskVo);
                     filterTaskVo.setStartDate(dateTimeFormatter(emailTask.getStartDate()));
                     filterTaskVo.setEndDate(dateTimeFormatter(emailTask.getEndDate()));

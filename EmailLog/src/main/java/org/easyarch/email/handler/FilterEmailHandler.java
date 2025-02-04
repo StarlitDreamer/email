@@ -75,7 +75,7 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                     .flatMap(emailTask -> {
                         try {
                             params.put("emailTaskId", emailTask.getEmailTaskId());
-                            List<UndeliveredEmail> logList = emailLogService.findByDynamicQueryEmail(params, 0, Integer.MAX_VALUE); // 获取所有记录
+                            List<UndeliveredEmail> logList = emailLogService.findByDynamicQueryEmail(params, page,size); // 获取所有记录
                             params.remove("emailTaskId");
                             
                             return logList.stream().map(email -> {

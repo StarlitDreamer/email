@@ -29,10 +29,7 @@ public class EmailLogService {
         this.esClient = esClient;
     }
 
-    public Email saveEmail(Email emailLog) throws IOException {
-        emailService.saveEmail(emailLog);
-        return emailLog;
-    }
+
     public EmailTask saveEmailTask(EmailTask emailTask) throws IOException {
         emailTaskService.saveEmailTask(emailTask);
         return emailTask;

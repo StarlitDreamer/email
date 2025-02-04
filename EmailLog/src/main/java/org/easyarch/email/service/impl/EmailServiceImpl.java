@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Service
 public class EmailServiceImpl implements EmailService {
     private final ElasticsearchClient esClient;
-    private static final String INDEX_NAME = "email_log";
+    private static final String INDEX_NAME = "fail_email_log";
 
     public EmailServiceImpl(ElasticsearchClient esClient) {
         this.esClient = esClient;
@@ -42,26 +42,6 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    // 保存或更新邮件
-    @Override
-    public void saveEmail(Email email) throws IOException {
-        // 确保索引存在
-        initEmailIndex();
-
-        // 保存文档
-        IndexResponse response = esClient.index(i -> i
-                .index(INDEX_NAME)
-                .id(email.getEmailId())
-                .document(email)
-        );
-
-        // 处理响应
-        if (response.result().name().equals("Created")) {
-            log.info("邮件文档创建成功: {}", email.getEmailId());
-        } else if (response.result().name().equals("Updated")) {
-            log.info("邮件文档更新成功: {}", email.getEmailId());
-        }
-    }
 
     @Override
     public List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException {
@@ -71,25 +51,25 @@ public class EmailServiceImpl implements EmailService {
             s.size(size);
 
             s.query(q -> q.bool(b -> {
-                // 首先添加 errcode 为 5 的条件
-                b.must(m -> m.term(t -> t.field("errcode").value("5")));
+                // 未发送邮件
+                b.must(m -> m.term(t -> t.field("errorCode").value("5")));
 
                 // 处理其他查询条件
                 if (!params.isEmpty()) {
                     params.forEach((key, value) -> {
-                        if (value != null && !key.equals("errcode")) { // 跳过errcode参数
+                        if (value != null && !"errorCode".equals(key)) { // 跳过errcode参数
                             switch (key) {
                                 case "emailId":
-                                    b.must(m -> m.term(t -> t.field("emailId").value(value)));
+                                    b.must(m -> m.term(t -> t.field("emailId.keyword").value(value)));
                                     break;
                                 case "emailTaskId":
-                                    b.must(m -> m.term(t -> t.field("emailTaskId").value(value)));
+                                    b.must(m -> m.term(t -> t.field("emailTaskId.keyword").value(value)));
                                     break;
                                 case "receiverId":
-                                    b.must(m -> m.term(t -> t.field("receiverId").value(value)));
+                                    b.must(m -> m.term(t -> t.field("receiverId.keyword").value(value)));
                                     break;
                                 case "senderId":
-                                    b.must(m -> m.match(t -> t.field("senderId").query(value)));
+                                    b.must(m -> m.match(t -> t.field("senderId.keyword").query(value)));
                                     break;
                                 case "startDate":
                                     b.must(m -> m.range(r -> r.field("startDate").gte(JsonData.of(Long.parseLong(value)))));

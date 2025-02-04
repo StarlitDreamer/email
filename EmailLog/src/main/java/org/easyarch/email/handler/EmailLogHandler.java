@@ -33,11 +33,11 @@ public class EmailLogHandler extends SimpleChannelInboundHandler<FullHttpRequest
                 Email emailLog = objectMapper.readValue(content, Email.class);
                 
                 // 保存到Elasticsearch
-                Email savedLog = emailLogService.saveEmail(emailLog);
+                //Email savedLog = emailLogService.saveEmail(emailLog);
                 
                 // 返回成功响应
-                String responseContent = objectMapper.writeValueAsString(savedLog);
-                sendResponse(ctx, HttpResponseStatus.OK, responseContent);
+                //String responseContent = objectMapper.writeValueAsString(savedLog);
+                //sendResponse(ctx, HttpResponseStatus.OK, responseContent);
                 
             } catch (Exception e) {
                 log.error("Error processing email log", e);

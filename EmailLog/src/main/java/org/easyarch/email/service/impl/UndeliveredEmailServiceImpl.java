@@ -6,6 +6,7 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import org.easyarch.email.pojo.Email;
+import org.easyarch.email.pojo.EmailTask;
 import org.easyarch.email.pojo.UndeliveredEmail;
 import org.easyarch.email.service.UndeliveredEmailService;
 import org.springframework.stereotype.Service;
@@ -23,12 +24,28 @@ public class UndeliveredEmailServiceImpl implements UndeliveredEmailService {
         this.esClient = esClient;
     }
 
+    // 初始化索引和映射
+    public void initEmailTaskIndex() throws IOException {
+        // 检查索引是否存在
+        boolean exists = esClient.indices().exists(e -> e
+                .index(INDEX_NAME)
+        ).value();
+
+        if (!exists) {
+            // 创建索引并设置映射
+            esClient.indices().create(c -> c
+                    .index(INDEX_NAME)
+                    .mappings(UndeliveredEmail.createMapping())  // 使用Email类中定义的映射
+            );
+        }
+    }
     @Override
-    public void saveEmail(UndeliveredEmail emailTask) throws IOException {
+    public void saveEmail(UndeliveredEmail email) throws IOException {
+        initEmailTaskIndex();
         IndexResponse response = esClient.index(i -> i
                 .index(INDEX_NAME)
-                .id(emailTask.getEmailTaskId())
-                .document(emailTask)
+                .id(email.getEmailId())
+                .document(email)
         );
     }
 
@@ -40,13 +57,13 @@ public class UndeliveredEmailServiceImpl implements UndeliveredEmailService {
             s.size(size);
 
             s.query(q -> q.bool(b -> {
-                // 首先添加 errcode 为 5 的条件
-                b.must(m -> m.term(t -> t.field("errcode").value("6")));
+                // 未发送邮件
+                b.must(m -> m.term(t -> t.field("errorCode").value("6")));
 
                 // 处理其他查询条件
                 if (!params.isEmpty()) {
                     params.forEach((key, value) -> {
-                        if (value != null && !key.equals("errcode")) { // 跳过errcode参数
+                        if (value != null && !"errorCode".equals(key)) { // 跳过errcode参数
                             switch (key) {
                                 case "emailId":
                                     b.must(m -> m.term(t -> t.field("emailId").value(value)));
@@ -82,5 +99,6 @@ public class UndeliveredEmailServiceImpl implements UndeliveredEmailService {
                 .map(Hit::source)
                 .collect(Collectors.toList());
     }
+
 
 }
