@@ -12,7 +12,6 @@ public class SenderManagementApplication
 {
     public static void main( String[] args )
     {
-
         SpringApplication.run(SenderManagementApplication.class, args);
     }
 }

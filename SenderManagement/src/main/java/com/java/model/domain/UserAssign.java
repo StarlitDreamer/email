@@ -20,8 +20,8 @@ import java.util.Map;
 @NoArgsConstructor
 public class UserAssign {
     @Id
-    @Field(type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword,name="user_id")
     private String userId;
-    @Field(type = FieldType.Nested)
+    @Field(type = FieldType.Nested,name="assign_process")
     private List<AssignProcess> assignProcess;
 }

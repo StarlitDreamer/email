@@ -4,9 +4,8 @@ spring:
     activate:
       on-profile: test
   elasticsearch:
-    port: 9200
-    ip: 127.0.0.1
-    username: elastic
-    password: bV1hfVvLspBxv4JGycY1
+    uris: http://localhost:9200
+    connection-timeout: 5000
+    socket-timeout: 5000
 server:
   port: 9898

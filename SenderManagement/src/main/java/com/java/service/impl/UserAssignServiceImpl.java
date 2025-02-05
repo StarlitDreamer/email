@@ -1,6 +1,5 @@
 package com.java.service.impl;
 
-import cn.hutool.core.date.DateUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -11,10 +10,8 @@ import com.java.model.domain.User;
 import com.java.model.domain.UserAssign;
 import com.java.model.vo.AssignUserDetailsVo;
 import com.java.service.UserAssignService;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;

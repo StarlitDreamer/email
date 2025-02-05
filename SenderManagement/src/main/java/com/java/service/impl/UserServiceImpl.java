@@ -155,7 +155,6 @@ public class UserServiceImpl implements UserService {
         if(map.containsKey("userPassword")){
             map.put("userPassword", DigestUtil.md5Hex(map.get("userPassword")));
         }
-        System.out.println(map);
         if(map.isEmpty()){
             throw new IOException("没有需要修改的信息");
         }
@@ -170,17 +169,14 @@ public class UserServiceImpl implements UserService {
         // 修改用户权限
         // 用户角色只有大管理才可以修改，注意权限问题。
         // 用户升为小管理之后，使用数字3、4代表用户角色。3是小管理、4是用户
-
         // 如果 user_auth_id 为空，则根据 user_role 赋予对应的权限，
         // 如果 user_role 为 3，则所属用户默认改成当前大管理
         // 如果 user_role 为空，则根据 user_auth_id 修改权限，但如果当前用户角色是 3 时，不能赋予 16 权限
         // 如果 user_auth_id 和 user_role 都不为空，则优先根据 user_auth_id 修改权限，
         // 如果 user_role 为 3，则所属用户默认改成当前大管理
-
         //根据userRole修改权限;
         String currentUserId = ThreadLocalUtil.getUserId();
         List<String> authsByRole = null;
-        System.out.println(user_role);
         if (user_role != null) {
             authsByRole = Auth.getAuthsByRole(user_role);
             if (user_auth_id == null || user_auth_id.isEmpty()) {
@@ -308,6 +304,8 @@ public class UserServiceImpl implements UserService {
 
     public User createUserDocument(Integer user_role, String user_name, String user_account, String user_password, String user_email, String user_email_code) {
         User userDocument = new User();
+        String[] parts = user_email.split("@");
+        String userHost = parts[1];
         userDocument.setUserId(IdUtil.randomUUID());//uuid
         userDocument.setUserRole(user_role);
         userDocument.setCreatorId(null);//创建者id
@@ -321,10 +319,9 @@ public class UserServiceImpl implements UserService {
         userDocument.setStatus(1);//用户分配的状态 未分配
         userDocument.setCreatedAt(setTimestamps());  // 设置创建时间和更新时间
         userDocument.setUpdatedAt(setTimestamps());
+        userDocument.setUserHost(userHost);
         return userDocument;
     }
-
-
     public static String setTimestamps() {
         LocalDateTime currentTime = LocalDateTime.now();
         return currentTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));

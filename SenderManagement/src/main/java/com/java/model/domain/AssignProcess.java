@@ -10,18 +10,18 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AssignProcess {
-    @Field(type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword,name="assignor_id")
     private String assignorId;  // 分配者ID
 
-    @Field(type = FieldType.Text)
+    @Field(type = FieldType.Text,name="assignor_name")
     private String assignorName; // 分配者名称
 
-    @Field(type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword,name="assignee_id")
     private String assigneeId;  // 被分配者ID
 
-    @Field(type = FieldType.Text)
+    @Field(type = FieldType.Text,name="assignee_name")
     private String assigneeName; // 被分配者名称
 
-    @Field(type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword,name="assign_date")
     private String assignDate;  // 分配日期
 }

@@ -1,6 +1,5 @@
 package com.java.atuhcode;
 
-import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.model.vo.AuthVo;
 
 import java.util.Arrays;

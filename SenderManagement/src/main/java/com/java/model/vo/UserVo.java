@@ -14,5 +14,4 @@ public class UserVo {
     private String userAccount;
     private String userEmail;
     private String status;
-
 }
