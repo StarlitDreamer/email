@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "templates")
+@Document(indexName = "template")
 public class Template {
     private List<String> belongUserId;  // 所属用户ID列表ownerUserIds
     private String creator;             // 创建人

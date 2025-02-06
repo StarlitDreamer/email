@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "customers")
+@Document(indexName = "customer")
 public class Customer {
     private List<String> acceptedEmailTypeId;  // 接受的邮件类型ID列表，默认接受所有类型 acceptedEmailTypeIds
     private String belongUserId;                // 所属用户ID  ownerUserId

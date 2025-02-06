@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "undelivered_emails")
+@Document(indexName = "undelivered_email")
 public class UndeliveredEmail {
     @Id
     private String emailId;             // 邮件ID，使用UUID

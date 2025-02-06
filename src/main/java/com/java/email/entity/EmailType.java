@@ -12,7 +12,7 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "email_types")
+@Document(indexName = "email_type")
 public class EmailType {
     @Id
     private String emailTypeId;         // 邮件类型ID，使用UUID

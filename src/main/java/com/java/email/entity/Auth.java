@@ -12,7 +12,7 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "auths")
+@Document(indexName = "auth")
 public class Auth {
     @Id
     private String authId;              // 权限ID

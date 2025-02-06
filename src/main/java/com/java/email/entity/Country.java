@@ -12,7 +12,7 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "countries")
+@Document(indexName = "country")
 public class Country {
     @Id
     private String countryId;           // 国家ID，使用UUID

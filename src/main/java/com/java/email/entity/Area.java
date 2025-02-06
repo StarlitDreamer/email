@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "areas")
+@Document(indexName = "area")
 public class Area {
     @Id
     private String areaId;              // 区域ID

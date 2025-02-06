@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "emails")
+@Document(indexName = "email")
 public class Email {
     @Id
     private String emailId;             // 邮件ID，使用UUID

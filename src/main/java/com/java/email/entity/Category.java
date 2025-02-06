@@ -12,7 +12,7 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "categories")
+@Document(indexName = "category")
 public class Category {
     @Id
     private String categoryId;          // 品类ID，使用UUID

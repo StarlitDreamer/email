@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(indexName = "users")
+@Document(indexName = "user")
 public class User {
     private String belongUserid;        // 所属用户ID  ownerUserId
     private long createdAt;            // 创建日期
