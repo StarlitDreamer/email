@@ -4,17 +4,21 @@ import com.java.atuhcode.Auth;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.model.domain.Result;
 import com.java.model.dto.CreateUserDto;
+import com.java.model.dto.CsvUserDto;
 import com.java.model.dto.UpdateUserDto;
 import com.java.model.vo.AssignUserDetailsVo;
 import com.java.model.vo.CheckUserVo;
 import com.java.model.vo.FilterUserVo;
 import com.java.service.UserAssignService;
 import com.java.service.UserService;
+import com.java.utils.CsvUtil;
 import com.java.utils.ResultUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.util.List;
 @RestController
@@ -129,6 +133,22 @@ public class SenderManageController {
             return ResultUtils.error("操作失败");
         }
     }
+
+
+@PostMapping("/csv")
+public Result<String> uploadCsvFile(@RequestParam("file") MultipartFile file) {
+    if (file.isEmpty()) {
+        return ResultUtils.error("文件不能为空");
+    }
+    try {
+        // 将文件转化为 Java 对象
+        List<CsvUserDto> persons = CsvUtil.parseCsvFile(file);
+        userAssignService.BatchUserImport(persons);
+        return  ResultUtils.success();
+    } catch (IOException e) {
+        return ResultUtils.error("操作失败");
+    }
+}
    @GetMapping("/getAuth")
    public Result getAuth() {
        return ResultUtils.success(Auth.getAllAuths());

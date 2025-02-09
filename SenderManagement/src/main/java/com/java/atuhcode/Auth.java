@@ -26,7 +26,7 @@ public enum Auth implements IAuth{
     AREA_MANAGE("15", "区域管理"),
     EMAIL_SERVER_MANAGE("16", "邮件服务器管理");
 
-    private static final Map<Integer, List<String>> roleAuthMap=new HashMap<>();
+    public static final Map<Integer, List<String>> roleAuthMap=new HashMap<>();
 
     private final String auth_id;//权限id
     private final String auth_name;//权限名称
