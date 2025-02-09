@@ -25,7 +25,7 @@ public class User {
 
     @JsonProperty("created_at")
     @Field(name = "created_at", type = FieldType.Date)
-    private String createdAt;            // 创建日期
+    private long createdAt;            // 创建日期
 
     @JsonProperty("creator_id")
     @Field(name = "creator_id", type = FieldType.Keyword)
@@ -37,7 +37,7 @@ public class User {
 
     @JsonProperty("updated_at")
     @Field(name = "updated_at", type = FieldType.Date)
-    private String updatedAt;            // 更新日期
+    private long updatedAt;            // 更新日期
 
     @JsonProperty("user_account")
     @Field(name = "user_account", type = FieldType.Keyword)
@@ -71,6 +71,11 @@ public class User {
     @JsonProperty("user_role")
     @Field(name = "user_role", type = FieldType.Integer)
     private Integer userRole;         // 用户角色 1:公司 2:大管理 3:小管理 4:用户
+
+    @JsonProperty("user_host")
+    @Field(name = "user_host", type = FieldType.Keyword)
+    private String userHost;           // 用户邮箱的服务器类型
+
 
 //    private String belongUserid;        // 所属用户ID  ownerUserId
 //    private long createdAt;            // 创建日期
