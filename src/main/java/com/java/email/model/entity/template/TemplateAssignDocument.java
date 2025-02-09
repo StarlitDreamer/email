@@ -12,10 +12,14 @@ import java.util.Map;
 @Data
 @Document(indexName = "template_assign")
 public class TemplateAssignDocument {
-    
+
     @Id
+    @Field(name = "id", type = FieldType.Keyword)
+    private String id;
+    
+    @Field(name = "template_id", type = FieldType.Keyword)
     private String templateId;
 
-    @Field(type = FieldType.Object)
+    @Field(name = "assign_process", type = FieldType.Object)
     private List<Map<String, Object>> assignProcess;
 } 

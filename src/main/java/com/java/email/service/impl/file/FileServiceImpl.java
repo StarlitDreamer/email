@@ -6,6 +6,8 @@ import com.java.email.common.Response.ResultCode;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.constant.UserConstData;
 import com.java.email.service.file.FileService;
+import com.java.email.utils.LogUtil;
+
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -23,6 +25,8 @@ public class FileServiceImpl implements FileService {
     @Autowired
     private UserRepository userRepository;
 
+    private static final LogUtil logUtil = LogUtil.getLogger(FileServiceImpl.class);
+
     @Override
     public Result filterUser(Map<String, Object> params) {
         // 获取当前用户角色
@@ -35,6 +39,7 @@ public class FileServiceImpl implements FileService {
         if (currentUserId == null) {
             return new Result(ResultCode.R_Error);
         }
+        logUtil.info("当前用户: " + userRole + " " + currentUserId);
 
         // 参数校验
         if (params == null) {
@@ -44,7 +49,7 @@ public class FileServiceImpl implements FileService {
         String userAccount = (String) params.get("user_account");
         String userEmail = (String) params.get("user_email");
         Integer pageNum = params.get("page_num") != null ? (Integer) params.get("page_num") : 1;
-        Integer pageSize = params.get("page_size") != null ? (Integer) params.get("page_size") : 50;
+        Integer pageSize = params.get("page_size") != null ? (Integer) params.get("page_size") : 30;
 
         // 校验分页参数
         if (pageNum < 1 || pageSize < 1) {
@@ -57,7 +62,7 @@ public class FileServiceImpl implements FileService {
         userEmail = userEmail != null ? userEmail : "";
 
         // 根据角色判断查询逻辑
-        if (userRole == 2) {
+        if (userRole.equals(UserConstData.ROLE_ADMIN_LARGE)) {
             // 角色2可以直接查询所有符合条件的用户
             List<UserDocument> users = userRepository.findByUserNameLikeAndUserAccountLikeAndUserEmailLike(
                     userName, userAccount, userEmail);
@@ -93,7 +98,7 @@ public class FileServiceImpl implements FileService {
 
             return new Result(ResultCode.R_Ok, pageResponse);
 
-        } else if (userRole == 3) {
+        } else if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
             // 角色3需要过滤,只返回自己和下属
             List<UserDocument> users = userRepository.findByUserNameLikeAndUserAccountLikeAndUserEmailLike(
                     userName, userAccount, userEmail);

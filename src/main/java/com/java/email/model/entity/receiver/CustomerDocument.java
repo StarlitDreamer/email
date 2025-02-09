@@ -14,54 +14,57 @@ import java.util.List;
 @Document(indexName = "customer")
 public class CustomerDocument {
     @Id
-    @Field(type = FieldType.Keyword)
+    @Field(name = "id", type = FieldType.Keyword)
+    private String id;
+
+    @Field(name = "customer_id", type = FieldType.Keyword)
     private String customerId;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "customer_name", type = FieldType.Text, analyzer = "ik_max_word")
     private String customerName;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "creator_id", type = FieldType.Keyword)
     private String creatorId;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "contact_person", type = FieldType.Text, analyzer = "ik_max_word")
     private String contactPerson;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "contact_way", type = FieldType.Text, analyzer = "ik_max_word")
     private String contactWay;
 
-    @Field(type = FieldType.Integer)
+    @Field(name = "customer_level", type = FieldType.Integer)
     private Integer customerLevel;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "customer_country_id", type = FieldType.Keyword)
     private String customerCountryId;
 
-    @Field(type = FieldType.Integer)
+    @Field(name = "trade_type", type = FieldType.Integer)
     private Integer tradeType;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "commodity_id", type = FieldType.Keyword)
     private List<String> commodityId;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "sex", type = FieldType.Keyword)
     private String sex;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "birth", type = FieldType.Date)
     private String birth;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "emails", type = FieldType.Text, analyzer = "ik_max_word")
     private List<String> emails;
 
-    @Field(type = FieldType.Integer)
+    @Field(name = "status", type = FieldType.Integer)
     private Integer status;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "belong_user_id", type = FieldType.Keyword)
     private String belongUserId;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "accept_email_type_id", type = FieldType.Keyword)
     private List<String> acceptEmailTypeId;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "created_at", type = FieldType.Date)
     private String createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "updated_at", type = FieldType.Date)
     private String updatedAt;
 } 

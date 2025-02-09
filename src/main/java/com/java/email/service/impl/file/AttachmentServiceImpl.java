@@ -26,10 +26,22 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +49,15 @@ import java.util.stream.Collectors;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.apache.commons.net.ftp.FTPClient;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+import com.jcraft.jsch.ChannelSftp;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.regions.Regions;
 
 @Service
 public class AttachmentServiceImpl implements AttachmentService {
@@ -56,6 +77,9 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Autowired
     private SubordinateValidation subordinateValidation;
 
+    @Autowired
+    private RestTemplate restTemplate;
+
     private static final LogUtil logUtil = LogUtil.getLogger(AttachmentServiceImpl.class);
 
 
@@ -66,7 +90,7 @@ public class AttachmentServiceImpl implements AttachmentService {
             // 角色验证
             String userId = ThreadLocalUtil.getUserId();
             if (userId == null) {
-                return new Result(ResultCode.R_UserNotFound);
+                return new Result(ResultCode.R_Error);
             }
             Integer userRole = ThreadLocalUtil.getUserRole();
             if (userRole == null) {
@@ -81,10 +105,6 @@ public class AttachmentServiceImpl implements AttachmentService {
                 return new Result(ResultCode.R_ParamError);
             }
 
-            // 获取当前时间
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            String currentTime = LocalDateTime.now().format(formatter);
-
             // 获取当前用户ID
             List<String> belongUserIds = new ArrayList<>();
             belongUserIds.add(userId);
@@ -95,7 +115,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 AttachmentDocument doc = new AttachmentDocument();
                 doc.setAttachmentId(attachment.get("attachment_id"));
                 doc.setAttachmentUrl(attachment.get("attachment_url"));
-                doc.setAttachmentSize(attachment.get("attachment_size"));
+                doc.setAttachmentSize(Long.parseLong(attachment.get("attachment_size")));
                 doc.setAttachmentName(attachment.get("attachment_name"));
                 doc.setCreatorId(userId);
                 doc.setBelongUserId(belongUserIds);
@@ -105,8 +125,8 @@ public class AttachmentServiceImpl implements AttachmentService {
                 } else {
                     doc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_UNASSIGNED);
                 }
-                doc.setCreatedAt(currentTime);
-                doc.setUpdatedAt(currentTime);
+                doc.setCreatedAt(System.currentTimeMillis() / 1000);
+                doc.setUpdatedAt(System.currentTimeMillis() / 1000);
                 attachmentDocuments.add(doc);
             }
 
@@ -117,7 +137,6 @@ public class AttachmentServiceImpl implements AttachmentService {
             throw e;
         }
     }
-
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -178,7 +197,7 @@ public class AttachmentServiceImpl implements AttachmentService {
             // 更新附件的归属用户
             attachmentDoc.setBelongUserId(belongUserIds);
             attachmentDoc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_ASSIGNED);
-            attachmentDoc.setUpdatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+            attachmentDoc.setUpdatedAt(System.currentTimeMillis() / 1000);
             attachmentRepository.save(attachmentDoc);
 
             // 创建分配记录
@@ -189,8 +208,8 @@ public class AttachmentServiceImpl implements AttachmentService {
             List<Map<String, String>> assigneeList = new ArrayList<>();
             for (UserDocument userDoc : userDocs.values()) {
                 Map<String, String> assignee = new HashMap<>();
-                assignee.put("id", userDoc.getUserId());
-                assignee.put("name", userDoc.getUserName());
+                assignee.put("assignee_id", userDoc.getUserId());
+                assignee.put("assignee_name", userDoc.getUserName());
                 assigneeList.add(assignee);
             }
             process.put("assignee", assigneeList);
@@ -219,7 +238,6 @@ public class AttachmentServiceImpl implements AttachmentService {
             throw e;
         }
     }
-
 
     @Override
     public Result assignAttachmentDetails(Map<String, Object> request) {
@@ -297,7 +315,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 // 公司id默认是1
                 mainQuery.must(m -> m
                         .term(t -> t
-                                .field("belongUserId")
+                                .field("belong_user_id")
                                 .value(UserConstData.COMPANY_USER_ID)
                         )
                 );
@@ -306,7 +324,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 if (StringUtils.hasText(attachmentName)) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("attachmentName")
+                                    .field("attachment_name")
                                     .query(attachmentName)
                             )
                     );
@@ -320,7 +338,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                         for (UserDocument creator : creators) {
                             creatorQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(creator.getUserId())
                                     )
                             );
@@ -344,7 +362,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
                 NativeQuery searchQuery = NativeQuery.builder()
                         .withQuery(q -> q.bool(mainQuery.build()))
-                        .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                        .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                         .withPageable(pageable)
                         .build();
 
@@ -394,7 +412,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                     if (StringUtils.hasText(attachmentName)) {
                         mainQuery.must(m -> m
                                 .match(t -> t
-                                        .field("attachmentName")
+                                        .field("attachment_name")
                                         .query(attachmentName)
                                 )
                         );
@@ -408,7 +426,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                             for (UserDocument user : belongUsers) {
                                 belongUserQuery.should(s -> s
                                         .term(t -> t
-                                                .field("belongUserId")
+                                                .field("belong_user_id")
                                                 .value(user.getUserId())
                                         )
                                 );
@@ -426,7 +444,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                             for (UserDocument creator : creators) {
                                 creatorQuery.should(s -> s
                                         .term(t -> t
-                                                .field("creatorId")
+                                                .field("creator_id")
                                                 .value(creator.getUserId())
                                         )
                                 );
@@ -460,7 +478,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
                 NativeQuery searchQuery = NativeQuery.builder()
                         .withQuery(q -> q.bool(mainQuery.build()))
-                        .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                        .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                         .withPageable(pageable)
                         .build();
 
@@ -500,7 +518,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                     if (StringUtils.hasText(attachmentName)) {
                         mainQuery.must(m -> m
                                 .match(t -> t
-                                        .field("attachmentName")
+                                        .field("attachment_name")
                                         .query(attachmentName)
                                 )
                         );
@@ -519,7 +537,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                         for (String id : belongValidation.getValidUserIds()) {
                             belongQuery.should(s -> s
                                     .term(t -> t
-                                            .field("belongUserId")
+                                            .field("belong_user_id")
                                             .value(id)
                                     )
                             );
@@ -540,7 +558,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                         for (String id : creatorValidation.getValidUserIds()) {
                             creatorQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(id)
                                     )
                             );
@@ -574,7 +592,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 BoolQuery.Builder creatorAccessQuery = new BoolQuery.Builder();
                 creatorAccessQuery.should(s -> s
                         .term(t -> t
-                                .field("creatorId")
+                                .field("creator_id")
                                 .value(currentUserId)
                         )
                 );
@@ -584,7 +602,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                     for (UserDocument sub : subordinates) {
                         creatorAccessQuery.should(s -> s
                                 .term(t -> t
-                                        .field("creatorId")
+                                        .field("creator_id")
                                         .value(sub.getUserId())
                                 )
                         );
@@ -595,7 +613,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 BoolQuery.Builder belongAccessQuery = new BoolQuery.Builder();
                 belongAccessQuery.should(s -> s
                         .term(t -> t
-                                .field("belongUserId")
+                                .field("belong_user_id")
                                 .value(currentUserId)
                         )
                 );
@@ -604,7 +622,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                     for (UserDocument sub : subordinates) {
                         belongAccessQuery.should(s -> s
                                 .term(t -> t
-                                        .field("belongUserId")
+                                        .field("belong_user_id")
                                         .value(sub.getUserId())
                                 )
                         );
@@ -618,7 +636,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
                 NativeQuery searchQuery = NativeQuery.builder()
                         .withQuery(q -> q.bool(mainQuery.build()))
-                        .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                        .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                         .withPageable(pageable)
                         .build();
 
@@ -660,7 +678,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 if (StringUtils.hasText(attachmentName)) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("attachmentName")
+                                    .field("attachment_name")
                                     .query(attachmentName)
                             )
                     );
@@ -675,7 +693,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                     // 是自己，添加belongUserId条件
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("belongUserId")
+                                    .field("belong_user_id")
                                     .value(currentUserId)
                             )
                     );
@@ -684,7 +702,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 // 无论有没有其他条件，都必须确保所属用户包含自己
                 mainQuery.must(m -> m
                         .term(t -> t
-                                .field("belongUserId")
+                                .field("belong_user_id")
                                 .value(currentUserId)
                         )
                 );
@@ -693,7 +711,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                 Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
                 NativeQuery searchQuery = NativeQuery.builder()
                         .withQuery(q -> q.bool(mainQuery.build()))
-                        .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                        .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                         .withPageable(pageable)
                         .build();
 
@@ -709,6 +727,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                             Map<String, Object> item = new HashMap<>();
                             item.put("id", doc.getAttachmentId());
                             item.put("name", doc.getAttachmentName());
+                            item.put("url", doc.getAttachmentUrl());
 
                             // 查询创建者名称
                             String responseCreatorName = userRepository.findByUserId(doc.getCreatorId())
@@ -801,12 +820,179 @@ public class AttachmentServiceImpl implements AttachmentService {
         }
         // 删除附件
         try {
-            attachmentRepository.deleteById(attachmentId);
-            attachmentAssignRepository.deleteById(attachmentId);
-            return new Result(ResultCode.R_Ok);
+            // 获取文件URL并删除文件
+            String attachmentUrl = attachmentDoc.getAttachmentUrl();
+            if (attachmentUrl != null && !attachmentUrl.isEmpty()) {
+                logUtil.info("开始删除附件：" + attachmentUrl);
+                
+                try {
+                    URL url = new URL(attachmentUrl);
+                    String protocol = url.getProtocol().toLowerCase();
+                    
+                    switch (protocol) {
+                        case "http":
+                        case "https":
+                            // 修改 HTTP/HTTPS 删除处理
+                            HttpHeaders headers = new HttpHeaders();
+                            headers.setAccept(Collections.singletonList(MediaType.ALL));
+                            HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+                            
+                            ResponseEntity<Void> response = restTemplate.exchange(
+                                attachmentUrl,
+                                HttpMethod.DELETE,
+                                requestEntity,
+                                Void.class
+                            );
+                            
+                            if (response.getStatusCode().is2xxSuccessful()) {
+                                break;
+                            } else {
+                                throw new Exception("Failed to delete file: " + response.getStatusCode());
+                            }
+                            
+                        case "file":
+                            // 本地文件协议
+                            Path filePath = Paths.get(url.toURI());
+                            Files.deleteIfExists(filePath);
+                            break;
+                            
+                        case "ftp":
+                        case "sftp":
+                            // FTP/SFTP 协议
+                            deleteFtpFile(url);
+                            break;
+                            
+                        case "s3":
+                            // Amazon S3 协议
+                            deleteS3File(url);
+                            break;
+                            
+                        default:
+                            // 尝试作为本地路径处理
+                            Path localPath = Paths.get(attachmentUrl);
+                            Files.deleteIfExists(localPath);
+                    }
+                    
+                    logUtil.info("文件删除成功：" + attachmentUrl);
+                    // 删除数据库记录
+                    attachmentRepository.deleteById(attachmentId);
+                    attachmentAssignRepository.deleteById(attachmentId);
+                    return new Result(ResultCode.R_Ok);
+                
+                } catch (Exception e) {
+                    logUtil.error("删除文件失败：" + e.getMessage());
+                    return new Result(ResultCode.R_Error);
+                }
+            } else {
+                logUtil.info("附件地址不合法：" + attachmentUrl);
+                return new Result(ResultCode.R_UrlNotFound);
+            }
         } catch (Exception e) {
             logUtil.error("Error deleting attachment: " + e.getMessage());
-            return new Result(ResultCode.R_DeleteFileError);
+            return new Result(ResultCode.R_Error);
+        }
+    }
+
+    // FTP/SFTP 文件删除方法
+    private void deleteFtpFile(URL url) throws Exception {
+        String protocol = url.getProtocol().toLowerCase();
+        String host = url.getHost();
+        int port = url.getPort();
+        String path = url.getPath();
+        String userInfo = url.getUserInfo();
+        
+        if ("ftp".equals(protocol)) {
+            // FTP 删除
+            FTPClient ftpClient = new FTPClient();
+            try {
+                // 连接设置
+                ftpClient.setConnectTimeout(5000);
+                ftpClient.connect(host, port != -1 ? port : 21);
+                
+                // 登录
+                if (userInfo != null) {
+                    String[] credentials = userInfo.split(":");
+                    ftpClient.login(credentials[0], credentials.length > 1 ? credentials[1] : "");
+                } else {
+                    ftpClient.login("anonymous", "");
+                }
+                
+                // 删除文件
+                boolean deleted = ftpClient.deleteFile(path);
+                if (!deleted) {
+                    throw new Exception("Failed to delete FTP file: " + path);
+                }
+                
+            } finally {
+                if (ftpClient.isConnected()) {
+                    ftpClient.disconnect();
+                }
+            }
+        } else if ("sftp".equals(protocol)) {
+            // SFTP 删除
+            JSch jsch = new JSch();
+            Session session = null;
+            ChannelSftp channelSftp = null;
+            
+            try {
+                // 创建会话
+                session = jsch.getSession(
+                    userInfo != null ? userInfo.split(":")[0] : "anonymous",
+                    host,
+                    port != -1 ? port : 22
+                );
+                
+                // 设置密码
+                if (userInfo != null && userInfo.split(":").length > 1) {
+                    session.setPassword(userInfo.split(":")[1]);
+                }
+                
+                // 跳过主机密钥验证
+                java.util.Properties config = new java.util.Properties();
+                config.put("StrictHostKeyChecking", "no");
+                session.setConfig(config);
+                
+                // 连接
+                session.connect(5000);
+                
+                // 打开 SFTP 通道
+                channelSftp = (ChannelSftp) session.openChannel("sftp");
+                channelSftp.connect();
+                
+                // 删除文件
+                channelSftp.rm(path);
+                
+            } finally {
+                if (channelSftp != null && channelSftp.isConnected()) {
+                    channelSftp.disconnect();
+                }
+                if (session != null && session.isConnected()) {
+                    session.disconnect();
+                }
+            }
+        }
+    }
+
+    // S3 文件删除方法
+    private void deleteS3File(URL url) throws Exception {
+        // 解析 S3 URL
+        // 格式: s3://bucket-name/key
+        String path = url.getPath();
+        String bucket = url.getHost();
+        String key = path.startsWith("/") ? path.substring(1) : path;
+        
+        // 创建 S3 客户端
+        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+            .withRegion(Regions.DEFAULT_REGION)  // 设置你的 region
+            .build();
+        
+        try {
+            // 删除对象
+            s3Client.deleteObject(bucket, key);
+        } catch (AmazonS3Exception e) {
+            throw new Exception("Failed to delete S3 file: " + e.getMessage());
+        } finally {
+            s3Client.shutdown();
         }
     }
 
@@ -816,6 +1002,7 @@ public class AttachmentServiceImpl implements AttachmentService {
             Map<String, Object> item = new HashMap<>();
             item.put("id", doc.getAttachmentId());
             item.put("name", doc.getAttachmentName());
+            item.put("url", doc.getAttachmentUrl());
 
             // 查询创建者名称
             String creatorName = userRepository.findByUserId(doc.getCreatorId())

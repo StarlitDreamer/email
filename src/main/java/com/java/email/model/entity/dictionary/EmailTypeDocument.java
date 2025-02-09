@@ -13,16 +13,19 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 public class EmailTypeDocument {
 
     @Id
-    @Field(type = FieldType.Keyword)
+    @Field(name = "id", type = FieldType.Keyword)
+    private String id;
+
+    @Field(name = "email_type_id", type = FieldType.Keyword)
     private String emailTypeId;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "email_type_name", type = FieldType.Text, analyzer = "ik_max_word")
     private String emailTypeName;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "created_at", type = FieldType.Date)
     private String createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "updated_at", type = FieldType.Date)
     private String updatedAt;
 
 } 
