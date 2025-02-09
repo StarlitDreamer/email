@@ -11,6 +11,7 @@ import com.java.email.model.EmailTypeVO;
 import com.java.email.model.EmailTypeUpdateRequest;
 import com.java.email.model.EmailTypeDeleteRequest;
 import com.java.email.service.EmailService;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -26,6 +27,33 @@ public class EmailServiceImpl implements EmailService {
     @Autowired
     private ElasticsearchClient elasticsearchClient;
 
+    @PostConstruct
+    public void init() {
+        createEmailTypeIndexIfNotExists();
+    }
+
+    private void createEmailTypeIndexIfNotExists() {
+        try {
+            boolean exists = elasticsearchClient.indices().exists(e -> e.index("email_type")).value();
+            if (!exists) {
+                elasticsearchClient.indices().create(c -> c
+                        .index("email_type")
+                        .mappings(m -> m
+                                .properties("email_type_name", p -> p
+                                        .text(t -> t
+                                                .fields("keyword", k -> k
+                                                        .keyword(kw -> kw)
+                                                )
+                                        )
+                                )
+                        )
+                );
+            }
+        } catch (Exception e) {
+            // 处理异常
+        }
+    }
+
     @Override
     public Result<?> createEmail(String emailTypeName) {
         try {
@@ -40,7 +68,7 @@ public class EmailServiceImpl implements EmailService {
 
             // 保存到 Elasticsearch
             IndexResponse response = elasticsearchClient.index(i -> i
-                    .index("email_type_index")
+                    .index("email_type")
                     .document(document)
             );
 
@@ -64,9 +92,9 @@ public class EmailServiceImpl implements EmailService {
                     .index("email_type")
                     .query(q -> {
                         if (StringUtils.hasText(request.getEmail_type_name())) {
-                            return q.match(m -> m
-                                    .field("email_type_name")
-                                    .query(request.getEmail_type_name())
+                            return q.term(t -> t
+                                    .field("email_type_name.keyword")
+                                    .value(request.getEmail_type_name())
                             );
                         }
                         return q.matchAll(ma -> ma);
@@ -113,7 +141,7 @@ public class EmailServiceImpl implements EmailService {
 
             // 先检查文档是否存在
             boolean exists = elasticsearchClient.exists(e -> e
-                    .index("email_type_index")
+                    .index("email_type")
                     .id(request.getEmail_type_id())
             ).value();
 
@@ -131,7 +159,7 @@ public class EmailServiceImpl implements EmailService {
 
             // 执行更新操作
             elasticsearchClient.update(u -> u
-                    .index("email_type_index")
+                    .index("email_type")
                     .id(request.getEmail_type_id())
                     .doc(document),
                     Map.class

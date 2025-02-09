@@ -2,7 +2,7 @@ spring:
   main:
     allow-bean-definition-overriding: true
   elasticsearch:
-    uris: http://localhost:9200
+    uris: http://112.35.176.43:9201
   servlet:
     multipart:
       enabled: true
