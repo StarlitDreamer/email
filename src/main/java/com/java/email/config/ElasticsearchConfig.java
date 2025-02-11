@@ -8,18 +8,24 @@ import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class ElasticsearchConfig {
 
-    private static final String HOST = "localhost";
-    private static final int PORT = 9200;
-    private static final String SCHEME = "http";
+    @Value("${elasticsearch.host}")
+    private String host;
+
+    @Value("${elasticsearch.port}")
+    private int port;
+
+    @Value("${elasticsearch.scheme}")
+    private String scheme;
 
     @Bean
     public RestClient restClient() {
         return RestClient.builder(
-            new HttpHost(HOST, PORT, SCHEME)
+            new HttpHost(host, port, scheme)
         ).build();
     }
 

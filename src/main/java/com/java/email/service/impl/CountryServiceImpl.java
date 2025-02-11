@@ -1,6 +1,8 @@
 package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.java.email.common.Result;
@@ -25,10 +27,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 
 @Service
 public class CountryServiceImpl implements CountryService {
 
+    private static final Logger log = LoggerFactory.getLogger(CountryServiceImpl.class);
     @Autowired
     private ElasticsearchClient elasticsearchClient;
 
@@ -61,38 +69,75 @@ public class CountryServiceImpl implements CountryService {
 
     @Override
     public Result<?> importCountry(MultipartFile file) {
-        try {
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)
-            );
-
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
+             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+            
             int successCount = 0;
             int failCount = 0;
-            String line;
-            
-            // 跳过CSV头行
-            reader.readLine();
-            
-            // 读取每一行数据
-            while ((line = reader.readLine()) != null) {
+
+            for (CSVRecord record : csvParser) {
                 try {
-                    // 处理CSV行
-                    String[] fields = line.split(",");
-                    if (fields.length >= 1) {  // 假设CSV至少包含国家名称
-                        Map<String, Object> document = new HashMap<>();
-                        document.put("country_name", fields[0].trim());
-                        
-                        // 保存到 Elasticsearch
-                        elasticsearchClient.index(i -> i
-                                .index("country")
-                                .document(document)
-                        );
-                        
-                        successCount++;
-                    } else {
+                    String countryName = record.get(0).trim().replace("\"", "");
+                    String countryCode = record.get(1).trim().replace("\"", "");
+                    
+                    // 检查国家名称是否重复
+                    SearchResponse<Map> nameResponse = elasticsearchClient.search(s -> s
+                            .index("country")
+                            .query(q -> q
+                                    .term(t -> t
+                                            .field("country_name.keyword")
+                                            .value(countryName)
+                                    )
+                            ),
+                            Map.class
+                    );
+                    
+                    if (nameResponse.hits().total().value() > 0) {
+                        log.warn("Duplicate country name: {}", countryName);
                         failCount++;
+                        continue;
                     }
+
+                    // 检查国家代码是否重复
+                    SearchResponse<Map> codeResponse = elasticsearchClient.search(s -> s
+                            .index("country")
+                            .query(q -> q
+                                    .term(t -> t
+                                            .field("country_code.keyword")
+                                            .value(countryCode)
+                                    )
+                            ),
+                            Map.class
+                    );
+                    
+                    if (codeResponse.hits().total().value() > 0) {
+                        log.warn("Duplicate country code: {}", countryCode);
+                        failCount++;
+                        continue;
+                    }
+                    
+                    
+                    
+                    // 构建文档
+                    Map<String, Object> document = new HashMap<>();
+                    document.put("country_name", countryName);
+                    document.put("country_code", countryCode);
+
+                    
+                    String now = java.time.Instant.now().toString();
+                    document.put("created_at", now);
+                    document.put("updated_at", now);
+                    
+                    // 保存到 Elasticsearch
+                    elasticsearchClient.index(i -> i
+                            .index("country")
+                            .document(document)
+                    );
+                    
+                    successCount++;
                 } catch (Exception e) {
+                    log.error("Error processing line: {}", record, e);
                     failCount++;
                 }
             }
@@ -104,6 +149,7 @@ public class CountryServiceImpl implements CountryService {
 
             return Result.success(response);
         } catch (Exception e) {
+            log.error("Import failed", e);
             return Result.error("导入国家失败：" + e.getMessage());
         }
     }
@@ -136,31 +182,37 @@ public class CountryServiceImpl implements CountryService {
                         if (StringUtils.hasText(request.getCountry_code()) && StringUtils.hasText(request.getCountry_name())) {
                             return q.bool(b -> b
                                     .must(m -> m
-                                            .term(t -> t
-                                                    .field("country_code.keyword")
-                                                    .value(request.getCountry_code())
+                                            .match(t -> t
+                                                    .field("country_code")
+                                                    .query(request.getCountry_code())
                                             )
                                     )
                                     .must(m -> m
-                                            .term(t -> t
-                                                    .field("country_name.keyword")
-                                                    .value(request.getCountry_name())
+                                            .match(t -> t
+                                                    .field("country_name")
+                                                    .query(request.getCountry_name())
                                             )
                                     )
                             );
                         } else if (StringUtils.hasText(request.getCountry_code())) {
-                            return q.term(t -> t
-                                    .field("country_code.keyword")
-                                    .value(request.getCountry_code())
+                            return q.match(t -> t
+                                    .field("country_code")
+                                    .query(request.getCountry_code())
                             );
                         } else if (StringUtils.hasText(request.getCountry_name())) {
-                            return q.term(t -> t
-                                    .field("country_name.keyword")
-                                    .value(request.getCountry_name())
+                            return q.match(t -> t
+                                    .field("country_name")
+                                    .query(request.getCountry_name())
                             );
                         }
                         return q.matchAll(ma -> ma);
                     })
+                    .sort(sort -> sort
+                            .field(f -> f
+                                    .field("updated_at")
+                                    .order(SortOrder.Desc)
+                            )
+                    )
                     .from(from)
                     .size(request.getPage_size()),
                     Map.class
@@ -200,6 +252,35 @@ public class CountryServiceImpl implements CountryService {
     @Override
     public Result<?> createCountry(CountryCreateRequest request) {
         try {
+            // 检查国家代码是否重复
+            SearchResponse<Map> countryResponse = elasticsearchClient.search(s -> s
+                    .index("country")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("country_code.keyword")
+                                    .value(request.getCountry_code())
+                            )
+                    ),
+                    Map.class
+            );
+            if (countryResponse.hits().total().value() > 0) {
+                return Result.error("国家代码已存在");
+            }
+            // 检查国家名称是否重复
+            SearchResponse<Map> countryNameResponse = elasticsearchClient.search(s -> s
+                    .index("country")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("country_name.keyword")
+                                    .value(request.getCountry_name())
+                            )
+                    ),
+                    Map.class
+            );  
+            if (countryNameResponse.hits().total().value() > 0) {
+                return Result.error("国家名称已存在");
+            }
+
             // 获取当前时间的 ISO 格式字符串
             String now = java.time.Instant.now().toString();
 
@@ -211,15 +292,14 @@ public class CountryServiceImpl implements CountryService {
             document.put("updated_at", now);
 
             // 保存到 Elasticsearch
-            elasticsearchClient.index(i -> i
+            IndexResponse response = elasticsearchClient.index(i -> i
                     .index("country")
-                    .id(request.getCountry_code())  // 使用国家代码作为文档ID
                     .document(document)
             );
 
             // 构建响应数据
             Map<String, Object> resultData = new HashMap<>();
-            resultData.put("country_code", request.getCountry_code());
+            resultData.put("country_id", response.id());
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建国家失败：" + e.getMessage());
@@ -276,6 +356,40 @@ public class CountryServiceImpl implements CountryService {
             if (!exists) {
                 return Result.error("国家不存在，ID: " + request.getCountry_id());
             }
+            // 检查国家代码是否重复
+            SearchResponse<Map> countryResponse = elasticsearchClient.search(s -> s
+                    .index("country")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("country_code.keyword")
+                                    .value(request.getCountry_code())
+                            )
+                    ),
+                    Map.class
+            );
+            if (countryResponse.hits().total().value() > 0) {
+                String existingId = countryResponse.hits().hits().get(0).id();
+                if (!existingId.equals(request.getCountry_id())) {
+                    return Result.error("国家代码已存在");
+                }
+            }
+            // 检查国家名称是否重复
+            SearchResponse<Map> countryNameResponse = elasticsearchClient.search(s -> s
+                    .index("country")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("country_name.keyword")
+                                    .value(request.getCountry_name())
+                            )
+                    ),
+                    Map.class
+            );
+            if (countryNameResponse.hits().total().value() > 0) {
+                String existingId = countryNameResponse.hits().hits().get(0).id();
+                if (!existingId.equals(request.getCountry_id())) {
+                    return Result.error("国家名称已存在");
+                }
+            }
 
             // 获取当前时间的 ISO 格式字符串
             String now = java.time.Instant.now().toString();
@@ -292,7 +406,7 @@ public class CountryServiceImpl implements CountryService {
 
             // 执行更新操作
             elasticsearchClient.update(u -> u
-                    .index("countrycountry")
+                    .index("country")
                     .id(request.getCountry_id())
                     .doc(document),
                     Map.class

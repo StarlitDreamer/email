@@ -1,6 +1,7 @@
 package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -13,6 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -24,6 +30,8 @@ import java.util.Map;
 
 @Service
 public class CommodityServiceImpl implements CommodityService {
+
+    private static final Logger log = LoggerFactory.getLogger(CommodityServiceImpl.class);
 
     @Autowired
     private ElasticsearchClient elasticsearchClient;
@@ -63,52 +71,73 @@ public class CommodityServiceImpl implements CommodityService {
 
     @Override
     public Result<?> importCommodity(MultipartFile file) {
-        try {
-            BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)
-            );
-
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
+             CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+            
             int successCount = 0;
             int failCount = 0;
-            String line;
-            
-            // 跳过CSV头行
-            reader.readLine();
-            
-            while ((line = reader.readLine()) != null) {
+
+            for (CSVRecord record : csvParser) {
                 try {
-                    String[] fields = line.split(",");
-                    if (fields.length >= 2) {  // 假设CSV包含商品名称和品类ID
-                        // 检查品类是否存在
-                        String categoryId = fields[1].trim();
-                        boolean categoryExists = elasticsearchClient.exists(e -> e
-                                .index("category")
-                                .id(categoryId)
-                        ).value();
-
-                        if (!categoryExists) {
-                            failCount++;
-                            continue;
-                        }
-
-                        Map<String, Object> document = new HashMap<>();
-                        document.put("commodity_name", fields[0].trim());
-                        document.put("category_id", categoryId);
-                        
-                        // 获取当前时间的 ISO 格式字符串
-                        String now = java.time.Instant.now().toString();
-                        document.put("created_at", now);
-                        document.put("updated_at", now);
-                        
-                        elasticsearchClient.index(i -> i
-                                .index("commodity")
-                                .document(document)
-                        );
-                        successCount++;
-                    } else {
+                    String commodityName = record.get(0).trim().replace("\"", "");
+                    String categoryName = record.get(1).trim().replace("\"", "");
+                    
+                    // 1. 检查商品名是否重复
+                    SearchResponse<Map> commodityResponse = elasticsearchClient.search(s -> s
+                            .index("commodity")
+                            .query(q -> q
+                                    .term(t -> t
+                                            .field("commodity_name.keyword")
+                                            .value(commodityName)
+                                    )
+                            ),
+                            Map.class
+                    );
+                    
+                    if (commodityResponse.hits().total().value() > 0) {
+                        log.warn("找到重复的商品名称: {}", commodityName);
                         failCount++;
+                        continue;
                     }
+                    
+                    // 2. 通过品类名称查找品类ID
+                    SearchResponse<Map> categoryResponse = elasticsearchClient.search(s -> s
+                            .index("category")
+                            .query(q -> q
+                                    .term(t -> t
+                                            .field("category_name.keyword")
+                                            .value(categoryName)
+                                    )
+                            ),
+                            Map.class
+                    );
+                    
+                    if (categoryResponse.hits().total().value() == 0) {
+                        log.warn("未找到品类: {}", categoryName);
+                        failCount++;
+                        continue;
+                    }
+                    
+                    String categoryId = categoryResponse.hits().hits().get(0).id();
+                    
+                    // 3. 插入商品记录
+                    Map<String, Object> document = new HashMap<>();
+                    document.put("commodity_name", commodityName);
+                    document.put("category_id", categoryId);
+                    
+                    String now = java.time.Instant.now().toString();
+                    document.put("created_at", now);
+                    document.put("updated_at", now);
+                    
+                    elasticsearchClient.index(i -> i
+                            .index("commodity")
+                            .document(document)
+                    );
+                    successCount++;
+                    
                 } catch (Exception e) {
+                    log.error("处理记录失败: {}", record, e);
                     failCount++;
                 }
             }
@@ -118,7 +147,7 @@ public class CommodityServiceImpl implements CommodityService {
             response.setFail_count(failCount);
             return Result.success(response);
         } catch (Exception e) {
-            return Result.error("导入商品失败：" + e.getMessage());
+            return Result.error("导入商品失败: " + e.getMessage());
         }
     }
 
@@ -133,6 +162,23 @@ public class CommodityServiceImpl implements CommodityService {
 
             if (!categoryExists) {
                 return Result.error("品类不存在，ID: " + request.getCategory_id());
+            }
+
+            // 检查商品名是否重复
+            SearchResponse<Map> commodityResponse = elasticsearchClient.search(s -> s
+                    .index("commodity")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("commodity_name.keyword")
+                                    .value(request.getCommodity_name())
+                            )
+                    ),
+                    Map.class
+            );
+
+            if (commodityResponse.hits().total().value() > 0) {
+                log.warn("找到重复的商品名称: {}", request.getCommodity_name());
+                return Result.error("商品名称已存在");
             }
 
             String now = java.time.Instant.now().toString();
@@ -167,9 +213,9 @@ public class CommodityServiceImpl implements CommodityService {
                         if (StringUtils.hasText(request.getCommodity_name()) && StringUtils.hasText(request.getCategory_id())) {
                             return q.bool(b -> b
                                     .must(m -> m
-                                            .term(t -> t
-                                                    .field("commodity_name.keyword")
-                                                    .value(request.getCommodity_name())
+                                            .match(t -> t
+                                                    .field("commodity_name")
+                                                    .query(request.getCommodity_name())
                                             )
                                     )
                                     .must(m -> m
@@ -180,9 +226,9 @@ public class CommodityServiceImpl implements CommodityService {
                                     )
                             );
                         } else if (StringUtils.hasText(request.getCommodity_name())) {
-                            return q.term(t -> t
-                                    .field("commodity_name.keyword")
-                                    .value(request.getCommodity_name())
+                            return q.match(t -> t
+                                    .field("commodity_name")
+                                    .query(request.getCommodity_name())
                             );
                         } else if (StringUtils.hasText(request.getCategory_id())) {
                             return q.term(t -> t
@@ -192,6 +238,12 @@ public class CommodityServiceImpl implements CommodityService {
                         }
                         return q.matchAll(ma -> ma);
                     })
+                    .sort(sort -> sort
+                            .field(f -> f
+                                    .field("updated_at")
+                                    .order(SortOrder.Desc)
+                            )
+                    )
                     .from(from)
                     .size(request.getPage_size()),
                     Map.class
@@ -279,21 +331,46 @@ public class CommodityServiceImpl implements CommodityService {
                 return Result.error("商品不存在，ID: " + request.getCommodity_id());
             }
 
-            // 检查品类是否存在
-            boolean categoryExists = elasticsearchClient.exists(e -> e
-                    .index("category")
-                    .id(request.getCategory_id())
-            ).value();
+            // 如果传了商品名，检查商品名是否重复
+            if (request.getCommodity_name() != null && !request.getCommodity_name().trim().isEmpty()) {
+                SearchResponse<Map> commodityResponse = elasticsearchClient.search(s -> s
+                        .index("commodity")
+                        .query(q -> q
+                            .term(t -> t
+                                    .field("commodity_name.keyword")
+                                    .value(request.getCommodity_name())
+                            )
+                        ),
+                        Map.class
+                );
+                // 如果查询结果不为空，且查询结果的id与当前商品id不一致，则商品名称已存在
+                if (commodityResponse.hits().total().value() > 0) {
+                    String existingId = commodityResponse.hits().hits().get(0).id();
+                    if (!existingId.equals(request.getCommodity_id())) {
+                        return Result.error("商品名称已存在");
+                    }
+                }
+            }
+            
+            // 如果传了品类id，检查品类是否存在
+            if (request.getCategory_id() != null && !request.getCategory_id().trim().isEmpty()) {
+                boolean categoryExists = elasticsearchClient.exists(e -> e
+                        .index("category")
+                        .id(request.getCategory_id())
+                        ).value();
 
-            if (!categoryExists) {
-                return Result.error("品类不存在，ID: " + request.getCategory_id());
+                if (!categoryExists) {
+                    return Result.error("品类不存在，ID: " + request.getCategory_id());
+                }
             }
 
             String now = java.time.Instant.now().toString();
 
             Map<String, Object> document = new HashMap<>();
             document.put("commodity_name", request.getCommodity_name());
-            document.put("category_id", request.getCategory_id());
+            if (request.getCategory_id() != null && !request.getCategory_id().trim().isEmpty()) {
+                document.put("category_id", request.getCategory_id());
+            }
             document.put("updated_at", now);
 
             elasticsearchClient.update(u -> u

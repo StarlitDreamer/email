@@ -1,18 +1,24 @@
 spring:
-  main:
-    allow-bean-definition-overriding: true
-  elasticsearch:
-    uris: http://112.35.176.43:9201
-  servlet:
-    multipart:
-      enabled: true
-      max-file-size: 10MB
-      max-request-size: 10MB
-      resolve-lazily: true
-      location: ${java.io.tmpdir}
-  mvc:
-    pathmatch:
-      matching-strategy: ant_path_matcher
+   main:
+     allow-bean-definition-overriding: true
+
+   servlet:
+     multipart:
+       enabled: true
+       max-file-size: 10MB
+       max-request-size: 10MB
+       resolve-lazily: true
+       location: ${java.io.tmpdir}
+   mvc:
+     pathmatch:
+       matching-strategy: ant_path_matcher
+  #  profiles:
+  #   active: prod
 server:
-  tomcat:
-    max-swallow-size: -1 
+   tomcat:
+     max-swallow-size: -1
+
+elasticsearch:
+  host: es
+  port: 9200
+  scheme: http

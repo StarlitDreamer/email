@@ -73,12 +73,6 @@ public class CommodityController {
         if (request.getCommodity_id() == null || request.getCommodity_id().trim().isEmpty()) {
             return Result.error("商品ID不能为空");
         }
-        if (request.getCommodity_name() == null || request.getCommodity_name().trim().isEmpty()) {
-            return Result.error("商品名称不能为空");
-        }
-        if (request.getCategory_id() == null || request.getCategory_id().trim().isEmpty()) {
-            return Result.error("品类ID不能为空");
-        }
         return commodityService.updateCommodity(request);
     }
 } 

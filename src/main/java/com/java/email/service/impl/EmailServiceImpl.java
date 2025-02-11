@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import com.java.email.common.Result;
 import com.java.email.model.EmailTypeFilterRequest;
 import com.java.email.model.EmailTypeFilterResponse;
@@ -57,6 +58,20 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public Result<?> createEmail(String emailTypeName) {
         try {
+            // 检查邮件类型名称是否重复
+            SearchResponse<Map> emailTypeResponse = elasticsearchClient.search(s -> s
+                    .index("email_type")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("email_type_name.keyword")
+                                    .value(emailTypeName)
+                            )
+                    ),
+                    Map.class
+            );
+            if (emailTypeResponse.hits().total().value() > 0) {
+                return Result.error("邮件类型名称已存在");
+            }
             // 获取当前时间的 ISO 格式字符串
             String now = java.time.Instant.now().toString();
             
@@ -92,13 +107,19 @@ public class EmailServiceImpl implements EmailService {
                     .index("email_type")
                     .query(q -> {
                         if (StringUtils.hasText(request.getEmail_type_name())) {
-                            return q.term(t -> t
-                                    .field("email_type_name.keyword")
-                                    .value(request.getEmail_type_name())
+                            return q.match(t -> t
+                                    .field("email_type_name")
+                                    .query(request.getEmail_type_name())
                             );
                         }
                         return q.matchAll(ma -> ma);
                     })
+                    .sort(sort -> sort
+                            .field(f -> f
+                                    .field("updated_at")
+                                    .order(SortOrder.Desc)
+                            )
+                    )
                     .from(from)
                     .size(request.getPage_size()),
                     Map.class
@@ -124,6 +145,7 @@ public class EmailServiceImpl implements EmailService {
 
             return Result.success(filterResponse);
         } catch (Exception e) {
+            System.out.println(e);
             return Result.error("搜索邮件类型失败：" + e.getMessage());
         }
     }
@@ -149,6 +171,20 @@ public class EmailServiceImpl implements EmailService {
                 return Result.error("邮件类型不存在，ID: " + request.getEmail_type_id());
             }
 
+            // 检查邮件类型名称是否重复
+            SearchResponse<Map> emailTypeResponse = elasticsearchClient.search(s -> s
+                    .index("email_type")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("email_type_name.keyword")
+                                    .value(request.getEmail_type_name())
+                            )
+                    ),
+                    Map.class
+            );
+            if (emailTypeResponse.hits().total().value() > 0) {
+                return Result.error("邮件类型名称已存在");
+            }
             // 获取当前时间的 ISO 格式字符串
             String now = java.time.Instant.now().toString();
 

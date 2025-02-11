@@ -1,6 +1,7 @@
 package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,20 @@ public class AreaServiceImpl implements AreaService {
             // 获取当前时间的 ISO 格式字符串
             String now = java.time.Instant.now().toString();
 
+            // 检查区域名是否重复
+            SearchResponse<Map> areaResponse = elasticsearchClient.search(s -> s
+                    .index("area")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("area_name.keyword")
+                                    .value(request.getArea_name())
+                            )
+                    ),
+                    Map.class
+            );
+            if (areaResponse.hits().total().value() > 0) {
+                return Result.error("区域名称已存在");
+            }
             // 构建文档
             Map<String, Object> document = new HashMap<>();
             document.put("area_name", request.getArea_name());
@@ -114,31 +130,37 @@ public class AreaServiceImpl implements AreaService {
                         if (StringUtils.hasText(request.getArea_name()) && StringUtils.hasText(request.getCountry_id())) {
                             return q.bool(b -> b
                                     .must(m -> m
-                                            .term(t -> t
-                                                    .field("area_name.keyword")
-                                                    .value(request.getArea_name())
+                                            .match(t -> t
+                                                    .field("area_name")
+                                                    .query(request.getArea_name())
                                             )
                                     )
                                     .must(m -> m
                                             .term(t -> t
-                                                    .field("country_id")
+                                                    .field("area_country")
                                                     .value(request.getCountry_id())
                                             )
                                     )
                             );
                         } else if (StringUtils.hasText(request.getArea_name())) {
-                            return q.term(t -> t
-                                    .field("area_name.keyword")
-                                    .value(request.getArea_name())
+                            return q.match(t -> t
+                                    .field("area_name")
+                                    .query(request.getArea_name())
                             );
                         } else if (StringUtils.hasText(request.getCountry_id())) {
                             return q.term(t -> t
-                                    .field("country_id")
+                                    .field("area_country")
                                     .value(request.getCountry_id())
                             );
                         }
                         return q.matchAll(ma -> ma);
                     })
+                    .sort(sort -> sort
+                            .field(f -> f
+                                    .field("updated_at")
+                                    .order(SortOrder.Desc)
+                            )
+                    )
                     .from(from)
                     .size(request.getPage_size()),
                     Map.class
@@ -156,7 +178,19 @@ public class AreaServiceImpl implements AreaService {
                 AreaVO area = new AreaVO();
                 area.setArea_id(hit.id());
                 area.setArea_name((String) hit.source().get("area_name"));
-                area.setArea_country((List<String>) hit.source().get("area_country"));
+                List<String> countryIds = (List<String>) hit.source().get("area_country");
+                List<String> countryNames = new ArrayList<>();
+                for (String countryId : countryIds) {
+                    Map<String, Object> country = elasticsearchClient.get(g -> g
+                            .index("country")
+                            .id(countryId),
+                            Map.class
+                    ).source();
+                    if (country != null) {
+                        countryNames.add((String) country.get("country_name"));
+                    }
+                }
+                area.setArea_country(countryNames);
                 area.setCreated_at((String) hit.source().get("created_at"));
                 area.setUpdated_at((String) hit.source().get("updated_at"));
                 areas.add(area);
@@ -226,11 +260,30 @@ public class AreaServiceImpl implements AreaService {
                 return Result.error("区域不存在，ID: " + request.getArea_id());
             }
 
+            // 检查区域名是否重复
+            SearchResponse<Map> areaResponse = elasticsearchClient.search(s -> s
+                    .index("area")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("area_name.keyword")
+                                    .value(request.getArea_name())
+                            )
+                    ),
+                    Map.class
+            );
+            // 如果查询结果不为空，且查询结果的id与当前商品id不一致，则商品名称已存在
+            if (areaResponse.hits().total().value() > 0) {
+                String existingId = areaResponse.hits().hits().get(0).id();
+                if (!existingId.equals(request.getArea_id())) {
+                    return Result.error("区域名称已存在");
+                }
+            }
+
             // 如果提供了国家ID列表，检查所有国家是否存在
-            if (request.getCountry_id() != null && !request.getCountry_id().isEmpty()) {
+            if (request.getCountry_id().size() > 0) {
                 for (String countryId : request.getCountry_id()) {
                     boolean countryExists = elasticsearchClient.exists(e -> e
-                            .index("country_index")
+                            .index("country")
                             .id(countryId)
                     ).value();
 
@@ -248,8 +301,8 @@ public class AreaServiceImpl implements AreaService {
             if (StringUtils.hasText(request.getArea_name())) {
                 document.put("area_name", request.getArea_name());
             }
-            if (request.getCountry_id() != null) {
-                document.put("country_id", request.getCountry_id());
+            if (request.getCountry_id().size() > 0) {
+                document.put("area_country", request.getCountry_id());
             }
             document.put("updated_at", now);
 
