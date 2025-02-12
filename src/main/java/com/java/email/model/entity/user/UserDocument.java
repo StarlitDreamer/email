@@ -41,6 +41,9 @@ public class UserDocument {
     @Field(name = "user_email_code", type = FieldType.Keyword)
     private String userEmailCode;
 
+    @Field(name = "user_host", type = FieldType.Keyword) 
+    private String userHost;
+
     @Field(name = "user_auth_id", type = FieldType.Keyword)
     private List<String> userAuthId;
 
