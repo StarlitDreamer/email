@@ -4,14 +4,17 @@ spring:
     activate:
       on-profile: test
   elasticsearch:
-    uris: http://localhost:9200
+    uris: http://112.35.176.43:9201
     connection-timeout: 5000
     socket-timeout: 5000
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  main:
+    allow-bean-definition-overriding: true
 server:
-  port: 9898
+  port: 8080
+
 
 
