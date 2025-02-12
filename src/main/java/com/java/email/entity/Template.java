@@ -52,6 +52,14 @@ public class Template {
     @JsonProperty("template_type_id")
     @Field(name = "template_type_id", type = FieldType.Integer)
     private int templateTypeId;         // 模板类型 templateType
+
+    @JsonProperty("created_at")
+    @Field(name = "created_at", type = FieldType.Date)
+    private String createdAt;
+
+    @Field(name = "updated_at", type = FieldType.Date)
+    @JsonProperty("updated_at")
+    private String updatedAt;
 }
 
 //@Document(indexName = "template")
