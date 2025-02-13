@@ -83,7 +83,11 @@ public class TemplateService {
                 allowedUserIds.addAll(getSubordinateUserIds(currentUserId));
                 return Result.success(templateRepository.findByBelongUserIdIn(allowedUserIds, pageable));
             } else if (currentUserRole == 4) { // 普通用户，只能查看自己的模板
-                return Result.success(templateRepository.findByBelongUserIdIn(Collections.singletonList(currentUserId), pageable));
+                List<String> allowedUserIds = new ArrayList<>();
+                allowedUserIds.add("1"); // 公司用户ID
+                allowedUserIds.add(currentUserId); // 自己
+                return Result.success(templateRepository.findByBelongUserIdIn(allowedUserIds, pageable));
+//                return Result.success(templateRepository.findByBelongUserIdIn(Collections.singletonList(currentUserId), pageable));
             } else {
                 // 如果没有匹配的角色，返回空结果
                 return Result.success(new PageImpl<>(Collections.emptyList()));
