@@ -50,8 +50,8 @@ public class Template {
     private String templateName;        // 模板名称
 
     @JsonProperty("template_type_id")
-    @Field(name = "template_type_id", type = FieldType.Integer)
-    private int templateTypeId;         // 模板类型 templateType
+    @Field(name = "template_type_id", type = FieldType.Keyword)
+    private String templateTypeId;         // 模板类型 templateType
 
     @JsonProperty("created_at")
     @Field(name = "created_at", type = FieldType.Date)
