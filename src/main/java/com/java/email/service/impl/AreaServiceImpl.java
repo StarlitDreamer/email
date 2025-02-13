@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class AreaServiceImpl implements AreaService {
@@ -82,6 +83,8 @@ public class AreaServiceImpl implements AreaService {
             }
             // 构建文档
             Map<String, Object> document = new HashMap<>();
+            String areaId = UUID.randomUUID().toString();
+            document.put("area_id", areaId);
             document.put("area_name", request.getArea_name());
             document.put("area_country", request.getArea_country());
             document.put("created_at", now);
@@ -90,12 +93,13 @@ public class AreaServiceImpl implements AreaService {
             // 保存到 Elasticsearch
             IndexResponse response = elasticsearchClient.index(i -> i
                     .index("area")
+                    .id(areaId)
                     .document(document)
             );
 
             // 构建响应数据
             Map<String, Object> resultData = new HashMap<>();
-            resultData.put("area_id", response.id());
+            resultData.put("area_id", areaId);
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建区域失败：" + e.getMessage());
@@ -176,7 +180,7 @@ public class AreaServiceImpl implements AreaService {
             List<AreaVO> areas = new ArrayList<>();
             for (Hit<Map> hit : response.hits().hits()) {
                 AreaVO area = new AreaVO();
-                area.setArea_id(hit.id());
+                area.setArea_id((String) hit.source().get("area_id"));
                 area.setArea_name((String) hit.source().get("area_name"));
                 List<String> countryIds = (List<String>) hit.source().get("area_country");
                 List<String> countryNames = new ArrayList<>();

@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.csv.CSVFormat;
@@ -121,9 +123,10 @@ public class CountryServiceImpl implements CountryService {
                     
                     // 构建文档
                     Map<String, Object> document = new HashMap<>();
+                    String countryId = UUID.randomUUID().toString();
                     document.put("country_name", countryName);
                     document.put("country_code", countryCode);
-
+                    document.put("country_id", countryId);
                     
                     String now = java.time.Instant.now().toString();
                     document.put("created_at", now);
@@ -132,6 +135,7 @@ public class CountryServiceImpl implements CountryService {
                     // 保存到 Elasticsearch
                     elasticsearchClient.index(i -> i
                             .index("country")
+                            .id(countryId)
                             .document(document)
                     );
                     
@@ -228,7 +232,7 @@ public class CountryServiceImpl implements CountryService {
             List<CountryVO> countries = new ArrayList<>();
             for (Hit<Map> hit : response.hits().hits()) {
                 CountryVO country = new CountryVO();
-                country.setCountry_id(hit.id());
+                country.setCountry_id((String) hit.source().get("country_id"));
                 country.setCountry_code((String) hit.source().get("country_code"));
                 country.setCountry_name((String) hit.source().get("country_name"));
                 country.setCreated_at((String) hit.source().get("created_at"));
@@ -286,20 +290,22 @@ public class CountryServiceImpl implements CountryService {
 
             // 构建文档
             Map<String, Object> document = new HashMap<>();
+            String countryId = UUID.randomUUID().toString();
+            document.put("country_id", countryId);
             document.put("country_code", request.getCountry_code());
             document.put("country_name", request.getCountry_name());
             document.put("created_at", now);
             document.put("updated_at", now);
-
             // 保存到 Elasticsearch
             IndexResponse response = elasticsearchClient.index(i -> i
                     .index("country")
+                    .id(countryId)
                     .document(document)
             );
 
             // 构建响应数据
             Map<String, Object> resultData = new HashMap<>();
-            resultData.put("country_id", response.id());
+            resultData.put("country_id", countryId);
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建国家失败：" + e.getMessage());

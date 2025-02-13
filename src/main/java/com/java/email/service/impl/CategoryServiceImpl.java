@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class CategoryServiceImpl implements CategoryService {
@@ -99,6 +100,8 @@ public class CategoryServiceImpl implements CategoryService {
 
                     // 构建文档
                     Map<String, Object> document = new HashMap<>();
+                    String categoryId = UUID.randomUUID().toString();
+                    document.put("category_id", categoryId);
                     document.put("category_name", categoryName);
                     
                     String now = java.time.Instant.now().toString();
@@ -107,6 +110,7 @@ public class CategoryServiceImpl implements CategoryService {
                     
                     elasticsearchClient.index(i -> i
                             .index("category")
+                            .id(categoryId)
                             .document(document)
                     );
                     successCount++;
@@ -129,13 +133,6 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public Result<?> createCategory(CategoryCreateRequest request) {
         try {
-            // 获取当前时间的 ISO 格式字符串
-            String now = java.time.Instant.now().toString();
-
-            Map<String, Object> document = new HashMap<>();
-            document.put("category_name", request.getCategory_name());
-            document.put("created_at", now);
-            document.put("updated_at", now);
             // 检查是否已存在相同的category_name
             SearchResponse<Map> searchResponse = elasticsearchClient.search(s -> s
                     .index("category")
@@ -151,14 +148,23 @@ public class CategoryServiceImpl implements CategoryService {
             if (searchResponse.hits().total().value() > 0) {
                 return Result.error("品类名称已存在");
             }
+            // 获取当前时间的 ISO 格式字符串
+            String now = java.time.Instant.now().toString();
 
+            Map<String, Object> document = new HashMap<>();
+            String categoryId = UUID.randomUUID().toString();
+            document.put("category_id", categoryId);
+            document.put("category_name", request.getCategory_name());
+            document.put("created_at", now);
+            document.put("updated_at", now);
             IndexResponse response = elasticsearchClient.index(i -> i
                     .index("category")
+                    .id(categoryId)
                     .document(document)
             );
 
             Map<String, Object> resultData = new HashMap<>();
-            resultData.put("category_id", response.id());
+            resultData.put("category_id", categoryId);
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建品类失败：" + e.getMessage());
@@ -200,7 +206,7 @@ public class CategoryServiceImpl implements CategoryService {
             List<CategoryVO> categories = new ArrayList<>();
             for (Hit<Map> hit : response.hits().hits()) {
                 CategoryVO category = new CategoryVO();
-                category.setCategory_id(hit.id());
+                category.setCategory_id((String) hit.source().get("category_id"));
                 category.setCategory_name((String) hit.source().get("category_name"));
                 category.setCreated_at((String) hit.source().get("created_at"));
                 category.setUpdated_at((String) hit.source().get("updated_at"));

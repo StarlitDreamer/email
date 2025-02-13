@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class CommodityServiceImpl implements CommodityService {
@@ -120,9 +121,10 @@ public class CommodityServiceImpl implements CommodityService {
                     }
                     
                     String categoryId = categoryResponse.hits().hits().get(0).id();
-                    
+                    String commodityId = UUID.randomUUID().toString();
                     // 3. 插入商品记录
                     Map<String, Object> document = new HashMap<>();
+                    document.put("commodity_id", commodityId);
                     document.put("commodity_name", commodityName);
                     document.put("category_id", categoryId);
                     
@@ -132,6 +134,7 @@ public class CommodityServiceImpl implements CommodityService {
                     
                     elasticsearchClient.index(i -> i
                             .index("commodity")
+                            .id(commodityId)
                             .document(document)
                     );
                     successCount++;
@@ -184,6 +187,8 @@ public class CommodityServiceImpl implements CommodityService {
             String now = java.time.Instant.now().toString();
 
             Map<String, Object> document = new HashMap<>();
+            String commodityId = UUID.randomUUID().toString();
+            document.put("commodity_id", commodityId);
             document.put("commodity_name", request.getCommodity_name());
             document.put("category_id", request.getCategory_id());
             document.put("created_at", now);
@@ -191,11 +196,12 @@ public class CommodityServiceImpl implements CommodityService {
 
             IndexResponse response = elasticsearchClient.index(i -> i
                     .index("commodity")
+                    .id(commodityId)
                     .document(document)
             );
 
             Map<String, Object> resultData = new HashMap<>();
-            resultData.put("commodity_id", response.id());
+            resultData.put("commodity_id", commodityId);
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建商品失败：" + e.getMessage());
@@ -257,7 +263,7 @@ public class CommodityServiceImpl implements CommodityService {
             List<CommodityVO> commodities = new ArrayList<>();
             for (Hit<Map> hit : response.hits().hits()) {
                 CommodityVO commodity = new CommodityVO();
-                commodity.setCommodity_id(hit.id());
+                commodity.setCommodity_id((String) hit.source().get("commodity_id"));
                 commodity.setCommodity_name((String) hit.source().get("commodity_name"));
                 commodity.setCategory_id((String) hit.source().get("category_id"));
                 commodity.setCreated_at((String) hit.source().get("created_at"));

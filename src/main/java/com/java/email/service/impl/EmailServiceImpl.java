@@ -16,14 +16,20 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
+@Slf4j
 public class EmailServiceImpl implements EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
     @Autowired
     private ElasticsearchClient elasticsearchClient;
@@ -77,6 +83,8 @@ public class EmailServiceImpl implements EmailService {
             
             // 构建文档
             Map<String, Object> document = new HashMap<>();
+            String emailTypeId = UUID.randomUUID().toString();
+            document.put("email_type_id", emailTypeId);
             document.put("email_type_name", emailTypeName);
             document.put("created_at", now);
             document.put("updated_at", now);
@@ -84,12 +92,13 @@ public class EmailServiceImpl implements EmailService {
             // 保存到 Elasticsearch
             IndexResponse response = elasticsearchClient.index(i -> i
                     .index("email_type")
+                    .id(emailTypeId)
                     .document(document)
             );
 
             // 构建响应数据
             Map<String, Object> resultData = new HashMap<>();
-            resultData.put("email_type_id", response.id());
+            resultData.put("email_type_id", emailTypeId);
             return Result.success(resultData);
         } catch (Exception e) {
             return Result.error("创建邮件类型失败：" + e.getMessage());
@@ -135,7 +144,7 @@ public class EmailServiceImpl implements EmailService {
             List<EmailTypeVO> emailTypes = new ArrayList<>();
             for (Hit<Map> hit : response.hits().hits()) {
                 EmailTypeVO emailType = new EmailTypeVO();
-                emailType.setEmail_type_id(hit.id());
+                emailType.setEmail_type_id((String) hit.source().get("email_type_id"));
                 emailType.setEmail_type_name((String) hit.source().get("email_type_name"));
                 emailType.setCreated_at((String) hit.source().get("created_at"));
                 emailType.setUpdated_at((String) hit.source().get("updated_at"));
@@ -162,11 +171,15 @@ public class EmailServiceImpl implements EmailService {
             }
 
             // 先检查文档是否存在
+            log.info("Checking email type with ID: {}", request.getEmail_type_id());
+            
             boolean exists = elasticsearchClient.exists(e -> e
                     .index("email_type")
                     .id(request.getEmail_type_id())
             ).value();
-
+            
+            log.info("Email type exists: {}", exists);
+            
             if (!exists) {
                 return Result.error("邮件类型不存在，ID: " + request.getEmail_type_id());
             }
@@ -206,6 +219,7 @@ public class EmailServiceImpl implements EmailService {
             resultData.put("email_type_id", request.getEmail_type_id());
             return Result.success(resultData);
         } catch (Exception e) {
+            log.error("Error updating email type: ", e);
             return Result.error("更新邮件类型失败：" + e.getMessage());
         }
     }
@@ -219,11 +233,15 @@ public class EmailServiceImpl implements EmailService {
             }
 
             // 先检查文档是否存在
+            log.info("Checking email type with ID: {}", request.getEmail_type_id());
+            
             boolean exists = elasticsearchClient.exists(e -> e
                     .index("email_type")
                     .id(request.getEmail_type_id())
             ).value();
-
+            
+            log.info("Email type exists: {}", exists);
+            
             if (!exists) {
                 return Result.error("邮件类型不存在，ID: " + request.getEmail_type_id());
             }
@@ -238,6 +256,7 @@ public class EmailServiceImpl implements EmailService {
             resultData.put("email_type_id", request.getEmail_type_id());
             return Result.success(resultData);
         } catch (Exception e) {
+            log.error("Error deleting email type: ", e);
             return Result.error("删除邮件类型失败：" + e.getMessage());
         }
     }

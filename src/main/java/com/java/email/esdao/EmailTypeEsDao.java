@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class EmailTypeEsDao {
@@ -17,10 +18,12 @@ public class EmailTypeEsDao {
 
     public void saveEmailType(String emailTypeName) throws IOException {
         Map<String, Object> document = new HashMap<>();
+        String emailTypeId = UUID.randomUUID().toString();
+        document.put("email_type_id", emailTypeId);
         document.put("email_type_name", emailTypeName);
 
         IndexResponse response = elasticsearchClient.index(i -> i
-                .index("email_index")
+                .index("email_type")
                 .document(document)
         );
     }
