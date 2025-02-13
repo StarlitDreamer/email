@@ -21,8 +21,15 @@ import com.java.email.constant.MagicMathConstData;
 import com.java.email.constant.ReceiverConstData;
 import com.java.email.constant.UserConstData;
 import com.java.email.common.userCommon.SubordinateValidation.ValidationResult;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -35,15 +42,23 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.java.email.model.dto.request.SupplierFilterRequest;
 import java.util.ArrayList;
+import java.util.Arrays;
+
 import org.springframework.data.elasticsearch.core.query.Query;
+import org.springframework.http.ResponseEntity;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.erhlc.NativeSearchQuery;
+import org.springframework.data.elasticsearch.client.erhlc.NativeSearchQueryBuilder;
+
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import com.java.email.esdao.repository.user.UserRepository;
 import com.java.email.model.entity.user.UserDocument;
@@ -108,6 +123,17 @@ public class SupplierServiceImpl implements SupplierService {
                 return new Result(ResultCode.R_ParamError);
             }
             try {
+                // Validate birth date format (yyyy-MM-dd)
+                if (!supplierDocument.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                    logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                    return new Result(ResultCode.R_ParamError);
+                }
+
+                // Convert to ISO format
+                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                LocalDate date = LocalDate.parse(supplierDocument.getBirth(), inputFormatter);
+                String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
+                supplierDocument.setBirth(isoDate);
                 java.time.Instant.parse(supplierDocument.getBirth());
             } catch (Exception e) {
                 logUtil.error("出生日期格式错误: " + e.getMessage());
@@ -260,6 +286,17 @@ public class SupplierServiceImpl implements SupplierService {
         }
         if (supplierDocument.getBirth() != null && !supplierDocument.getBirth().trim().isEmpty()) {
             try {
+                // Validate birth date format (yyyy-MM-dd)
+                if (!supplierDocument.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                    logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                    return new Result(ResultCode.R_ParamError);
+                }
+
+                // Convert to ISO format
+                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                LocalDate date = LocalDate.parse(supplierDocument.getBirth(), inputFormatter);
+                String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
+                supplierDocument.setBirth(isoDate);
                 java.time.Instant.parse(supplierDocument.getBirth());
                 existingSupplier.setBirth(supplierDocument.getBirth());
             } catch (Exception e) {
@@ -438,7 +475,7 @@ public class SupplierServiceImpl implements SupplierService {
 
             // 所属用户为公司，则直接查询所有与公司相关的供应商
             if(belongUserName != null && belongUserName.equals(UserConstData.COMPANY_USER_NAME)) {
-                mainQuery.must(m -> m.term(t -> t.field("belongUserId").value(UserConstData.COMPANY_USER_ID)));
+                mainQuery.must(m -> m.term(t -> t.field("belong_user_id").value(UserConstData.COMPANY_USER_ID)));
                 // 创建人条件
                 if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
                     List<UserDocument> creators = userRepository.findByUserNameLike(request.getCreatorName().trim());
@@ -447,7 +484,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (UserDocument creator : creators) {
                             creatorQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(creator.getUserId())
                                     )
                             );
@@ -460,7 +497,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierName() != null && !request.getSupplierName().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("supplierName")
+                                    .field("supplier_name")
                                     .query(request.getSupplierName().trim())
                             )
                     );
@@ -470,7 +507,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getContactPerson() != null && !request.getContactPerson().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactPerson")
+                                    .field("contact_person")
                                     .query(request.getContactPerson().trim())
                             )
                     );
@@ -480,7 +517,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getContactWay() != null && !request.getContactWay().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactWay")
+                                    .field("contact_way")
                                     .query(request.getContactWay().trim())
                             )
                     );
@@ -490,7 +527,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierLevel() != null) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("supplierLevel")
+                                    .field("supplier_level")
                                     .value(request.getSupplierLevel())
                             )
                     );
@@ -542,7 +579,7 @@ public class SupplierServiceImpl implements SupplierService {
                     for (String emailTypeId : request.getAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("acceptEmailTypeId")
+                                        .field("accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -554,7 +591,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierCountryId() != null && !request.getSupplierCountryId().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("supplierCountryId")
+                                    .field("supplier_country_id")
                                     .value(request.getSupplierCountryId().trim())
                             )
                     );
@@ -564,7 +601,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getTradeType() != null) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("tradeType")
+                                    .field("trade_type")
                                     .value(request.getTradeType())
                             )
                     );
@@ -578,7 +615,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (CommodityDocument commodity : commodities) {
                             commodityQuery.should(s -> s
                                     .term(t -> t
-                                            .field("commodityId")
+                                            .field("commodity_id")
                                             .value(commodity.getCommodityId())
                                     )
                             );
@@ -589,7 +626,7 @@ public class SupplierServiceImpl implements SupplierService {
 
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -621,7 +658,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (UserDocument creator : creators) {
                             creatorQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(creator.getUserId())
                                     )
                             );
@@ -638,7 +675,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (UserDocument belongUser : belongUsers) {
                             belongQuery.should(s -> s
                                     .term(t -> t
-                                            .field("belongUserId")
+                                            .field("belong_user_id")
                                             .value(belongUser.getUserId())
                                     )
                             );
@@ -651,7 +688,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierName() != null && !request.getSupplierName().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("supplierName")
+                                    .field("supplier_name")
                                     .query(request.getSupplierName().trim())
                             )
                     );
@@ -661,7 +698,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getContactPerson() != null && !request.getContactPerson().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactPerson")
+                                    .field("contact_person")
                                     .query(request.getContactPerson().trim())
                             )
                     );
@@ -671,7 +708,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getContactWay() != null && !request.getContactWay().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactWay")
+                                    .field("contact_way")
                                     .query(request.getContactWay().trim())
                             )
                     );
@@ -681,7 +718,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierLevel() != null && request.getSupplierLevel() >= ReceiverConstData.SUPPLIER_LEVEL_LOW && request.getSupplierLevel() <= ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("supplierLevel")
+                                    .field("supplier_level")
                                     .value(request.getSupplierLevel())
                             )
                     );
@@ -691,7 +728,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("tradeType")
+                                    .field("trade_type")
                                     .value(request.getTradeType())
                             )
                     );
@@ -701,7 +738,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierCountryId() != null && !request.getSupplierCountryId().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("supplierCountryId")
+                                    .field("supplier_country_id")
                                     .value(request.getSupplierCountryId().trim())
                             )
                     );
@@ -716,7 +753,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (CommodityDocument commodity : commodities) {
                             commodityQuery.should(s -> s
                                     .term(t -> t
-                                            .field("commodityId")
+                                            .field("commodity_id")
                                             .value(commodity.getCommodityId())
                                     )
                             );
@@ -767,7 +804,7 @@ public class SupplierServiceImpl implements SupplierService {
                     for (String emailTypeId : request.getAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("acceptEmailTypeId")
+                                        .field("accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -788,7 +825,7 @@ public class SupplierServiceImpl implements SupplierService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                     .withPageable(pageable)
                     .build();
             }
@@ -815,7 +852,7 @@ public class SupplierServiceImpl implements SupplierService {
                     for (UserDocument user : validUsers) {
                         creatorQuery.should(s -> s
                                 .term(t -> t
-                                        .field("creatorId")
+                                        .field("creator_id")
                                         .value(user.getUserId())
                                 )
                         );
@@ -839,7 +876,7 @@ public class SupplierServiceImpl implements SupplierService {
                     for (UserDocument user : validUsers) {
                         belongQuery.should(s -> s
                                 .term(t -> t
-                                        .field("belongUserId")
+                                        .field("belong_user_id")
                                         .value(user.getUserId())
                                 )
                         );
@@ -853,7 +890,7 @@ public class SupplierServiceImpl implements SupplierService {
                     BoolQuery.Builder creatorAccessQuery = new BoolQuery.Builder();
                     creatorAccessQuery.should(s -> s
                             .term(t -> t
-                                    .field("creatorId")
+                                    .field("creator_id")
                                     .value(currentUserId)
                             )
                     );
@@ -862,7 +899,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (UserDocument sub : subordinates) {
                             creatorAccessQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(sub.getUserId())
                                     )
                             );
@@ -873,7 +910,7 @@ public class SupplierServiceImpl implements SupplierService {
                     BoolQuery.Builder belongAccessQuery = new BoolQuery.Builder();
                     belongAccessQuery.should(s -> s
                             .term(t -> t
-                                    .field("belongUserId")
+                                    .field("belong_user_id")
                                     .value(currentUserId)
                             )
                     );
@@ -881,7 +918,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (UserDocument sub : subordinates) {
                             belongAccessQuery.should(s -> s
                                     .term(t -> t
-                                            .field("belongUserId")
+                                            .field("belong_user_id")
                                             .value(sub.getUserId())
                                     )
                             );
@@ -898,7 +935,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierName() != null && !request.getSupplierName().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("supplierName")
+                                    .field("supplier_name")
                                     .query(request.getSupplierName().trim())
                             )
                     );
@@ -908,7 +945,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getContactPerson() != null && !request.getContactPerson().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactPerson")
+                                    .field("contact_person")
                                     .query(request.getContactPerson().trim())
                             )
                     );
@@ -918,7 +955,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getContactWay() != null && !request.getContactWay().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactWay")
+                                    .field("contact_way")
                                     .query(request.getContactWay().trim())
                             )
                     );
@@ -928,7 +965,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierLevel() != null && request.getSupplierLevel() >= ReceiverConstData.SUPPLIER_LEVEL_LOW && request.getSupplierLevel() <= ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("supplierLevel")
+                                    .field("supplier_level")
                                     .value(request.getSupplierLevel())
                             )
                     );
@@ -939,7 +976,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("tradeType")
+                                    .field("trade_type")
                                     .value(request.getTradeType())
                             )
                     );
@@ -949,7 +986,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierCountryId() != null && !request.getSupplierCountryId().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("supplierCountryId")
+                                    .field("supplier_country_id")
                                     .value(request.getSupplierCountryId().trim())
                             )
                     );
@@ -964,7 +1001,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (CommodityDocument commodity : commodities) {
                             commodityQuery.should(s -> s
                                     .term(t -> t
-                                            .field("commodityId")
+                                            .field("commodity_id")
                                             .value(commodity.getCommodityId())
                                     )
                             );
@@ -1015,7 +1052,7 @@ public class SupplierServiceImpl implements SupplierService {
                     for (String emailTypeId : request.getAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("acceptEmailTypeId")
+                                        .field("accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1035,7 +1072,7 @@ public class SupplierServiceImpl implements SupplierService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                         .withQuery(q -> q.bool(mainQuery.build()))
-                        .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                        .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                         .withPageable(pageable)
                         .build();
 
@@ -1046,7 +1083,7 @@ public class SupplierServiceImpl implements SupplierService {
                 BoolQuery.Builder belongQuery = new BoolQuery.Builder();
                 belongQuery.should(s -> s
                             .term(t -> t
-                                .field("belongUserId")
+                                .field("belong_user_id")
                                 .value(currentUserId)
                             )
                         );
@@ -1057,7 +1094,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierName() != null && !request.getSupplierName().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("supplierName")
+                                    .field("supplier_name")
                                     .query(request.getSupplierName().trim())
                             )
                     );
@@ -1067,7 +1104,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getContactPerson() != null && !request.getContactPerson().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactPerson")
+                                    .field("contact_person")
                                     .query(request.getContactPerson().trim())
                             )
                     );
@@ -1077,7 +1114,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getContactWay() != null && !request.getContactWay().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactWay")
+                                    .field("contact_way")
                                     .query(request.getContactWay().trim())
                             )
                     );
@@ -1087,7 +1124,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierLevel() != null && request.getSupplierLevel() >= ReceiverConstData.SUPPLIER_LEVEL_LOW && request.getSupplierLevel() <= ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("supplierLevel")
+                                    .field("supplier_level")
                                     .value(request.getSupplierLevel())
                             )
                     );
@@ -1097,7 +1134,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("tradeType")
+                                    .field("trade_type")
                                     .value(request.getTradeType())
                             )
                     );
@@ -1107,7 +1144,7 @@ public class SupplierServiceImpl implements SupplierService {
                 if (request.getSupplierCountryId() != null && !request.getSupplierCountryId().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("supplierCountryId")
+                                    .field("supplier_country_id")
                                     .value(request.getSupplierCountryId().trim())
                             )
                     );
@@ -1122,7 +1159,7 @@ public class SupplierServiceImpl implements SupplierService {
                         for (CommodityDocument commodity : commodities) {
                             commodityQuery.should(s -> s
                                     .term(t -> t
-                                            .field("commodityId")
+                                            .field("commodity_id")
                                             .value(commodity.getCommodityId())
                                     )
                             );
@@ -1173,7 +1210,7 @@ public class SupplierServiceImpl implements SupplierService {
                     for (String emailTypeId : request.getAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("acceptEmailTypeId")
+                                        .field("accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1185,7 +1222,7 @@ public class SupplierServiceImpl implements SupplierService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -1557,6 +1594,143 @@ public class SupplierServiceImpl implements SupplierService {
                     return map;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Result importSupplier(MultipartFile file) {
+        if (file.isEmpty()) {
+            return new Result(ResultCode.R_ParamError);
+        }
+
+        if (!file.getOriginalFilename().endsWith(".csv")) {
+            return new Result(ResultCode.R_ParamError);
+        }
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            // 跳过CSV头行
+            String headerLine = reader.readLine();
+            String line;
+            List<SupplierDocument> suppliers = new ArrayList<>();
+            
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
+                SupplierDocument supplier = new SupplierDocument();
+                
+                // 设置基本信息
+                supplier.setSupplierName(data[0]);
+                supplier.setContactPerson(data[1]);
+                supplier.setContactWay(data[2]);
+                supplier.setSupplierLevel(Integer.parseInt(data[3]));
+                
+                // 通过国家名称查询国家ID
+                String countryName = data[4];
+                List<CountryDocument> country = countryRepository.findByCountryNameLike(countryName);
+                logUtil.info("country: " + country);
+                CountryDocument matchedCountry = null;
+                for (CountryDocument c : country) {
+                    if (c.getCountryName().equals(countryName)) {
+                        matchedCountry = c;
+                        break;
+                    }
+                }
+                if (matchedCountry == null) {
+                    continue;
+                }
+                supplier.setSupplierCountryId(matchedCountry.getCountryId());
+                
+                supplier.setTradeType(Integer.parseInt(data[5]));
+                
+                // 处理商品名称数组，转换为商品ID
+                String[] commodityNames = data[6].split(";");
+                List<String> commodityIds = new ArrayList<>();
+                for (String commodityName : commodityNames) {
+                    CommodityDocument commodity = commodityRepository.findByCommodityName(commodityName.trim());
+                    if (commodity == null) {
+                        continue;
+                    }
+                    commodityIds.add(commodity.getCommodityId());
+                }
+                supplier.setCommodityId(commodityIds);
+                
+                supplier.setSex(data[7]);
+                
+                // 处理birth日期，转换为ISO格式
+                String birthDate = data[8];
+                if (birthDate != null && !birthDate.isEmpty()) {
+                    try {
+                        // 支持多种日期格式: yyyy/MM/dd, yyyy-MM-dd, 包括单位数的月日
+                        DateTimeFormatter[] formatters = {
+                            DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                            DateTimeFormatter.ofPattern("yyyy/M/d"),
+                            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                            DateTimeFormatter.ofPattern("yyyy-M-d")
+                        };
+
+                        LocalDate date = null;
+                        for (DateTimeFormatter formatter : formatters) {
+                            try {
+                                date = LocalDate.parse(birthDate, formatter);
+                                break;
+                            } catch (DateTimeParseException e) {
+                                continue;
+                            }
+                        }
+
+                        if (date == null) {
+                            logUtil.error("无法解析日期: " + birthDate);
+                            throw new DateTimeParseException("无法解析日期", birthDate, 0);
+                        }
+
+                        String isoDate = date.atStartOfDay(ZoneOffset.UTC)
+                                .format(DateTimeFormatter.ISO_INSTANT);
+                        supplier.setBirth(isoDate);
+                    } catch (DateTimeParseException e) {
+                        logUtil.error("日期格式错误，应为yyyy/MM/dd格式：" + birthDate);
+                        continue;
+                    }
+                }
+                
+                // 处理邮箱列表
+                String[] emails = data[9].split(";");
+                supplier.setEmails(Arrays.asList(emails));
+                // 设置接受的邮件类型ID列表
+                List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
+                        .map(EmailTypeDocument::getEmailTypeId)
+                        .collect(Collectors.toList());
+                supplier.setAcceptEmailTypeId(emailTypeIds);
+
+                // 设置用户相关字段
+                String userId = ThreadLocalUtil.getUserId();
+                supplier.setBelongUserId(userId);
+                supplier.setCreatorId(userId);
+
+                // 设置状态为已分配(2)
+                supplier.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
+
+                // 生成供应商ID
+                supplier.setSupplierId(UUID.randomUUID().toString());
+
+                // 设置创建和更新时间
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                String currentTime = LocalDateTime.now().format(formatter);
+                supplier.setCreatedAt(currentTime);
+                supplier.setUpdatedAt(currentTime);
+                
+                suppliers.add(supplier);
+            }
+            
+            // 批量保存到ES
+            supplierRepository.saveAll(suppliers);
+            
+            return new Result(ResultCode.R_Ok, suppliers.size());
+            
+        } catch (IOException e) {
+            logUtil.error("CSV文件读取失败", e);
+            return new Result(ResultCode.R_Error, "文件处理失败：" + e.getMessage());
+        } catch (Exception e) {
+            logUtil.error("数据处理失败", e);
+            return new Result(ResultCode.R_Error, "数据处理失败：" + e.getMessage());
+        }
     }
 
 }

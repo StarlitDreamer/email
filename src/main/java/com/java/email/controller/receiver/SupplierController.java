@@ -6,12 +6,24 @@ import com.java.email.model.dto.request.SupplierFilterRequest;
 import com.java.email.service.receiver.SupplierService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,6 +33,11 @@ public class SupplierController {
     @Autowired
     private SupplierService supplierService;
 
+    @PostMapping("/importSupplier")
+    public Result importSupplier(@RequestParam("file") MultipartFile file) {
+        return supplierService.importSupplier(file);
+    }
+        
     @PostMapping("/createSupplier")
     public Result createSupplier(@RequestBody SupplierDocument supplierDocument) {
         return supplierService.createSupplier(supplierDocument);

@@ -17,6 +17,9 @@ import com.java.email.esdao.repository.file.ImgAssignRepository;
 import com.java.email.esdao.repository.user.UserRepository;
 import com.java.email.service.file.ImgService;
 
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
 import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -36,9 +39,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import com.java.email.utils.LogUtil;
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.Session;
 import com.java.email.common.userCommon.SubordinateValidation;
 import com.java.email.common.userCommon.SubordinateValidation.ValidationResult;
 import com.java.email.common.userCommon.ThreadLocalUtil;
