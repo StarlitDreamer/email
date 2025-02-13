@@ -1624,19 +1624,14 @@ public class SupplierServiceImpl implements SupplierService {
                 
                 // 通过国家名称查询国家ID
                 String countryName = data[4];
-                List<CountryDocument> country = countryRepository.findByCountryNameLike(countryName);
-                logUtil.info("country: " + country);
-                CountryDocument matchedCountry = null;
-                for (CountryDocument c : country) {
-                    if (c.getCountryName().equals(countryName)) {
-                        matchedCountry = c;
-                        break;
-                    }
+                CountryDocument country = countryRepository.findByCountryName(countryName);
+                if (country != null) {
+                    supplier.setSupplierCountryId(country.getCountryId());
                 }
-                if (matchedCountry == null) {
+                if (country == null) {
+                    logUtil.error("国家不存在: " + countryName);
                     continue;
                 }
-                supplier.setSupplierCountryId(matchedCountry.getCountryId());
                 
                 supplier.setTradeType(Integer.parseInt(data[5]));
                 

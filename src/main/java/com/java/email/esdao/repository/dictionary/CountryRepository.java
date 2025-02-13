@@ -13,4 +13,6 @@ import org.springframework.stereotype.Repository;
 public interface CountryRepository extends ElasticsearchRepository<CountryDocument, String> {
     List<CountryDocument> findByCountryNameLike(String countryName);
 
+    CountryDocument findByCountryName(String countryName);
+
 } 

@@ -6,6 +6,7 @@ import com.java.email.service.receiver.CustomerService;
 import com.java.email.model.dto.request.CustomerFilterRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -15,6 +16,11 @@ public class CustomerController {
 
     @Autowired
     private CustomerService customerService;
+
+    @PostMapping("/importCustomer")
+    public Result importCustomer(@RequestParam("file") MultipartFile file) {
+        return customerService.importCustomer(file);
+    }
 
     @PostMapping("/createCustomer")
     public Result createCustomer(@RequestBody CustomerDocument customerDocument) {
