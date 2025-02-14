@@ -5,6 +5,8 @@ import com.java.email.model.entity.receiver.SupplierDocument;
 import com.java.email.model.dto.request.SupplierFilterRequest;
 import java.util.Map;
 
+import org.springframework.web.multipart.MultipartFile;
+
 public interface SupplierService {
 
     Result createSupplier(SupplierDocument supplierDocument);
@@ -20,4 +22,6 @@ public interface SupplierService {
     Result assignSupplierDetails(Map<String, Object> params);
 
     Result allAssignSupplier(Map<String, Object> params);
+
+    Result importSupplier(MultipartFile file);
 }

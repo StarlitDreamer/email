@@ -5,6 +5,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.InnerField;
+import org.springframework.data.elasticsearch.annotations.MultiField;
 import org.springframework.data.elasticsearch.annotations.DateFormat;
 
 import java.util.Date;
@@ -13,18 +15,26 @@ import java.util.Date;
 @Document(indexName = "country")
 public class CountryDocument {
     @Id
-    @Field(type = FieldType.Keyword)
+    @Field(name = "id", type = FieldType.Keyword)
+    private String id;
+
+    @Field(name = "country_id", type = FieldType.Keyword)
     private String countryId;
 
-    @Field(type = FieldType.Text)
+    @Field(name = "country_code", type = FieldType.Text)
     private String countryCode;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @MultiField(
+        mainField = @Field(name = "country_name", type = FieldType.Text, analyzer = "ik_max_word"),
+        otherFields = {
+            @InnerField(suffix = "keyword", type = FieldType.Keyword)
+        }
+    )
     private String countryName;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "created_at", type = FieldType.Date)
     private String createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "updated_at", type = FieldType.Date)
     private String updatedAt;
 } 

@@ -8,4 +8,6 @@ import java.util.List;
 public interface CommodityRepository extends ElasticsearchRepository<CommodityDocument, String> {
 
     List<CommodityDocument> findByCommodityNameLike(String commodityName);
+
+    CommodityDocument findByCommodityName(String trim);
 }

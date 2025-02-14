@@ -2,7 +2,6 @@ package com.java.email.model.entity.user;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.DateFormat;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
@@ -12,43 +11,48 @@ import java.util.List;
 @Data
 @Document(indexName = "user")
 public class UserDocument {
-    
     @Id
+    private String id;
+
+    @Field(name = "user_id", type = FieldType.Keyword)
     private String userId;
 
-    @Field(type = FieldType.Integer)
+    @Field(name = "user_role", type = FieldType.Integer)
     private Integer userRole;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "creator_id", type = FieldType.Keyword)
     private String creatorId;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "belong_user_id", type = FieldType.Keyword)
     private String belongUserId;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "user_name", type = FieldType.Text, analyzer = "ik_max_word")
     private String userName;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "user_account", type = FieldType.Text)
     private String userAccount;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "user_password", type = FieldType.Keyword)
     private String userPassword;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "user_email", type = FieldType.Text)
     private String userEmail;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "user_email_code", type = FieldType.Keyword)
     private String userEmailCode;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "user_host", type = FieldType.Keyword) 
+    private String userHost;
+
+    @Field(name = "user_auth_id", type = FieldType.Keyword)
     private List<String> userAuthId;
 
-    @Field(type = FieldType.Integer)
+    @Field(name = "status", type = FieldType.Integer)
     private Integer status;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "created_at", type = FieldType.Date)
     private String createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "updated_at", type = FieldType.Date)
     private String updatedAt;
 } 

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/file")
-@AuthPermission(permission = AuthConstData.FILE_MANAGE)
+//@AuthPermission(permission = AuthConstData.FILE_MANAGE)
 public class FileController {
     
     @Autowired

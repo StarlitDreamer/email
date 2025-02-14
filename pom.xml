@@ -8,11 +8,14 @@
         <version>3.4.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
+
+    <!-- 子模块的基本信息 -->
     <groupId>com.java</groupId>
-    <artifactId>email</artifactId>
+    <artifactId>FileAndReceiver</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>email</name>
-    <description>email</description>
+    <name>FileAndReceiver</name>
+    <description>Spring Boot FileAndReceiver module</description>
+
     <url/>
     <licenses>
         <license/>
@@ -92,6 +95,28 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
+
+        <!-- FTP 支持 -->
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.9.0</version>
+        </dependency>
+
+        <!-- SFTP 支持 -->
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.55</version>
+        </dependency>
+
+        <!-- AWS S3 支持 -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>1.12.261</version>
+        </dependency>
+        
     </dependencies>
 
     <build>

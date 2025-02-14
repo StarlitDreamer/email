@@ -232,8 +232,8 @@ public class TemplateServiceImpl implements TemplateService {
             List<Map<String, String>> assigneeList = new ArrayList<>();
             for (UserDocument userDoc : userDocs.values()) {
                 Map<String, String> assignee = new HashMap<>();
-                assignee.put("id", userDoc.getUserId());
-                assignee.put("name", userDoc.getUserName());
+                assignee.put("assignee_id", userDoc.getUserId());
+                assignee.put("assignee_name", userDoc.getUserName());
                 assigneeList.add(assignee);
             }
             process.put("assignee", assigneeList);

@@ -13,36 +13,38 @@ import java.util.List;
 @Data
 @Document(indexName = "template")
 public class TemplateDocument {
-
     @Id
-    @Field(type = FieldType.Keyword)
+    @Field(name = "id", type = FieldType.Keyword)
+    private String id;
+
+    @Field(name = "template_id", type = FieldType.Keyword)
     private String templateId;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "template_name", type = FieldType.Text, analyzer = "ik_max_word")
     private String templateName;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "template_type_id", type = FieldType.Keyword)
     private String templateTypeId;
 
-    @Field(type = FieldType.Text)
+    @Field(name = "template_content", type = FieldType.Text)
     private String templateContent;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "creator_id", type = FieldType.Keyword)
     private String creatorId;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "creator_name", type = FieldType.Text, analyzer = "ik_max_word")
     private String creatorName;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "belong_user_id", type = FieldType.Keyword)
     private List<String> belongUserId;
 
-    @Field(type = FieldType.Integer)
+    @Field(name = "status", type = FieldType.Integer)
     private Integer status;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "created_at", type = FieldType.Date, format = DateFormat.date_time_no_millis)
     private String createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.date_time_no_millis)
+    @Field(name = "updated_at", type = FieldType.Date, format = DateFormat.date_time_no_millis)
     private String updatedAt;
 
 } 

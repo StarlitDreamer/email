@@ -12,10 +12,13 @@ import java.util.Map;
 @Data
 @Document(indexName = "supplier_assign")
 public class SupplierAssignDocument {
-    
     @Id
+    @Field(name = "id", type = FieldType.Keyword)
+    private String id;
+
+    @Field(name = "supplier_id", type = FieldType.Keyword)
     private String supplierId;
 
-    @Field(type = FieldType.Object)
+    @Field(name = "assign_process", type = FieldType.Object)
     private List<Map<String, Object>> assignProcess;
 }

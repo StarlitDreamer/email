@@ -10,12 +10,13 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 @Document(indexName = "auth")
 public class AuthDocument {
     @Id
+    @Field(name = "id", type = FieldType.Keyword)
     private String id;
     
-    @Field(type = FieldType.Keyword)
+    @Field(name = "auth_id", type = FieldType.Keyword)
     private String authId;
     
-    @Field(type = FieldType.Keyword)
+    @Field(name = "auth_name", type = FieldType.Keyword)
     private String authName;
 
     // 显式添加 getter 和 setter 方法

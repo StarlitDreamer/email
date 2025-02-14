@@ -33,9 +33,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +57,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class CustomerServiceImpl implements CustomerService {
@@ -104,17 +112,18 @@ public class CustomerServiceImpl implements CustomerService {
             return new Result(ResultCode.R_ParamError);
         }
         try {
-            // 先解析原始日期字符串为 LocalDateTime
-            LocalDateTime birthDateTime = LocalDateTime.parse(
-                customerDocument.getBirth().replace("Z", ""), 
-                DateTimeFormatter.ISO_LOCAL_DATE_TIME
-            );
-            
-            // 使用相同的方式格式化
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            String formattedDate = birthDateTime.format(formatter);
-            customerDocument.setBirth(formattedDate);
-            
+            // Validate birth date format (yyyy-MM-dd)
+            if (!customerDocument.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                return new Result(ResultCode.R_ParamError);
+            }
+
+            // Convert to ISO format
+            DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            LocalDate date = LocalDate.parse(customerDocument.getBirth(), inputFormatter);
+            String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
+            customerDocument.setBirth(isoDate);
+            java.time.Instant.parse(customerDocument.getBirth());
         } catch (Exception e) {
             logUtil.error("出生日期格式错误: " + e.getMessage());
             return new Result(ResultCode.R_ParamError);
@@ -253,6 +262,17 @@ public class CustomerServiceImpl implements CustomerService {
         }
         if (customerDocument.getBirth() != null && !customerDocument.getBirth().trim().isEmpty()) {
             try {
+                // Validate birth date format (yyyy-MM-dd)
+                if (!customerDocument.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                    logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                    return new Result(ResultCode.R_ParamError);
+                }
+
+                // Convert to ISO format
+                DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                LocalDate date = LocalDate.parse(customerDocument.getBirth(), inputFormatter);
+                String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
+                customerDocument.setBirth(isoDate);
                 java.time.Instant.parse(customerDocument.getBirth());
                 existingCustomer.setBirth(customerDocument.getBirth());
             } catch (Exception e) {
@@ -361,7 +381,7 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         // 如果是小管理（角色为3），需要验证权限
-        if (userRole == UserConstData.ROLE_ADMIN_SMALL) {
+        if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
             // 检查是否为创建人
             boolean isCreator = userId.equals(existingCustomer.getCreatorId());
             
@@ -376,7 +396,7 @@ public class CustomerServiceImpl implements CustomerService {
             }
         }
         // 如果是普通用户（角色为4），需要验证权限
-        if (userRole == UserConstData.ROLE_USER) {
+        if (userRole.equals(UserConstData.ROLE_USER)) {
             if (!userId.equals(existingCustomer.getBelongUserId()) || !userId.equals(existingCustomer.getCreatorId())) {
                 logUtil.error("无权删除非本人创建或所属的客户");
                 return new Result(ResultCode.R_NoAuth);
@@ -677,7 +697,7 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 // 贸易类型条件
-                if (request.getTradeType() != null && (request.getTradeType() == ReceiverConstData.TRADE_TYPE_FACTORY || request.getTradeType() == ReceiverConstData.TRADE_TYPE_TRADER)) {
+                if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("tradeType")
@@ -923,7 +943,7 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 // 贸易类型条件
-                if (request.getTradeType() != null && (request.getTradeType() == ReceiverConstData.TRADE_TYPE_FACTORY || request.getTradeType() == ReceiverConstData.TRADE_TYPE_TRADER)) {
+                if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("tradeType")
@@ -1080,7 +1100,7 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 // 贸易类型条件
-                if (request.getTradeType() != null && (request.getTradeType() == ReceiverConstData.TRADE_TYPE_FACTORY || request.getTradeType() == ReceiverConstData.TRADE_TYPE_TRADER)) {
+                if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("tradeType")
@@ -1490,6 +1510,139 @@ public class CustomerServiceImpl implements CustomerService {
         } catch (Exception e) {
             logUtil.error("Error assigning customers: " + e.getMessage());
             return new Result(ResultCode.R_Error);
+        }
+    }
+
+    @Override
+    public Result importCustomer(MultipartFile file) {
+        if (file.isEmpty()) {
+            return new Result(ResultCode.R_ParamError);
+        }
+
+        if (!file.getOriginalFilename().endsWith(".csv")) {
+            return new Result(ResultCode.R_ParamError); 
+        }
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            // 跳过CSV头行
+            String headerLine = reader.readLine();
+            String line;
+            List<CustomerDocument> customers = new ArrayList<>();
+            
+            while ((line = reader.readLine()) != null) {
+                String[] data = line.split(",");
+                CustomerDocument customer = new CustomerDocument();
+                
+                // 设置基本信息
+                customer.setCustomerName(data[0]);
+                customer.setContactPerson(data[1]);
+                customer.setContactWay(data[2]);
+                customer.setCustomerLevel(Integer.parseInt(data[3]));
+                
+                // 通过国家名称查询国家ID
+                String countryName = data[4];
+                CountryDocument country = countryRepository.findByCountryName(countryName);
+                if (country != null) {
+                    customer.setCustomerCountryId(country.getCountryId());
+                }
+                if (country == null) {
+                    logUtil.error("国家不存在: " + countryName);
+                    continue;
+                }
+                
+                customer.setTradeType(Integer.parseInt(data[5]));
+                
+                // 处理商品名称数组，转换为商品ID
+                String[] commodityNames = data[6].split(";");
+                List<String> commodityIds = new ArrayList<>();
+                for (String commodityName : commodityNames) {
+                    CommodityDocument commodity = commodityRepository.findByCommodityName(commodityName.trim());
+                    if (commodity == null) {
+                        continue;
+                    }
+                    commodityIds.add(commodity.getCommodityId());
+                }
+                customer.setCommodityId(commodityIds);
+                
+                customer.setSex(data[7]);
+                
+                // 处理birth日期，转换为ISO格式
+                String birthDate = data[8];
+                if (birthDate != null && !birthDate.isEmpty()) {
+                    try {
+                        // 支持多种日期格式: yyyy/MM/dd, yyyy-MM-dd, 包括单位数的月日
+                        DateTimeFormatter[] formatters = {
+                            DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                            DateTimeFormatter.ofPattern("yyyy/M/d"),
+                            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                            DateTimeFormatter.ofPattern("yyyy-M-d")
+                        };
+
+                        LocalDate date = null;
+                        for (DateTimeFormatter formatter : formatters) {
+                            try {
+                                date = LocalDate.parse(birthDate, formatter);
+                                break;
+                            } catch (DateTimeParseException e) {
+                                continue;
+                            }
+                        }
+
+                        if (date == null) {
+                            logUtil.error("无法解析日期: " + birthDate);
+                            throw new DateTimeParseException("无法解析日期", birthDate, 0);
+                        }
+
+                        String isoDate = date.atStartOfDay(ZoneOffset.UTC)
+                                .format(DateTimeFormatter.ISO_INSTANT);
+                        customer.setBirth(isoDate);
+                    } catch (DateTimeParseException e) {
+                        logUtil.error("日期格式错误，应为yyyy/MM/dd格式：" + birthDate);
+                        continue;
+                    }
+                }
+                
+                // 处理邮箱列表
+                String[] emails = data[9].split(";");
+                customer.setEmails(Arrays.asList(emails));
+                
+                // 设置接受的邮件类型ID列表
+                List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
+                        .map(EmailTypeDocument::getEmailTypeId)
+                        .collect(Collectors.toList());
+                customer.setAcceptEmailTypeId(emailTypeIds);
+
+                // 设置用户相关字段
+                String userId = ThreadLocalUtil.getUserId();
+                customer.setBelongUserId(userId);
+                customer.setCreatorId(userId);
+
+                // 设置状态为已分配(2)
+                customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
+
+                // 生成客户ID
+                customer.setCustomerId(UUID.randomUUID().toString());
+
+                // 设置创建和更新时间
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                String currentTime = LocalDateTime.now().format(formatter);
+                customer.setCreatedAt(currentTime);
+                customer.setUpdatedAt(currentTime);
+                
+                customers.add(customer);
+            }
+            
+            // 批量保存到ES
+            customerRepository.saveAll(customers);
+            
+            return new Result(ResultCode.R_Ok, customers.size());
+            
+        } catch (IOException e) {
+            logUtil.error("CSV文件读取失败", e);
+            return new Result(ResultCode.R_Error, "文件处理失败：" + e.getMessage());
+        } catch (Exception e) {
+            logUtil.error("数据处理失败", e);
+            return new Result(ResultCode.R_Error, "数据处理失败：" + e.getMessage());
         }
     }
 
