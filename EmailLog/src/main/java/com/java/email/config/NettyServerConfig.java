@@ -1,5 +1,6 @@
 package com.java.email.config;
 
+import com.java.email.common.Redis.RedisService;
 import com.java.email.handler.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
@@ -14,6 +15,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import com.java.email.service.EmailLogService;
 import com.java.email.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,6 +29,9 @@ public class NettyServerConfig {
 
     @Value("${netty.port}")
     private int port;
+
+    @Autowired
+    private RedisService redisService;
 
     public NettyServerConfig(EmailLogService emailLogService, UserService userService) {
         this.emailLogService = emailLogService;
@@ -52,7 +57,8 @@ public class NettyServerConfig {
                                     .addLast(new ManualReportHandler(emailLogService))
                                 .addLast(new QueryOneLogHandler(emailLogService,userService))
                                     .addLast(new FilterEmailTaskHandler(emailLogService,userService))
-                                    .addLast(new FilterEmailHandler(emailLogService,userService));
+                                    .addLast(new FilterEmailHandler(emailLogService,userService))
+                                    .addLast(new TokenCheckHandler(redisService));
 
                         }
                     })
