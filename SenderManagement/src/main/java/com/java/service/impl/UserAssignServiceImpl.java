@@ -44,11 +44,9 @@ public void assignUser(String belong_user_id) throws IOException {
             .index("user")
             .id(belong_user_id), User.class);
     User user = response.source();
-    if (user == null) {
-        throw new IOException("不存在该用户");
-    }
-    if (user.getUserRole() != 3) {
-        throw new IOException("不是管理员不行");
+    // 添加角色验证
+    if (user == null || (user.getUserRole() != 2 && user.getUserRole() != 3)) {
+        throw new IOException("分配的目标用户必须是管理员");
     }
     String assignorName = ThreadLocalUtil.getUserName();  // 获取分配者名称
     String assigneeName = Objects.requireNonNull(Objects.requireNonNull(userService.getUserById(belong_user_id).source()).getUserName());  // 获取被分配者名称
@@ -98,6 +96,7 @@ public void BatchUserImport(List<CsvUserDto> csvUserDtoList) throws IOException 
     List<BulkOperation> operations = new ArrayList<>();
     String currentTime = UserServiceImpl.setTimestamps();
 
+
     for (CsvUserDto csvUser : csvUserDtoList) {
         User user = new User();
         String userId = IdUtil.randomUUID();
@@ -118,71 +117,70 @@ public void BatchUserImport(List<CsvUserDto> csvUserDtoList) throws IOException 
         user.setBelongUserId(belongUserId);
         user.setUserAuthId(Auth.roleAuthMap.get(user.getUserRole()));
         user.setStatus(2);
-        user.setCreatedAt(currentTime);
-        user.setUpdatedAt(currentTime);
+        user.setCreatedAt(UserServiceImpl.getTimestampWithTimezone());
+        user.setUpdatedAt(UserServiceImpl.getTimestampWithTimezone());
         String[] parts = csvUser.getUserEmail().split("@");
         user.setUserHost(parts[1]);
         users.add(user);
-    // 创建用户分配记录
-    AssignProcess assignProcess = new AssignProcess(
-            currentUserId,
-            currentUserName,
-            userId,
-            csvUser.getUserName(),
-            currentTime
-    );
-    UserAssign userAssign = new UserAssign(currentUserId, List.of(assignProcess));
+        // 创建用户分配记录
+        AssignProcess assignProcess = new AssignProcess(
+                currentUserId,
+                currentUserName,
+                userId,
+                csvUser.getUserName(),
+                currentTime
+        );
+        UserAssign userAssign = new UserAssign(currentUserId, List.of(assignProcess));
 
-    // 添加用户索引操作
-    operations.add(new BulkOperation.Builder()
-            .index(idx -> idx
-                    .index("user")
-                    .id(userId)
-                    .document(user)
-            ).build());
+        // 添加用户索引操作
+        operations.add(new BulkOperation.Builder()
+                .index(idx -> idx
+                        .index("user")
+                        .id(userId)
+                        .document(user)
+                ).build());
 
-    // 添加用户分配记录索引操作
-    operations.add(new BulkOperation.Builder()
-            .index(idx -> idx
-                    .index(INDEX_NAME)
-                    .id(currentUserId)
-                    .document(userAssign)
-            ).build());
-}
+        // 添加用户分配记录索引操作
+        operations.add(new BulkOperation.Builder()
+                .index(idx -> idx
+                        .index(INDEX_NAME)
+                        .id(currentUserId)
+                        .document(userAssign)
+                ).build());
+    }
 
 // 执行批量操作
-BulkResponse bulkResponse = esClient.bulk(b -> b
-        .operations(operations)
-);
+    BulkResponse bulkResponse = esClient.bulk(b -> b
+            .operations(operations)
+    );
 
 // 检查是否有错误
-        if (bulkResponse.errors()) {
-    throw new IOException("批量导入过程中发生错误");
-}
+    if (bulkResponse.errors()) {
+        throw new IOException("批量导入过程中发生错误");
+    }
 }
 
 
 
 @Override
-    public AssignUserDetailsVo assignUserDetails(String user_id, String page_num, String page_size) throws IOException {
-        int pageNum = Integer.parseInt(page_num);
-        int pageSize = Integer.parseInt(page_size);
-        SearchResponse<UserAssign> searchResponse = esClient.search(s -> s
-                .index(INDEX_NAME)
-                .query(q -> q.bool(b -> b
-                        .must(m -> m.term(t -> t.field("userId").value(user_id)))
-                ))
-                .from((pageNum - 1) * pageSize)
-                .size(pageSize), UserAssign.class);
-        List<AssignProcess> assignProcessList = new ArrayList<>();
-        for (Hit<UserAssign> hit : searchResponse.hits().hits()) {
-            UserAssign userAssign = hit.source();
-            if (userAssign != null && userAssign.getAssignProcess() != null) {
-                assignProcessList.addAll(userAssign.getAssignProcess());
-            }
+public AssignUserDetailsVo assignUserDetails(String user_id, String page_num, String page_size) throws IOException {
+    int pageNum = Integer.parseInt(page_num);
+    int pageSize = Integer.parseInt(page_size);
+    SearchResponse<UserAssign> searchResponse = esClient.search(s -> s
+            .index(INDEX_NAME)
+            .query(q -> q.bool(b -> b
+                    .must(m -> m.term(t -> t.field("userId").value(user_id)))
+            ))
+            .from((pageNum - 1) * pageSize)
+            .size(pageSize), UserAssign.class);
+    List<AssignProcess> assignProcessList = new ArrayList<>();
+    for (Hit<UserAssign> hit : searchResponse.hits().hits()) {
+        UserAssign userAssign = hit.source();
+        if (userAssign != null && userAssign.getAssignProcess() != null) {
+            assignProcessList.addAll(userAssign.getAssignProcess());
         }
-        int totalItems = (int) searchResponse.hits().total().value();
-        return new AssignUserDetailsVo(totalItems, pageNum, pageSize, assignProcessList);
-
     }
+    int totalItems = (int) searchResponse.hits().total().value();
+    return new AssignUserDetailsVo(totalItems, pageNum, pageSize, assignProcessList);
+}
 }

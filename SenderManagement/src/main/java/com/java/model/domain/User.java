@@ -49,10 +49,10 @@ public class User {
     private int status; // 用户分配的状态
 
     @Field(type = FieldType.Keyword,name = "created_at")
-    private String createdAt; // 创建时间
+    private long createdAt; // 创建时间
 
     @Field(type = FieldType.Keyword,name = "updated_at")
-    private String updatedAt; // 更新时间
+    private long updatedAt; // 更新时间
     @Field(type = FieldType.Keyword,name = "user_host")
     private String userHost;//邮箱类型
 }
