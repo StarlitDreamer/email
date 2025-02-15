@@ -21,6 +21,11 @@ public class TemplateController {
     @Autowired
     private TemplateService templateService;
 
+    @PostMapping("/checkTemplate")
+    public Result checkTemplate(@RequestBody Map<String, Object> request) {
+        return templateService.checkTemplate(request);
+    }
+
     @PostMapping("/saveTemplate")
     public Result saveTemplate(@RequestBody Map<String, Object> request) {
         return templateService.saveTemplate(request);

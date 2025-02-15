@@ -190,7 +190,8 @@ public class CustomerServiceImpl implements CustomerService {
         
         try {
             // Save the customer document
-            customerDocument.setCustomerId(UUID.randomUUID().toString());
+            String customerId = UUID.randomUUID().toString();
+            customerDocument.setCustomerId(customerId);
             // 普通用户默认已分配
             if(userRole == 4){
                 customerDocument.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
@@ -300,7 +301,7 @@ public class CustomerServiceImpl implements CustomerService {
             }
             existingCustomer.setEmails(customerDocument.getEmails());
         }
-        if (customerDocument.getCustomerLevel() != null) {
+        if (customerDocument.getCustomerLevel() != null && customerDocument.getCustomerLevel() != 0) {
             if (customerDocument.getCustomerLevel() < ReceiverConstData.CUSTOMER_LEVEL_LOW || 
                 customerDocument.getCustomerLevel() > ReceiverConstData.CUSTOMER_LEVEL_HIGH) {
                 logUtil.error("客户等级必须在1-3之间");
@@ -308,7 +309,7 @@ public class CustomerServiceImpl implements CustomerService {
             }
             existingCustomer.setCustomerLevel(customerDocument.getCustomerLevel());
         }
-        if (customerDocument.getTradeType() != null) {
+        if (customerDocument.getTradeType() != null && customerDocument.getTradeType() != 0) {
             if (!(customerDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || 
                   customerDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                 logUtil.error("贸易类型必须在1-2之间");
@@ -404,8 +405,8 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         try {
-            customerRepository.deleteById(customerId);
-            customerAssignRepository.deleteById(customerId);
+            customerRepository.deleteByCustomerId(customerId);
+            customerAssignRepository.deleteByCustomerId(customerId);
             return new Result(ResultCode.R_Ok);
         } catch (Exception e) {
             logUtil.error("Error deleting customer: " + e.getMessage());
@@ -447,7 +448,7 @@ public class CustomerServiceImpl implements CustomerService {
 
             // 所属用户为公司，则直接查询所有与公司相关的客户
             if(belongUserName != null && belongUserName.equals(UserConstData.COMPANY_USER_NAME)) {
-                mainQuery.must(m -> m.term(t -> t.field("belongUserId").value(currentUserId)));
+                mainQuery.must(m -> m.term(t -> t.field("belong_user_id").value(currentUserId)));
                 // 创建人条件
                 if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
                     List<UserDocument> creators = userRepository.findByUserNameLike(request.getCreatorName().trim());
@@ -456,7 +457,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (UserDocument creator : creators) {
                             creatorQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(creator.getUserId())
                                     )
                             );
@@ -469,7 +470,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("customerName")
+                                    .field("customer_name")
                                     .query(request.getCustomerName().trim())
                             )
                     );
@@ -479,7 +480,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getContactPerson() != null && !request.getContactPerson().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactPerson")
+                                    .field("contact_person")
                                     .query(request.getContactPerson().trim())
                             )
                     );
@@ -489,7 +490,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getContactWay() != null && !request.getContactWay().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactWay")
+                                    .field("contact_way")
                                     .query(request.getContactWay().trim())
                             )
                     );
@@ -499,7 +500,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerLevel() != null) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("customerLevel")
+                                    .field("customer_level")
                                     .value(request.getCustomerLevel())
                             )
                     );
@@ -527,10 +528,19 @@ public class CustomerServiceImpl implements CustomerService {
 
                 // 生日条件
                 if (request.getBirth() != null && !request.getBirth().trim().isEmpty()) {
+                    if (!request.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                        logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                        return new Result(ResultCode.R_ParamError);
+                    }
+
+                    // Convert to ISO format
+                    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                    LocalDate date = LocalDate.parse(request.getBirth(), inputFormatter);
+                    String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("birth")
-                                    .value(request.getBirth().trim())
+                                    .value(isoDate)
                             )
                     );
                 }
@@ -551,7 +561,7 @@ public class CustomerServiceImpl implements CustomerService {
                     for (String emailTypeId : request.getAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("acceptEmailTypeId")
+                                        .field("accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -563,7 +573,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerCountryId() != null && !request.getCustomerCountryId().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("customerCountryId")
+                                    .field("customer_country_id")
                                     .value(request.getCustomerCountryId().trim())
                             )
                     );
@@ -573,7 +583,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getTradeType() != null) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("tradeType")
+                                    .field("trade_type")
                                     .value(request.getTradeType())
                             )
                     );
@@ -587,7 +597,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (CommodityDocument commodity : commodities) {
                             commodityQuery.should(s -> s
                                     .term(t -> t
-                                            .field("commodityId")
+                                            .field("commodity_id")
                                             .value(commodity.getCommodityId())
                                     )
                             );
@@ -598,7 +608,7 @@ public class CustomerServiceImpl implements CustomerService {
 
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -620,7 +630,6 @@ public class CustomerServiceImpl implements CustomerService {
                     )
                 );
             }
-            
             if(userRole.equals(UserConstData.ROLE_ADMIN_LARGE)){
                 // 创建人条件
                 if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
@@ -630,7 +639,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (UserDocument creator : creators) {
                             creatorQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(creator.getUserId())
                                     )
                             );
@@ -647,7 +656,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (UserDocument user : belongUsers) {
                             belongQuery.should(s -> s
                                     .term(t -> t
-                                            .field("belongUserId")
+                                            .field("belong_user_id")
                                             .value(user.getUserId())
                                     )
                             );
@@ -660,7 +669,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("customerName")
+                                    .field("customer_name")
                                     .query(request.getCustomerName().trim())
                             )
                     );
@@ -670,7 +679,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getContactPerson() != null && !request.getContactPerson().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactPerson")
+                                    .field("contact_person")
                                     .query(request.getContactPerson().trim())
                             )
                     );
@@ -680,7 +689,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getContactWay() != null && !request.getContactWay().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactWay")
+                                    .field("contact_way")
                                     .query(request.getContactWay().trim())
                             )
                     );
@@ -690,7 +699,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerLevel() != null && request.getCustomerLevel() >= ReceiverConstData.CUSTOMER_LEVEL_LOW && request.getCustomerLevel() <= ReceiverConstData.CUSTOMER_LEVEL_HIGH) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("customerLevel")
+                                    .field("customer_level")
                                     .value(request.getCustomerLevel())
                             )
                     );
@@ -700,7 +709,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("tradeType")
+                                    .field("trade_type")
                                     .value(request.getTradeType())
                             )
                     );
@@ -710,7 +719,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerCountryId() != null && !request.getCustomerCountryId().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("customerCountryId")
+                                    .field("customer_country_id")
                                     .value(request.getCustomerCountryId().trim())
                             )
                     );
@@ -724,7 +733,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (CommodityDocument commodity : commodities) {
                             commodityQuery.should(s -> s
                                     .term(t -> t
-                                            .field("commodityId")
+                                            .field("commodity_id")
                                             .value(commodity.getCommodityId())
                                     )
                             );
@@ -746,11 +755,19 @@ public class CustomerServiceImpl implements CustomerService {
                 // 出生日期条件
                 if (request.getBirth() != null && !request.getBirth().trim().isEmpty()) {
                     try {
-                        java.time.Instant.parse(request.getBirth());
+                        if (!request.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                            logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                            return new Result(ResultCode.R_ParamError);
+                        }
+
+                        // Convert to ISO format
+                        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                        LocalDate date = LocalDate.parse(request.getBirth(), inputFormatter);
+                        String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
                         mainQuery.must(m -> m
                                 .term(t -> t
                                         .field("birth")
-                                        .value(request.getBirth())
+                                        .value(isoDate)
                                 )
                         );
                     } catch (Exception e) {
@@ -775,7 +792,7 @@ public class CustomerServiceImpl implements CustomerService {
                     for (String emailTypeId : request.getAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("acceptEmailTypeId")
+                                        .field("accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -796,7 +813,7 @@ public class CustomerServiceImpl implements CustomerService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                     .withPageable(pageable)
                     .build();
             }
@@ -823,7 +840,7 @@ public class CustomerServiceImpl implements CustomerService {
                     for (UserDocument user : validUsers) {
                         creatorQuery.should(s -> s
                                 .term(t -> t
-                                        .field("creatorId")
+                                        .field("creator_id")
                                         .value(user.getUserId())
                                 )
                         );
@@ -847,7 +864,7 @@ public class CustomerServiceImpl implements CustomerService {
                     for (UserDocument user : validUsers) {
                         belongQuery.should(s -> s
                                 .term(t -> t
-                                        .field("belongUserId")
+                                        .field("belong_user_id")
                                         .value(user.getUserId())
                                 )
                         );
@@ -861,7 +878,7 @@ public class CustomerServiceImpl implements CustomerService {
                     BoolQuery.Builder creatorAccessQuery = new BoolQuery.Builder();
                     creatorAccessQuery.should(s -> s
                             .term(t -> t
-                                    .field("creatorId")
+                                    .field("creator_id")
                                     .value(currentUserId)
                             )
                     );
@@ -870,7 +887,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (UserDocument sub : subordinates) {
                             creatorAccessQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(sub.getUserId())
                                     )
                             );
@@ -881,7 +898,7 @@ public class CustomerServiceImpl implements CustomerService {
                     BoolQuery.Builder belongAccessQuery = new BoolQuery.Builder();
                     belongAccessQuery.should(s -> s
                             .term(t -> t
-                                    .field("belongUserId")
+                                    .field("belong_user_id")
                                     .value(currentUserId)
                             )
                     );
@@ -889,7 +906,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (UserDocument sub : subordinates) {
                             belongAccessQuery.should(s -> s
                                     .term(t -> t
-                                            .field("belongUserId")
+                                            .field("belong_user_id")
                                             .value(sub.getUserId())
                                     )
                             );
@@ -906,7 +923,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("customerName")
+                                    .field("customer_name")
                                     .query(request.getCustomerName().trim())
                             )
                     );
@@ -916,7 +933,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getContactPerson() != null && !request.getContactPerson().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactPerson")
+                                    .field("contact_person")
                                     .query(request.getContactPerson().trim())
                             )
                     );
@@ -926,7 +943,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getContactWay() != null && !request.getContactWay().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactWay")
+                                    .field("contact_way")
                                     .query(request.getContactWay().trim())
                             )
                     );
@@ -936,7 +953,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerLevel() != null && request.getCustomerLevel() >= ReceiverConstData.CUSTOMER_LEVEL_LOW && request.getCustomerLevel() <= ReceiverConstData.CUSTOMER_LEVEL_HIGH) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("customerLevel")
+                                    .field("customer_level")
                                     .value(request.getCustomerLevel())
                             )
                     );
@@ -946,7 +963,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("tradeType")
+                                    .field("trade_type")
                                     .value(request.getTradeType())
                             )
                     );
@@ -956,7 +973,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerCountryId() != null && !request.getCustomerCountryId().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("customerCountryId")
+                                    .field("customer_country_id")
                                     .value(request.getCustomerCountryId().trim())
                             )
                     );
@@ -970,7 +987,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (CommodityDocument commodity : commodities) {
                             commodityQuery.should(s -> s
                                     .term(t -> t
-                                            .field("commodityId")
+                                            .field("commodity_id")
                                             .value(commodity.getCommodityId())
                                     )
                             );
@@ -992,11 +1009,19 @@ public class CustomerServiceImpl implements CustomerService {
                 // 出生日期条件
                 if (request.getBirth() != null && !request.getBirth().trim().isEmpty()) {
                     try {
-                        java.time.Instant.parse(request.getBirth());
+                        if (!request.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                            logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                            return new Result(ResultCode.R_ParamError);
+                        }
+
+                        // Convert to ISO format
+                        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                        LocalDate date = LocalDate.parse(request.getBirth(), inputFormatter);
+                        String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
                         mainQuery.must(m -> m
                                 .term(t -> t
                                         .field("birth")
-                                        .value(request.getBirth())
+                                        .value(isoDate)
                                 )
                         );
                     } catch (Exception e) {
@@ -1021,7 +1046,7 @@ public class CustomerServiceImpl implements CustomerService {
                     for (String emailTypeId : request.getAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("acceptEmailTypeId")
+                                        .field("accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1042,7 +1067,7 @@ public class CustomerServiceImpl implements CustomerService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                     .withPageable(pageable)
                     .build();
             }
@@ -1052,7 +1077,7 @@ public class CustomerServiceImpl implements CustomerService {
                 BoolQuery.Builder belongQuery = new BoolQuery.Builder();
                 belongQuery.should(s -> s
                             .term(t -> t
-                                .field("belongUserId")
+                                .field("belong_user_id")
                                 .value(currentUserId)
                             )
                         );
@@ -1063,7 +1088,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("customerName")
+                                    .field("customer_name")
                                     .query(request.getCustomerName().trim())
                             )
                     );
@@ -1073,7 +1098,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getContactPerson() != null && !request.getContactPerson().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactPerson")
+                                    .field("contact_person")
                                     .query(request.getContactPerson().trim())
                             )
                     );
@@ -1083,7 +1108,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getContactWay() != null && !request.getContactWay().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .match(t -> t
-                                    .field("contactWay")
+                                    .field("contact_way")
                                     .query(request.getContactWay().trim())
                             )
                     );
@@ -1093,7 +1118,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerLevel() != null && request.getCustomerLevel() >= ReceiverConstData.CUSTOMER_LEVEL_LOW && request.getCustomerLevel() <= ReceiverConstData.CUSTOMER_LEVEL_HIGH) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("customerLevel")
+                                    .field("customer_level")
                                     .value(request.getCustomerLevel())
                             )
                     );
@@ -1103,7 +1128,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("tradeType")
+                                    .field("trade_type")
                                     .value(request.getTradeType())
                             )
                     );
@@ -1113,7 +1138,7 @@ public class CustomerServiceImpl implements CustomerService {
                 if (request.getCustomerCountryId() != null && !request.getCustomerCountryId().trim().isEmpty()) {
                     mainQuery.must(m -> m
                             .term(t -> t
-                                    .field("customerCountryId")
+                                    .field("customer_country_id")
                                     .value(request.getCustomerCountryId().trim())
                             )
                     );
@@ -1127,7 +1152,7 @@ public class CustomerServiceImpl implements CustomerService {
                         for (CommodityDocument commodity : commodities) {
                             commodityQuery.should(s -> s
                                     .term(t -> t
-                                            .field("commodityId")
+                                            .field("commodity_id")
                                             .value(commodity.getCommodityId())
                                     )
                             );
@@ -1149,11 +1174,19 @@ public class CustomerServiceImpl implements CustomerService {
                 // 出生日期条件
                 if (request.getBirth() != null && !request.getBirth().trim().isEmpty()) {
                     try {
-                        java.time.Instant.parse(request.getBirth());
+                        if (!request.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                            logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                            return new Result(ResultCode.R_ParamError);
+                        }
+
+                        // Convert to ISO format
+                        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                        LocalDate date = LocalDate.parse(request.getBirth(), inputFormatter);
+                        String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
                         mainQuery.must(m -> m
                                 .term(t -> t
                                         .field("birth")
-                                        .value(request.getBirth())
+                                        .value(isoDate)
                                 )
                         );
                     } catch (Exception e) {
@@ -1178,7 +1211,7 @@ public class CustomerServiceImpl implements CustomerService {
                     for (String emailTypeId : request.getAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("acceptEmailTypeId")
+                                        .field("accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1189,11 +1222,10 @@ public class CustomerServiceImpl implements CustomerService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
                     .withPageable(pageable)
                     .build();
             }
-            
             // 执行查询
             SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(searchQuery, CustomerDocument.class);
             
@@ -1621,7 +1653,8 @@ public class CustomerServiceImpl implements CustomerService {
                 customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
 
                 // 生成客户ID
-                customer.setCustomerId(UUID.randomUUID().toString());
+                String customerId = UUID.randomUUID().toString();
+                customer.setCustomerId(customerId);
 
                 // 设置创建和更新时间
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -1684,7 +1717,7 @@ public class CustomerServiceImpl implements CustomerService {
                             }
                         }
                     }
-                    map.put("commodity_names", commodityNames);
+                    map.put("commodity_name", commodityNames);
                     
                     map.put("sex", customer.getSex());
                     map.put("birth", customer.getBirth());
@@ -1700,7 +1733,7 @@ public class CustomerServiceImpl implements CustomerService {
                             }
                         }
                     }
-                    map.put("accept_email_type_names", emailTypeNames);
+                    map.put("accept_email_type_name", emailTypeNames);
                     
                     map.put("status", customer.getStatus());
                     map.put("created_at", customer.getCreatedAt());

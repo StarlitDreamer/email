@@ -13,9 +13,6 @@ import java.util.Date;
 @Document(indexName = "commodity")
 public class CommodityDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "commodity_id", type = FieldType.Keyword)
     private String commodityId;
 

@@ -14,9 +14,6 @@ import java.util.Map;
 public class TemplateAssignDocument {
 
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-    
     @Field(name = "template_id", type = FieldType.Keyword)
     private String templateId;
 

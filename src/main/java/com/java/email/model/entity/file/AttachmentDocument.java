@@ -13,9 +13,6 @@ import java.util.List;
 @Document(indexName = "attachment")
 public class AttachmentDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "attachment_id", type = FieldType.Keyword)
     private String attachmentId;
 

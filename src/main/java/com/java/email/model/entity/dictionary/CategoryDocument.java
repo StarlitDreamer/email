@@ -12,9 +12,6 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 public class CategoryDocument {
 
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "category_id", type = FieldType.Keyword)
     private String categoryId;
 

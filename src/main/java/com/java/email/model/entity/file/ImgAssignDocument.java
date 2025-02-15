@@ -13,9 +13,6 @@ import java.util.Map;
 @Document(indexName = "img_assign")
 public class ImgAssignDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "img_id", type = FieldType.Keyword)
     private String imgId;
 

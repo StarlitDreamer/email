@@ -15,9 +15,6 @@ import java.util.Date;
 @Document(indexName = "country")
 public class CountryDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "country_id", type = FieldType.Keyword)
     private String countryId;
 

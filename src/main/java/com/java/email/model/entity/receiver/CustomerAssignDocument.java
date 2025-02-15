@@ -13,9 +13,6 @@ import java.util.Map;
 @Document(indexName = "customer_assign")
 public class CustomerAssignDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "customer_id", type = FieldType.Keyword)
     private String customerId;
 

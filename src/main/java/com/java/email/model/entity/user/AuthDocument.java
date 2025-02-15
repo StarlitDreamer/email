@@ -10,9 +10,6 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 @Document(indexName = "auth")
 public class AuthDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-    
     @Field(name = "auth_id", type = FieldType.Keyword)
     private String authId;
     

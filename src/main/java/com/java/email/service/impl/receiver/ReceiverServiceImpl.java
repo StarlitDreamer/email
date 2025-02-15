@@ -93,10 +93,14 @@ public class ReceiverServiceImpl implements ReceiverService {
 
         // 如果查询的是公司用户，直接返回公司用户信息
         if (userName.equals(UserConstData.COMPANY_USER_NAME)) {
+            List<Map<String, Object>> userList = new ArrayList<>();
             Map<String, Object> userMap = new HashMap<>();
             userMap.put("user_id", UserConstData.COMPANY_USER_ID);
             userMap.put("user_name", UserConstData.COMPANY_USER_NAME);
-            return new Result(ResultCode.R_Ok, userMap);
+            userList.add(userMap);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("user", userList);
+            return new Result(ResultCode.R_Ok, resultMap);
         }
 
         // 创建用户列表

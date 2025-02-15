@@ -1,6 +1,9 @@
 package com.java.email.esdao.repository.dictionary;
 
+import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
+import org.springframework.data.util.Streamable;
+
 import com.java.email.model.entity.dictionary.CommodityDocument;
 
 import java.util.List;
@@ -10,4 +13,6 @@ public interface CommodityRepository extends ElasticsearchRepository<CommodityDo
     List<CommodityDocument> findByCommodityNameLike(String commodityName);
 
     CommodityDocument findByCommodityName(String trim);
+
+    Streamable<Order> findByCommodityId(String id);
 }

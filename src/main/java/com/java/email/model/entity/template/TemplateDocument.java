@@ -14,9 +14,6 @@ import java.util.List;
 @Document(indexName = "template")
 public class TemplateDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "template_id", type = FieldType.Keyword)
     private String templateId;
 

@@ -13,9 +13,6 @@ import java.util.List;
 @Document(indexName = "img")
 public class ImgDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "img_id", type = FieldType.Keyword)
     private String imgId;
 

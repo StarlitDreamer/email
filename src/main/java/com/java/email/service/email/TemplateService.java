@@ -9,4 +9,5 @@ public interface TemplateService {
     Result assignTemplateDetails(Map<String, Object> request);
     Result filterTemplate(Map<String, Object> request);
     Result deleteTemplate(Map<String, Object> request);
+    Result checkTemplate(Map<String, Object> request);
 } 

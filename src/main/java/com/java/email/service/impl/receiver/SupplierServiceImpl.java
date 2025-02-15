@@ -214,7 +214,8 @@ public class SupplierServiceImpl implements SupplierService {
 
         try {
             // Save the supplier document
-            supplierDocument.setSupplierId(UUID.randomUUID().toString());
+            String supplierId = UUID.randomUUID().toString();
+            supplierDocument.setSupplierId(supplierId);
             // 普通用户默认已分配
             if(userRole == 4){
                 supplierDocument.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
@@ -324,7 +325,7 @@ public class SupplierServiceImpl implements SupplierService {
             }
             existingSupplier.setEmails(supplierDocument.getEmails());
         }
-        if (supplierDocument.getSupplierLevel() != null) {
+        if (supplierDocument.getSupplierLevel() != null && supplierDocument.getSupplierLevel() != 0) {
             if (supplierDocument.getSupplierLevel() < ReceiverConstData.SUPPLIER_LEVEL_LOW || 
                 supplierDocument.getSupplierLevel() > ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
                 logUtil.error("供应商等级必须在1-3之间");
@@ -332,7 +333,7 @@ public class SupplierServiceImpl implements SupplierService {
             }
             existingSupplier.setSupplierLevel(supplierDocument.getSupplierLevel());
         }
-        if (supplierDocument.getTradeType() != null) {
+        if (supplierDocument.getTradeType() != null && supplierDocument.getTradeType() != 0) {
             if (!(supplierDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || 
                   supplierDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                 logUtil.error("贸易类型必须在1-2之间");
@@ -555,10 +556,19 @@ public class SupplierServiceImpl implements SupplierService {
 
                 // 生日条件
                 if (request.getBirth() != null && !request.getBirth().trim().isEmpty()) {
+                    if (!request.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                        logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                        return new Result(ResultCode.R_ParamError);
+                    }
+
+                    // Convert to ISO format
+                    DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                    LocalDate date = LocalDate.parse(request.getBirth(), inputFormatter);
+                    String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("birth")
-                                    .value(request.getBirth().trim())
+                                    .value(isoDate)
                             )
                     );
                 }
@@ -775,11 +785,19 @@ public class SupplierServiceImpl implements SupplierService {
                 // 出生日期条件
                 if (request.getBirth() != null && !request.getBirth().trim().isEmpty()) {
                     try {
-                        java.time.Instant.parse(request.getBirth());
+                        if (!request.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                            logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                            return new Result(ResultCode.R_ParamError);
+                        }
+
+                        // Convert to ISO format
+                        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                        LocalDate date = LocalDate.parse(request.getBirth(), inputFormatter);
+                        String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
                         mainQuery.must(m -> m
                                 .term(t -> t
                                         .field("birth")
-                                        .value(request.getBirth())
+                                        .value(isoDate)
                                 )
                         );
                     } catch (Exception e) {
@@ -1023,11 +1041,19 @@ public class SupplierServiceImpl implements SupplierService {
                 // 出生日期条件
                 if (request.getBirth() != null && !request.getBirth().trim().isEmpty()) {
                     try {
-                        java.time.Instant.parse(request.getBirth());
+                        if (!request.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                            logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                            return new Result(ResultCode.R_ParamError);
+                        }
+
+                        // Convert to ISO format
+                        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                        LocalDate date = LocalDate.parse(request.getBirth(), inputFormatter);
+                        String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
                         mainQuery.must(m -> m
                                 .term(t -> t
                                         .field("birth")
-                                        .value(request.getBirth())
+                                        .value(isoDate)
                                 )
                         );
                     } catch (Exception e) {
@@ -1181,11 +1207,19 @@ public class SupplierServiceImpl implements SupplierService {
                 // 出生日期条件
                 if (request.getBirth() != null && !request.getBirth().trim().isEmpty()) {
                     try {
-                        java.time.Instant.parse(request.getBirth());
+                        if (!request.getBirth().matches("^\\d{4}-\\d{2}-\\d{2}$")) {
+                            logUtil.error("出生日期格式错误，应为yyyy-MM-dd格式");
+                            return new Result(ResultCode.R_ParamError);
+                        }
+
+                        // Convert to ISO format
+                        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                        LocalDate date = LocalDate.parse(request.getBirth(), inputFormatter);
+                        String isoDate = date.atStartOfDay(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
                         mainQuery.must(m -> m
                                 .term(t -> t
                                         .field("birth")
-                                        .value(request.getBirth())
+                                        .value(isoDate)
                                 )
                         );
                     } catch (Exception e) {
@@ -1561,7 +1595,7 @@ public class SupplierServiceImpl implements SupplierService {
                     map.put("supplier_level", supplier.getSupplierLevel());
                     
                     // Get country name from country id
-                    CountryDocument country = countryRepository.findById(supplier.getSupplierCountryId()).orElse(null);
+                    CountryDocument country = countryRepository.findByCountryId(supplier.getSupplierCountryId()).orElse(null);
                     map.put("supplier_country_name", country != null ? country.getCountryName() : "");
                     
                     map.put("trade_type", supplier.getTradeType());
@@ -1703,7 +1737,8 @@ public class SupplierServiceImpl implements SupplierService {
                 supplier.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
 
                 // 生成供应商ID
-                supplier.setSupplierId(UUID.randomUUID().toString());
+                String supplierId = UUID.randomUUID().toString();
+                supplier.setSupplierId(supplierId);
 
                 // 设置创建和更新时间
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");

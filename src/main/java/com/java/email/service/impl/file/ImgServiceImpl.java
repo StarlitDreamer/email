@@ -169,7 +169,7 @@ public class ImgServiceImpl implements ImgService {
             // 先查询并验证所有用户,如果全部合格，则保存起来可以直接用，不用每次都查询
             Map<String, UserDocument> userDocs = new HashMap<>();
             for (String userId : belongUserIds) {
-                UserDocument userDoc = userRepository.findByUserId(userId).orElse(null);
+                UserDocument userDoc = userRepository.findById(userId).orElse(null);
                 if (userDoc == null) {
                     return new Result(ResultCode.R_Error, "User " + userId + " not found");
                 }
@@ -355,7 +355,7 @@ public class ImgServiceImpl implements ImgService {
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
             NativeQuery searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -471,7 +471,7 @@ public class ImgServiceImpl implements ImgService {
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
             NativeQuery searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -629,7 +629,7 @@ public class ImgServiceImpl implements ImgService {
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
             NativeQuery searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -705,7 +705,7 @@ public class ImgServiceImpl implements ImgService {
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
             NativeQuery searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -723,7 +723,7 @@ public class ImgServiceImpl implements ImgService {
                         item.put("name", doc.getImgName());
                         item.put("url", doc.getImgUrl());
                         // 查询创建者名称
-                        String responseCreatorName = userRepository.findByUserId(doc.getCreatorId())
+                        String responseCreatorName = userRepository.findById(doc.getCreatorId())
                                 .map(UserDocument::getUserName)
                                 .orElse("");
                         item.put("creator_name", responseCreatorName);
@@ -775,13 +775,13 @@ public class ImgServiceImpl implements ImgService {
 
             // 检查创建者和所属用户是否都包含下属
             // 检查创建者是否为下属
-            UserDocument creator = userRepository.findByUserId(creatorId).orElse(null);
+            UserDocument creator = userRepository.findById(creatorId).orElse(null);
             boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
             // 检查所属用户是否包含下属
             boolean hasBelongUserSubordinate = false;
             if (belongUserIds != null && !belongUserIds.isEmpty()) {
                 hasBelongUserSubordinate = belongUserIds.stream()
-                        .map(id -> userRepository.findByUserId(id).orElse(null))
+                        .map(id -> userRepository.findById(id).orElse(null))
                         .filter(user -> user != null)
                         .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
             }
@@ -991,7 +991,7 @@ public class ImgServiceImpl implements ImgService {
             item.put("url", doc.getImgUrl());
 
             // 查询创建者名称
-            String creatorName = userRepository.findByUserId(doc.getCreatorId())
+            String creatorName = userRepository.findById(doc.getCreatorId())
                     .map(UserDocument::getUserName)
                     .orElse("");
             item.put("creator_name", creatorName);
@@ -1000,7 +1000,7 @@ public class ImgServiceImpl implements ImgService {
             List<String> belongUserNames = new ArrayList<>();
             if (doc.getBelongUserId() != null && !doc.getBelongUserId().isEmpty()) {
                 belongUserNames = doc.getBelongUserId().stream()
-                        .map(userId -> userRepository.findByUserId(userId)
+                        .map(userId -> userRepository.findById(userId)
                                 .map(UserDocument::getUserName)
                                 .orElse(""))
                         .filter(name -> !name.isEmpty())

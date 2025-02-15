@@ -14,9 +14,6 @@ import java.util.Map;
 public class AttachmentAssignDocument {
     
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "attachment_id", type = FieldType.Keyword)
     private String attachmentId;
 

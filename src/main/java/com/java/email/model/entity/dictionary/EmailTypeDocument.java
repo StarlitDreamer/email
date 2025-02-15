@@ -13,9 +13,6 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 public class EmailTypeDocument {
 
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "email_type_id", type = FieldType.Keyword)
     private String emailTypeId;
 

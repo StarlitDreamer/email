@@ -4,6 +4,7 @@ import com.java.email.model.entity.dictionary.CommodityDocument;
 import com.java.email.model.entity.dictionary.CountryDocument;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.elasticsearch.annotations.Query;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
@@ -14,5 +15,7 @@ public interface CountryRepository extends ElasticsearchRepository<CountryDocume
     List<CountryDocument> findByCountryNameLike(String countryName);
 
     CountryDocument findByCountryName(String countryName);
+
+    Optional<CountryDocument> findByCountryId(String countryId);
 
 } 

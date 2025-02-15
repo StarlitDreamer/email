@@ -14,9 +14,6 @@ import java.util.List;
 @Document(indexName = "customer")
 public class CustomerDocument {
     @Id
-    @Field(name = "id", type = FieldType.Keyword)
-    private String id;
-
     @Field(name = "customer_id", type = FieldType.Keyword)
     private String customerId;
 
