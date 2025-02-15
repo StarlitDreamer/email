@@ -145,12 +145,12 @@ public class UserAssignServiceImpl implements UserAssignService {
                         csvUser.getUserName(),
                         currentTime
                 );
-                UserAssign userAssign = new UserAssign(currentUserId, List.of(assignProcess));
+                UserAssign userAssign = new UserAssign(userId, List.of(assignProcess));
 
                 // 添加用户索引操作
                 operations.add(new BulkOperation.Builder()
                         .index(idx -> idx
-                                .index("user")
+                                .index(USER_INDEX_NAME)
                                 .id(userId)
                                 .document(user)
                         ).build());
@@ -165,16 +165,14 @@ public class UserAssignServiceImpl implements UserAssignService {
             }
 
             // 执行批量操作
-            BulkResponse bulkResponse = esClient.bulk(b -> b
+                 esClient.bulk(b -> b
                     .operations(operations)
             );
 
-            // 检查是否有错误
-            if (bulkResponse.errors()) {
-                throw new IOException("批量导入过程中发生错误");
-            }
+
         } catch (Exception e) {
             e.printStackTrace();
+            throw new IOException("批量导入过程中发生错误");
         }
 
     }

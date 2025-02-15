@@ -260,6 +260,15 @@ public void deleteUser(String userId) throws IOException {
     deleteUserFromUserAssignIndex(userId);
 }
 
+@Override
+public List<String> getUserAuth(String user_id) throws IOException {
+    GetResponse<User> response = esClient.get(g -> g
+            .index("user")
+            .id(user_id), User.class);
+    User user = response.source();
+    return user.getUserAuthId();
+}
+
 private void deleteUserFromUserIndex(String userId) throws IOException {
     // 创建删除请求，删除 user 索引中的用户文档
     DeleteRequest deleteRequest = new DeleteRequest.Builder()

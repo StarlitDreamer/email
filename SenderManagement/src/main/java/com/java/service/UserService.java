@@ -17,4 +17,5 @@ public interface UserService {
     public void updateUserinfo(UpdateUserDto user) throws IOException;
     public void updateUserAuth(String user_id, List<String> user_auth_id,Integer user_role) throws IOException;
     public void deleteUser(String user_id) throws IOException;
+    public List<String> getUserAuth(String user_id) throws IOException;
 }
