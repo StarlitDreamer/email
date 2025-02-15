@@ -1,7 +1,6 @@
 package com.java.controller;
 
 import com.java.atuhcode.Auth;
-import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.model.domain.Result;
 import com.java.model.dto.CreateUserDto;
 import com.java.model.dto.CsvUserDto;

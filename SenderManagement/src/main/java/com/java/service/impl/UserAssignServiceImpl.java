@@ -11,7 +11,7 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.monitoring.BulkRequest;
 import co.elastic.clients.util.ObjectBuilder;
 import com.java.atuhcode.Auth;
-import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.common.userCommon.ThreadLocalUtil;
 import com.java.model.domain.AssignProcess;
 import com.java.model.domain.User;
 import com.java.model.domain.UserAssign;

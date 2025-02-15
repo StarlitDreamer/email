@@ -9,7 +9,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.java.atuhcode.Auth;
-import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.common.userCommon.ThreadLocalUtil;
 import com.java.model.domain.AssignProcess;
 import com.java.model.domain.User;
 import com.java.model.domain.UserAssign;
@@ -89,31 +89,45 @@ public FilterUserVo filterUser(String user_name, String user_account, String use
         if (belong_user_name != null && !belong_user_name.isEmpty()) {
             filters.put("belong_user_name", belong_user_name);
         }
-        if (status != null) {
+        if (status != null && (status ==1 || status ==2)) {
             filters.put("status", status);
         }
         filters.forEach((key, value) -> {
             if (value != null && !value.toString().isEmpty()) {
                 switch (key) {
                     case "user_name":
+                        boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
+                        break;
                     case "user_account":
+                        boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
+                        break;
                     case "user_email":
+                        boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
+                        break;
                     case "belong_user_name":
                         boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
                         break;
                     case "status":
-                        boolQuery.should(m -> m.term(t -> t.field("status").value(FieldValue.of(value))));
+                        boolQuery.must(m -> m.term(t -> t.field("status").value(FieldValue.of(value))));
                         break;
                     default:
                         break;
                 }
             }
         });
-        SearchResponse<User> searchResponse = esClient.search(s -> s
-                .index(INDEX_NAME)
-                .query(q -> q.bool(boolQuery.build()))
-                .from((page_num - 1) * page_size)
-                .size(page_size), User.class);
+        SearchResponse<User> searchResponse;
+        if(filters.isEmpty()){
+          searchResponse = esClient.search(s -> s
+                    .index(INDEX_NAME)
+                    .from((page_num - 1) * page_size)
+                    .size(page_size), User.class);
+        }else {
+           searchResponse = esClient.search(s -> s
+                    .index(INDEX_NAME)
+                    .query(q -> q.bool(boolQuery.build()))
+                    .from((page_num - 1) * page_size)
+                    .size(page_size), User.class);
+        }
 
         List<UserVo> userVoList = new ArrayList<>();
         for (Hit<User> hit : searchResponse.hits().hits()) {
@@ -131,7 +145,11 @@ public FilterUserVo filterUser(String user_name, String user_account, String use
             }
         }
         int items = userVoList.size();
+        System.out.println(userVoList.size());
+        System.out.println("items: " + new FilterUserVo(items, page_num, page_size, userVoList));
+
         return new FilterUserVo(items, page_num, page_size, userVoList);
+
     }catch (Exception e) {
         e.printStackTrace();
         throw new IOException("查询失败");
@@ -236,6 +254,7 @@ public void updateUserAuth(String user_id, List<String> user_auth_id, Integer us
             .doc(updateData), User.class);
 }
 // 删除用户的方法
+@Override
 public void deleteUser(String userId) throws IOException {
     deleteUserFromUserIndex(userId);
     deleteUserFromUserAssignIndex(userId);
@@ -260,6 +279,9 @@ private void deleteUserFromUserAssignIndex(String userId) throws IOException {
             ))
             .build();
 
+    if (searchRequest.query().bool().should().size() == 0) {
+        return;
+    }
     // 执行查询，获取相关记录
     SearchResponse<UserAssign> searchResponse = esClient.search(searchRequest, UserAssign.class);
 
@@ -297,6 +319,7 @@ private void deleteUserFromUserAssignIndex(String userId) throws IOException {
 }
 
 //判断用户权限
+@Override
 public boolean hasAuth(String userId, String authId) throws IOException {
     GetResponse<User> response = getUserById(userId);
     User user = response.source();

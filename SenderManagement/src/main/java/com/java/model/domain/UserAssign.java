@@ -2,6 +2,7 @@ package com.java.model.domain;
 
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.mapping.TypeMapping;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,7 +22,9 @@ import java.util.Map;
 public class UserAssign {
     @Id
     @Field(type = FieldType.Keyword,name="user_id")
+    @JsonProperty("user_id")
     private String userId;
     @Field(type = FieldType.Nested,name="assign_process")
+    @JsonProperty("assign_process")
     private List<AssignProcess> assignProcess;
 }
