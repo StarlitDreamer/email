@@ -1,5 +1,6 @@
 package com.java.email.config;
 
+import com.java.email.utils.LogUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -9,9 +10,11 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 public class RedisConfig {
+    private static final LogUtil logUtil = LogUtil.getLogger(RedisConfig.class);
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+        logUtil.info("RedisConfig.redisTemplate(),进入RedisTemplate");
         // 创建 RedisTemplate 对象
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         // 设置连接工厂

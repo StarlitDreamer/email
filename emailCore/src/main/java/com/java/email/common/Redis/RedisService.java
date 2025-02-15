@@ -15,6 +15,7 @@ public class RedisService {
     private RedisTemplate<String, Object> redisTemplate;
 
     RedisService(RedisTemplate<String, Object> redisTemplate) {
+        logUtil.info("RedisService.RedisService(),进入RedisService");
         this.redisTemplate = redisTemplate;
     }
 

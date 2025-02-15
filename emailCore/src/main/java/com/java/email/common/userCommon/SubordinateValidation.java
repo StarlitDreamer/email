@@ -1,10 +1,11 @@
 package com.java.email.common.userCommon;
 
 import com.java.email.esdao.repository.user.UserRepository;
-import com.java.email.model.entity.UserDocument;
+import com.java.email.model.entity.user.UserDocument;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -38,6 +39,26 @@ public class SubordinateValidation {
         // 检查是否为下属
         UserDocument user = userRepository.findByUserId(userId).orElse(null);
         return user != null && currentUserId.equals(user.getBelongUserId());
+    }
+
+    /**
+     * 验证用户是否为下属
+     * @param currentUserId 当前用户ID
+     * @param targetUserId 目标用户ID
+     * @return 验证结果
+     */
+    public ValidationResult isSubordinate(String currentUserId, String targetUserId) {
+        if (!StringUtils.hasText(currentUserId) || !StringUtils.hasText(targetUserId)) {
+            return new ValidationResult(false, Collections.emptyList());
+        }
+
+        UserDocument targetUser = userRepository.findByUserId(targetUserId).orElse(null);
+        if (targetUser == null) {
+            return new ValidationResult(false, Collections.emptyList());
+        }
+
+        boolean isSubordinate = currentUserId.equals(targetUser.getBelongUserId());
+        return new ValidationResult(isSubordinate, isSubordinate ? Arrays.asList(targetUser) : Collections.emptyList());
     }
 
     /**

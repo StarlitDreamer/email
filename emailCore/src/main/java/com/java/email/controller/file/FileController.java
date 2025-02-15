@@ -1,8 +1,6 @@
 package com.java.email.controller.file;
 
-import com.java.email.annotation.AuthPermission;
 import com.java.email.common.Response.Result;
-import com.java.email.constant.AuthConstData;
 import com.java.email.service.file.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,7 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/file")
-@AuthPermission(permission = AuthConstData.FILE_MANAGE)
+//@AuthPermission(permission = AuthConstData.FILE_MANAGE)
 public class FileController {
     
     @Autowired

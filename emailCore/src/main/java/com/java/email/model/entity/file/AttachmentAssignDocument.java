@@ -14,8 +14,9 @@ import java.util.Map;
 public class AttachmentAssignDocument {
     
     @Id
+    @Field(name = "attachment_id", type = FieldType.Keyword)
     private String attachmentId;
 
-    @Field(type = FieldType.Object)
+    @Field(name = "assign_process", type = FieldType.Object)
     private List<Map<String, Object>> assignProcess;
 } 

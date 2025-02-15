@@ -1,6 +1,10 @@
 package com.java.email.service.impl.file;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.java.email.common.Response.PageResponse;
 import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
@@ -12,11 +16,15 @@ import com.java.email.constant.UserConstData;
 import com.java.email.esdao.repository.file.ImgAssignRepository;
 import com.java.email.esdao.repository.file.ImgRepository;
 import com.java.email.esdao.repository.user.UserRepository;
-import com.java.email.model.entity.UserDocument;
 import com.java.email.model.entity.file.ImgAssignDocument;
 import com.java.email.model.entity.file.ImgDocument;
+import com.java.email.model.entity.user.UserDocument;
 import com.java.email.service.file.ImgService;
 import com.java.email.utils.LogUtil;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,16 +33,19 @@ import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
 
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,6 +66,9 @@ public class ImgServiceImpl implements ImgService {
     @Autowired
     private SubordinateValidation subordinateValidation;
 
+    @Autowired
+    private RestTemplate restTemplate;
+
     private static final LogUtil logUtil = LogUtil.getLogger(ImgServiceImpl.class);
 
     @Override
@@ -63,6 +77,10 @@ public class ImgServiceImpl implements ImgService {
         try {
             String userId = ThreadLocalUtil.getUserId();
             if (userId == null) {
+                return new Result(ResultCode.R_UserNotFound);
+            }
+            Integer userRole = ThreadLocalUtil.getUserRole();
+            if (userRole == null) {
                 return new Result(ResultCode.R_UserNotFound);
             }
             // 参数校验
@@ -74,10 +92,6 @@ public class ImgServiceImpl implements ImgService {
                 return new Result(ResultCode.R_ParamError);
             }
 
-            // 获取当前时间
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            String currentTime = LocalDateTime.now().format(formatter);
-
             // 获取当前用户ID
             List<String> belongUserIds = new ArrayList<>();
             belongUserIds.add(userId);
@@ -88,13 +102,18 @@ public class ImgServiceImpl implements ImgService {
                 ImgDocument doc = new ImgDocument();
                 doc.setImgId(img.get("img_id"));
                 doc.setImgUrl(img.get("img_url"));
-                doc.setImgSize(img.get("img_size"));
+                doc.setImgSize(Long.parseLong(img.get("img_size")));
                 doc.setImgName(img.get("img_name"));
                 doc.setCreatorId(userId);
                 doc.setBelongUserId(belongUserIds);
-                doc.setStatus(MagicMathConstData.IMG_STATUS_UNASSIGNED);
-                doc.setCreatedAt(currentTime);
-                doc.setUpdatedAt(currentTime);
+                // 普通用户上传的附件默认是已分配
+                if (userRole == 4) {
+                    doc.setStatus(MagicMathConstData.IMG_STATUS_ASSIGNED);
+                } else {
+                    doc.setStatus(MagicMathConstData.IMG_STATUS_UNASSIGNED);
+                }
+                doc.setCreatedAt(System.currentTimeMillis()/1000);
+                doc.setUpdatedAt(System.currentTimeMillis()/1000);
                 imgDocuments.add(doc);
             }
 
@@ -143,7 +162,7 @@ public class ImgServiceImpl implements ImgService {
             // 先查询并验证所有用户,如果全部合格，则保存起来可以直接用，不用每次都查询
             Map<String, UserDocument> userDocs = new HashMap<>();
             for (String userId : belongUserIds) {
-                UserDocument userDoc = userRepository.findByUserId(userId).orElse(null);
+                UserDocument userDoc = userRepository.findById(userId).orElse(null);
                 if (userDoc == null) {
                     return new Result(ResultCode.R_Error, "User " + userId + " not found");
                 }
@@ -152,9 +171,9 @@ public class ImgServiceImpl implements ImgService {
 
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
-                if (!belongUserIds.contains("1")) {
+                if (!belongUserIds.contains(UserConstData.COMPANY_USER_ID)) {
                     for (UserDocument userDoc : userDocs.values()) {
-                        if (!userDoc.getBelongUserId().equals(assignId)) {
+                        if (!userDoc.getBelongUserId().equals(assignId) && !userDoc.getUserId().equals(assignId)) {
                             return new Result(ResultCode.R_NotBelongToAdmin);
                         }
                     }
@@ -165,7 +184,7 @@ public class ImgServiceImpl implements ImgService {
             // 更新附件的归属用户
             imgDoc.setBelongUserId(belongUserIds);
             imgDoc.setStatus(MagicMathConstData.IMG_STATUS_ASSIGNED);
-            imgDoc.setUpdatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+            imgDoc.setUpdatedAt(System.currentTimeMillis()/1000);
             imgRepository.save(imgDoc);
 
             // 创建分配记录
@@ -176,8 +195,8 @@ public class ImgServiceImpl implements ImgService {
             List<Map<String, String>> assigneeList = new ArrayList<>();
             for (UserDocument userDoc : userDocs.values()) {
                 Map<String, String> assignee = new HashMap<>();
-                assignee.put("id", userDoc.getUserId());
-                assignee.put("name", userDoc.getUserName());
+                assignee.put("assignee_id", userDoc.getUserId());
+                assignee.put("assignee_name", userDoc.getUserName());
                 assigneeList.add(assignee);
             }
             process.put("assignee", assigneeList);
@@ -252,91 +271,6 @@ public class ImgServiceImpl implements ImgService {
     }
 
     @Override
-    public Result deleteImg(Map<String, Object> request) {
-        // 参数校验
-        if (!request.containsKey("img_id")) {
-            return new Result(ResultCode.R_ParamError);
-        }
-        String imgId = (String) request.get("img_id");
-        ImgDocument imgDoc = imgRepository.findById(imgId).orElse(null);
-        if (imgDoc == null) {
-            return new Result(ResultCode.R_ImgNotFound);
-        }
-        // 获取当前用户信息
-        String currentUserId = ThreadLocalUtil.getUserId();
-        Integer userRole = ThreadLocalUtil.getUserRole();
-        if (currentUserId == null || userRole == null) {
-            return new Result(ResultCode.R_UserNotFound);
-        }
-
-        // 角色2可以直接删除
-        if (userRole == 2) {
-            // Continue to delete
-        }
-        // 角色3需要检查创建者和所属用户
-        else if (userRole == 3) {
-            String creatorId = imgDoc.getCreatorId();
-            List<String> belongUserIds = imgDoc.getBelongUserId();
-
-            // 检查是否为创建者且在所属用户中
-            boolean isCreatorAndBelongs = currentUserId.equals(creatorId) &&
-                    (belongUserIds != null && belongUserIds.contains(currentUserId));
-
-            // 如果是创建者且在所属用户中，直接删除
-            if (isCreatorAndBelongs) {
-                try {
-                    imgRepository.deleteById(imgId);
-                    return new Result(ResultCode.R_Ok);
-                } catch (Exception e) {
-                    logUtil.error("Error deleting img: " + e.getMessage());
-                    return new Result(ResultCode.R_DeleteFileError);
-                }
-            }
-
-            // 检查创建者和所属用户是否都包含下属
-            boolean hasSubordinates = false;
-            // 检查创建者是否为下属
-            UserDocument creator = userRepository.findByUserId(creatorId).orElse(null);
-            boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
-
-            // 检查所属用户是否包含下属
-            boolean hasBelongUserSubordinate = false;
-            if (belongUserIds != null && !belongUserIds.isEmpty()) {
-                hasBelongUserSubordinate = belongUserIds.stream()
-                        .map(id -> userRepository.findByUserId(id).orElse(null))
-                        .filter(user -> user != null)
-                        .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
-            }
-
-            hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
-            if (!hasSubordinates) {
-                return new Result(ResultCode.R_NoAuth);
-            }
-        }
-        // 角色4需要检查是否为创建者且是所属用户
-        else if (userRole == 4) {
-            String creatorId = imgDoc.getCreatorId();
-            List<String> belongUserIds = imgDoc.getBelongUserId();
-
-            if (!currentUserId.equals(creatorId) ||
-                    belongUserIds == null ||
-                    !belongUserIds.contains(currentUserId)) {
-                return new Result(ResultCode.R_NoAuth);
-            }
-        } else {
-            return new Result(ResultCode.R_NoAuth);
-        }
-        // 删除附件
-        try {
-            imgRepository.deleteById(imgId);
-            return new Result(ResultCode.R_Ok);
-        } catch (Exception e) {
-            logUtil.error("Error deleting img: " + e.getMessage());
-            return new Result(ResultCode.R_DeleteFileError);
-        }
-    }
-
-    @Override
     public Result filterImg(Map<String, Object> request) {
         // 参数校验
         if (request == null) {
@@ -360,14 +294,14 @@ public class ImgServiceImpl implements ImgService {
             return new Result(ResultCode.R_ParamError);
         }
 
-        // 如果belongUserName是"公司"，直接执行查询
-        if (StringUtils.hasText(belongUserName) && "公司".equals(belongUserName)) {
+        // 如果所属用户是"公司"，直接执行查询
+        if (StringUtils.hasText(belongUserName) && UserConstData.COMPANY_USER_NAME.equals(belongUserName)) {
             BoolQuery.Builder mainQuery = new BoolQuery.Builder();
 
             // 公司id默认是1
             mainQuery.must(m -> m
                     .term(t -> t
-                            .field("belongUserId")
+                            .field("belong_user_id")
                             .value(UserConstData.COMPANY_USER_ID)
                     )
             );
@@ -375,10 +309,10 @@ public class ImgServiceImpl implements ImgService {
             // 添加图片名称条件
             if (StringUtils.hasText(imgName)) {
                 mainQuery.must(m -> m
-                    .wildcard(t -> t
-                    .field("imgName")
-                    .wildcard("*" + imgName + "*")
-                    )
+                        .match(t -> t
+                                .field("img_name")
+                                .query(imgName)
+                        )
                 );
             }
 
@@ -390,7 +324,7 @@ public class ImgServiceImpl implements ImgService {
                     for (UserDocument creator : creators) {
                         creatorQuery.should(s -> s
                                 .term(t -> t
-                                        .field("creatorId")
+                                        .field("creator_id")
                                         .value(creator.getUserId())
                                 )
                         );
@@ -414,7 +348,7 @@ public class ImgServiceImpl implements ImgService {
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
             NativeQuery searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -451,10 +385,10 @@ public class ImgServiceImpl implements ImgService {
             boolean hasValidConditions = false;  // 标记是否有有效的查询条件
 
             // 检查是否有任何查询条件
-            if (!StringUtils.hasText(imgName) && 
-                !StringUtils.hasText(belongUserName) && 
-                !StringUtils.hasText(creatorName) && 
-                (status == null || status == 0)) {
+            if (!StringUtils.hasText(imgName) &&
+                    !StringUtils.hasText(belongUserName) &&
+                    !StringUtils.hasText(creatorName) &&
+                    (status == null || status == 0)) {
                 // 没有查询条件时，直接查询所有数据
                 mainQuery.must(m -> m
                         .matchAll(ma -> ma)
@@ -463,10 +397,10 @@ public class ImgServiceImpl implements ImgService {
                 // 有查询条件时的处理
                 if (StringUtils.hasText(imgName)) {
                     mainQuery.must(m -> m
-                        .wildcard(t -> t
-                        .field("imgName")
-                        .wildcard("*" + imgName + "*")
-                        )
+                            .match(t -> t
+                                    .field("img_name")
+                                    .query(imgName)
+                            )
                     );
                     hasValidConditions = true;
                 }
@@ -478,7 +412,7 @@ public class ImgServiceImpl implements ImgService {
                         for (UserDocument user : belongUsers) {
                             belongUserQuery.should(s -> s
                                     .term(t -> t
-                                            .field("belongUserId")
+                                            .field("belong_user_id")
                                             .value(user.getUserId())
                                     )
                             );
@@ -496,7 +430,7 @@ public class ImgServiceImpl implements ImgService {
                         for (UserDocument creator : creators) {
                             creatorQuery.should(s -> s
                                     .term(t -> t
-                                            .field("creatorId")
+                                            .field("creator_id")
                                             .value(creator.getUserId())
                                     )
                             );
@@ -530,7 +464,7 @@ public class ImgServiceImpl implements ImgService {
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
             NativeQuery searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -559,20 +493,20 @@ public class ImgServiceImpl implements ImgService {
             boolean hasValidConditions = false;  // 标记是否有有效的查询条件
 
             // 检查是否有任何查询条件
-            if (!StringUtils.hasText(imgName) && 
-                !StringUtils.hasText(belongUserName) && 
-                !StringUtils.hasText(creatorName) && 
-                (status == null || status == 0)) {
+            if (!StringUtils.hasText(imgName) &&
+                    !StringUtils.hasText(belongUserName) &&
+                    !StringUtils.hasText(creatorName) &&
+                    (status == null || status == 0)) {
                 // 没有查询条件时，直接查询所有有权限的数据
-                
+
             } else {
                 // 有查询条件时的处理
                 if (StringUtils.hasText(imgName)) {
                     mainQuery.must(m -> m
-                        .wildcard(t -> t
-                        .field("imgName")
-                        .wildcard("*" + imgName + "*")
-                        )
+                            .match(t -> t
+                                    .field("img_name")
+                                    .query(imgName)
+                            )
                     );
                     hasValidConditions = true;
                 }
@@ -589,7 +523,7 @@ public class ImgServiceImpl implements ImgService {
                     for (String id : belongValidation.getValidUserIds()) {
                         belongQuery.should(s -> s
                                 .term(t -> t
-                                        .field("belongUserId")
+                                        .field("belong_user_id")
                                         .value(id)
                                 )
                         );
@@ -610,7 +544,7 @@ public class ImgServiceImpl implements ImgService {
                     for (String id : creatorValidation.getValidUserIds()) {
                         creatorQuery.should(s -> s
                                 .term(t -> t
-                                        .field("creatorId")
+                                        .field("creator_id")
                                         .value(id)
                                 )
                         );
@@ -644,17 +578,16 @@ public class ImgServiceImpl implements ImgService {
             BoolQuery.Builder creatorAccessQuery = new BoolQuery.Builder();
             creatorAccessQuery.should(s -> s
                     .term(t -> t
-                            .field("creatorId")
+                            .field("creator_id")
                             .value(currentUserId)
                     )
             );
-            // 添加下属的创建者条件
             List<UserDocument> subordinates = userRepository.findByBelongUserId(currentUserId);
             if (!subordinates.isEmpty()) {
                 for (UserDocument sub : subordinates) {
                     creatorAccessQuery.should(s -> s
                             .term(t -> t
-                                    .field("creatorId")
+                                    .field("creator_id")
                                     .value(sub.getUserId())
                             )
                     );
@@ -665,22 +598,22 @@ public class ImgServiceImpl implements ImgService {
             BoolQuery.Builder belongAccessQuery = new BoolQuery.Builder();
             belongAccessQuery.should(s -> s
                     .term(t -> t
-                            .field("belongUserId")
+                            .field("belong_user_id")
                             .value(currentUserId)
                     )
             );
-
             if (!subordinates.isEmpty()) {
                 for (UserDocument sub : subordinates) {
                     belongAccessQuery.should(s -> s
                             .term(t -> t
-                                    .field("belongUserId")
+                                    .field("belong_user_id")
                                     .value(sub.getUserId())
                             )
                     );
                 }
             }
             accessQuery.should(s -> s.bool(belongAccessQuery.build()));
+
             // 至少满足一个权限条件
             accessQuery.minimumShouldMatch("1");
             mainQuery.must(m -> m.bool(accessQuery.build()));
@@ -689,7 +622,7 @@ public class ImgServiceImpl implements ImgService {
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
             NativeQuery searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -715,9 +648,9 @@ public class ImgServiceImpl implements ImgService {
         // 角色4 - 普通用户
         else if (userRole == 4) {
             // 普通用户不允许查询创建者
-            if(StringUtils.hasText(creatorName)){
+            if (StringUtils.hasText(creatorName)) {
                 return new Result(ResultCode.R_ParamError);
-            }   
+            }
             // 状态只能为0
             if (status != 0) {
                 return new Result(ResultCode.R_ParamError);
@@ -731,10 +664,10 @@ public class ImgServiceImpl implements ImgService {
             // 添加图片名称条件
             if (StringUtils.hasText(imgName)) {
                 mainQuery.must(m -> m
-                    .wildcard(t -> t
-                    .field("imgName")
-                    .wildcard("*" + imgName + "*")
-                    )
+                        .match(t -> t
+                                .field("img_name")
+                                .query(imgName)
+                        )
                 );
             }
 
@@ -747,7 +680,7 @@ public class ImgServiceImpl implements ImgService {
                 // 是自己，添加belongUserId条件
                 mainQuery.must(m -> m
                         .term(t -> t
-                                .field("belongUserId")
+                                .field("belong_user_id")
                                 .value(currentUserId)
                         )
                 );
@@ -756,7 +689,7 @@ public class ImgServiceImpl implements ImgService {
             // 无论有没有其他条件，都必须确保所属用户包含自己
             mainQuery.must(m -> m
                     .term(t -> t
-                            .field("belongUserId")
+                            .field("belong_user_id")
                             .value(currentUserId)
                     )
             );
@@ -765,7 +698,7 @@ public class ImgServiceImpl implements ImgService {
             Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
             NativeQuery searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -781,9 +714,9 @@ public class ImgServiceImpl implements ImgService {
                         Map<String, Object> item = new HashMap<>();
                         item.put("id", doc.getImgId());
                         item.put("name", doc.getImgName());
-
+                        item.put("url", doc.getImgUrl());
                         // 查询创建者名称
-                        String responseCreatorName = userRepository.findByUserId(doc.getCreatorId())
+                        String responseCreatorName = userRepository.findById(doc.getCreatorId())
                                 .map(UserDocument::getUserName)
                                 .orElse("");
                         item.put("creator_name", responseCreatorName);
@@ -806,16 +739,252 @@ public class ImgServiceImpl implements ImgService {
         return new Result(ResultCode.R_Fail);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result deleteImg(Map<String, Object> request) {
+        // 参数校验
+        if (!request.containsKey("img_id")) {
+            return new Result(ResultCode.R_ParamError);
+        }
+        String imgId = (String) request.get("img_id");
+        ImgDocument imgDoc = imgRepository.findById(imgId).orElse(null);
+        if (imgDoc == null) {
+            return new Result(ResultCode.R_ImgNotFound);
+        }
+        // 获取当前用户信息
+        String currentUserId = ThreadLocalUtil.getUserId();
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (currentUserId == null || userRole == null) {
+            return new Result(ResultCode.R_UserNotFound);
+        }
 
+        // 角色3需要检查创建者和所属用户
+        if (userRole == 3) {
+            String creatorId = imgDoc.getCreatorId();
+            List<String> belongUserIds = imgDoc.getBelongUserId();
+
+            // 检查是否为创建者
+            boolean isCreator = currentUserId.equals(creatorId);
+
+            // 检查创建者和所属用户是否都包含下属
+            // 检查创建者是否为下属
+            UserDocument creator = userRepository.findById(creatorId).orElse(null);
+            boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
+            // 检查所属用户是否包含下属
+            boolean hasBelongUserSubordinate = false;
+            if (belongUserIds != null && !belongUserIds.isEmpty()) {
+                hasBelongUserSubordinate = belongUserIds.stream()
+                        .map(id -> userRepository.findById(id).orElse(null))
+                        .filter(user -> user != null)
+                        .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
+            }
+            boolean hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
+
+            // 如果既不是创建人，也不是下属，则无权删除
+            if (!isCreator && !hasSubordinates) {
+                return new Result(ResultCode.R_NoAuth);
+            }
+        }
+        // 角色4需要检查是否为创建者且是所属用户
+        if (userRole == 4) {
+            String creatorId = imgDoc.getCreatorId();
+            List<String> belongUserIds = imgDoc.getBelongUserId();
+
+            if (!currentUserId.equals(creatorId) ||
+                    belongUserIds == null ||
+                    !belongUserIds.contains(currentUserId)) {
+                return new Result(ResultCode.R_NoAuth);
+            }
+        } 
+        // 删除图片
+        try {
+            // 获取文件URL并删除文件
+            String imgUrl = imgDoc.getImgUrl();
+            if (imgUrl != null && !imgUrl.isEmpty()) {
+                logUtil.info("开始删除图片：" + imgUrl);
+                
+                try {
+                    URL url = new URL(imgUrl);
+                    String protocol = url.getProtocol().toLowerCase();
+                    
+                    switch (protocol) {
+                        case "http":
+                        case "https":
+                            // 修改 HTTP/HTTPS 删除处理
+                            HttpHeaders headers = new HttpHeaders();
+                            headers.setAccept(Collections.singletonList(MediaType.ALL));
+                            HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+                            
+                            ResponseEntity<Void> response = restTemplate.exchange(
+                                imgUrl,
+                                HttpMethod.DELETE,
+                                requestEntity,
+                                Void.class
+                            );
+                            
+                            if (response.getStatusCode().is2xxSuccessful()) {
+                                break;
+                            } else {
+                                throw new Exception("Failed to delete file: " + response.getStatusCode());
+                            }
+                            
+                        case "file":
+                            // 本地文件协议
+                            Path filePath = Paths.get(url.toURI());
+                            Files.deleteIfExists(filePath);
+                            break;
+                            
+                        case "ftp":
+                        case "sftp":
+                            // FTP/SFTP 协议
+                            deleteFtpFile(url);
+                            break;
+                            
+                        case "s3":
+                            // Amazon S3 协议
+                            deleteS3File(url);
+                            break;
+                            
+                        default:
+                            // 尝试作为本地路径处理
+                            Path localPath = Paths.get(imgUrl);
+                            Files.deleteIfExists(localPath);
+                    }
+                    
+                    logUtil.info("图片删除成功：" + imgUrl);
+                    // 删除数据库记录
+                    imgRepository.deleteById(imgId);
+                    imgAssignRepository.deleteById(imgId);
+                    return new Result(ResultCode.R_Ok);
+                
+                } catch (Exception e) {
+                    logUtil.error("删除图片失败：" + e.getMessage());
+                    return new Result(ResultCode.R_Error);
+                }
+            } else {
+                logUtil.info("图片地址不合法：" + imgUrl);
+                return new Result(ResultCode.R_UrlNotFound);
+            }
+        } catch (Exception e) {
+            logUtil.error("Error deleting img: " + e.getMessage());
+            return new Result(ResultCode.R_Error);
+        }
+    }
+
+    // FTP/SFTP 文件删除方法
+    private void deleteFtpFile(URL url) throws Exception {
+        String protocol = url.getProtocol().toLowerCase();
+        String host = url.getHost();
+        int port = url.getPort();
+        String path = url.getPath();
+        String userInfo = url.getUserInfo();
+        
+        if ("ftp".equals(protocol)) {
+            // FTP 删除
+            FTPClient ftpClient = new FTPClient();
+            try {
+                // 连接设置
+                ftpClient.setConnectTimeout(5000);
+                ftpClient.connect(host, port != -1 ? port : 21);
+                
+                // 登录
+                if (userInfo != null) {
+                    String[] credentials = userInfo.split(":");
+                    ftpClient.login(credentials[0], credentials.length > 1 ? credentials[1] : "");
+                } else {
+                    ftpClient.login("anonymous", "");
+                }
+                
+                // 删除文件
+                boolean deleted = ftpClient.deleteFile(path);
+                if (!deleted) {
+                    throw new Exception("Failed to delete FTP file: " + path);
+                }
+                
+            } finally {
+                if (ftpClient.isConnected()) {
+                    ftpClient.disconnect();
+                }
+            }
+        } else if ("sftp".equals(protocol)) {
+            // SFTP 删除
+            JSch jsch = new JSch();
+            Session session = null;
+            ChannelSftp channelSftp = null;
+            
+            try {
+                // 创建会话
+                session = jsch.getSession(
+                    userInfo != null ? userInfo.split(":")[0] : "anonymous",
+                    host,
+                    port != -1 ? port : 22
+                );
+                
+                // 设置密码
+                if (userInfo != null && userInfo.split(":").length > 1) {
+                    session.setPassword(userInfo.split(":")[1]);
+                }
+                
+                // 跳过主机密钥验证
+                Properties config = new Properties();
+                config.put("StrictHostKeyChecking", "no");
+                session.setConfig(config);
+                
+                // 连接
+                session.connect(5000);
+                
+                // 打开 SFTP 通道
+                channelSftp = (ChannelSftp) session.openChannel("sftp");
+                channelSftp.connect();
+                
+                // 删除文件
+                channelSftp.rm(path);
+                
+            } finally {
+                if (channelSftp != null && channelSftp.isConnected()) {
+                    channelSftp.disconnect();
+                }
+                if (session != null && session.isConnected()) {
+                    session.disconnect();
+                }
+            }
+        }
+    }
+
+    // S3 文件删除方法
+    private void deleteS3File(URL url) throws Exception {
+        // 解析 S3 URL
+        // 格式: s3://bucket-name/key
+        String path = url.getPath();
+        String bucket = url.getHost();
+        String key = path.startsWith("/") ? path.substring(1) : path;
+        
+        // 创建 S3 客户端
+        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+            .withRegion(Regions.DEFAULT_REGION)  // 设置你的 region
+            .build();
+        
+        try {
+            // 删除对象
+            s3Client.deleteObject(bucket, key);
+        } catch (AmazonS3Exception e) {
+            throw new Exception("Failed to delete S3 file: " + e.getMessage());
+        } finally {
+            s3Client.shutdown();
+        }
+    }
+
+    
     // 处理查询结果，转换为所需格式
     private List<Map<String, Object>> convertToResponseFormat(List<ImgDocument> documents) {
         return documents.stream().map(doc -> {
             Map<String, Object> item = new HashMap<>();
             item.put("id", doc.getImgId());
             item.put("name", doc.getImgName());
+            item.put("url", doc.getImgUrl());
 
             // 查询创建者名称
-            String creatorName = userRepository.findByUserId(doc.getCreatorId())
+            String creatorName = userRepository.findById(doc.getCreatorId())
                     .map(UserDocument::getUserName)
                     .orElse("");
             item.put("creator_name", creatorName);
@@ -824,7 +993,7 @@ public class ImgServiceImpl implements ImgService {
             List<String> belongUserNames = new ArrayList<>();
             if (doc.getBelongUserId() != null && !doc.getBelongUserId().isEmpty()) {
                 belongUserNames = doc.getBelongUserId().stream()
-                        .map(userId -> userRepository.findByUserId(userId)
+                        .map(userId -> userRepository.findById(userId)
                                 .map(UserDocument::getUserName)
                                 .orElse(""))
                         .filter(name -> !name.isEmpty())

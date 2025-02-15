@@ -1,10 +1,10 @@
 package com.java.email.common.userCommon;
 
 
-import com.java.email.esdao.repository.AuthRepository;
+import com.java.email.esdao.repository.user.AuthRepository;
 import com.java.email.esdao.repository.user.UserRepository;
-import com.java.email.model.entity.AuthDocument;
-import com.java.email.model.entity.UserDocument;
+import com.java.email.model.entity.user.AuthDocument;
+import com.java.email.model.entity.user.UserDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
