@@ -17,11 +17,11 @@ public class ElasticsearchConfig {
 @Primary
 public ElasticsearchClient elasticsearchClient() {
     RestClient restClient = RestClient.builder(
-            new HttpHost("localhost", 9200)
+            new HttpHost("112.35.176.43", 9201)
     ).setRequestConfigCallback(requestConfigBuilder ->
             requestConfigBuilder
-                    .setConnectTimeout(10000)
-                    .setSocketTimeout(60000)
+                    .setConnectTimeout(100000)
+                    .setSocketTimeout(600000)
     ).build();
 
     ElasticsearchTransport transport = new RestClientTransport(

@@ -13,5 +13,5 @@ public class UserVo {
     private String belongUserName;
     private String userAccount;
     private String userEmail;
-    private String status;
+    private Integer status;
 }

@@ -30,7 +30,7 @@ public class SenderManageController {
     private UserAssignService userAssignService;
 
     @PostMapping("/createUser")
-    @PreAuthorize("hasAuthority('AUTH_9')")
+//    @PreAuthorize("hasAuthority('AUTH_9')")
     public Result createUser(@RequestBody@Validated CreateUserDto user) throws IOException {
 //        String currentUserId = ThreadLocalUtil.getUserId();//通过treadLocal获取当前操作者的用户id
         try {
@@ -44,9 +44,9 @@ public class SenderManageController {
         }
     }
     @GetMapping("/filterUser")
-    @PreAuthorize("hasAuthority('AUTH_9')")
+//    @PreAuthorize("hasAuthority('AUTH_9')")
     public Result filterUser(@RequestParam(value = "user_name", required = false) String user_name, @RequestParam(value = "user_account", required = false) String user_account,
-                             @RequestParam(value = "user_email", required = false) String user_email, @RequestParam(value = "belong_user_name") String belong_user_name, @RequestParam(value = "status") Integer status, @RequestParam(value = "page_num") Integer page_num,
+                             @RequestParam(value = "user_email", required = false) String user_email, @RequestParam(value = "belong_user_name") String belong_user_name, @RequestParam(value = "status",required = false) Integer status, @RequestParam(value = "page_num") Integer page_num,
                              @RequestParam(value = "page_size") Integer page_size) {
 //        String currentUserId = ThreadLocalUtil.getUserId();
         try {
@@ -61,7 +61,7 @@ public class SenderManageController {
     }
 
     @GetMapping("/checkUser")
-    @PreAuthorize("hasAuthority('AUTH_9')")
+//    @PreAuthorize("hasAuthority('AUTH_9')")
     public Result checkUser(@RequestParam(value = "user_id") String user_id) {
 //        String currentUserId = ThreadLocalUtil.getUserId();
         try {
@@ -75,7 +75,7 @@ public class SenderManageController {
         }
     }
     @PostMapping("/updateUserinfo")
-    @PreAuthorize("hasAuthority('AUTH_9')")
+//    @PreAuthorize("hasAuthority('AUTH_9')")
     public Result updateUserinfo(@RequestBody@Validated UpdateUserDto user)  {
 //        String currentUserId = ThreadLocalUtil.getUserId();
         try {
@@ -90,7 +90,7 @@ public class SenderManageController {
     }
 
     @PostMapping("/updateUserAuth")
-    @PreAuthorize("hasAuthority('AUTH_4')")
+//    @PreAuthorize("hasAuthority('AUTH_4')")
     public Result updateUserAuth(@RequestParam(value = "user_id") String user_id, @RequestParam(value = "user_auth_id",required = false) List<String> user_auth_id, @RequestParam(value = "user_role",required = false) Integer user_role) {
         try {
             userService.updateUserAuth(user_id, user_auth_id, user_role);
@@ -102,7 +102,7 @@ public class SenderManageController {
     }
 
     @PostMapping("/deleteUser")
-    @PreAuthorize("hasAuthority('AUTH_9')")
+//    @PreAuthorize("hasAuthority('AUTH_9')")
     public Result deleteUser(@RequestParam(value = "user_id") String user_id) {
 //        String currentUserId = ThreadLocalUtil.getUserId();
         try {
@@ -135,7 +135,7 @@ public class SenderManageController {
     }
 
 
-@PostMapping("/csv")
+@PostMapping("/importUser")
 public Result<String> uploadCsvFile(@RequestParam("file") MultipartFile file) {
     if (file.isEmpty()) {
         return ResultUtils.error("文件不能为空");

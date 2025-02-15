@@ -22,6 +22,7 @@ public class CheckTokenInterceptor implements HandlerInterceptor {
     private static final LogUtil logUtil=LogUtil.getLogger(CheckTokenInterceptor.class);
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler){
+        logUtil.error("请求进入拦截器");
         int runStep=0;
         do {
             //从token获取userId，拿到redis的key

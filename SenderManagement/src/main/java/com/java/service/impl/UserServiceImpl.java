@@ -64,32 +64,41 @@ public String createUser(CreateUserDto user) throws IOException {
 @Override
 public FilterUserVo filterUser(String user_name, String user_account, String user_email, String belong_user_name, Integer status, Integer page_num, Integer page_size)  throws IOException {
     try {
-
         //提供筛选条件筛选用户，小管理只能筛选出下属用户
         String current_id = ThreadLocalUtil.getUserId();
         Integer currentUserRole = ThreadLocalUtil.getUserRole();
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         // 根据角色添加查询条件
         if (currentUserRole == 3) {
-            boolQuery.must(m -> m.term(t -> t.field("belongUserId").value(current_id)));
+            boolQuery.must(m -> m.term(t -> t.field("belong_user_id").value(current_id)));
         } else if (currentUserRole == 4) {
             GetResponse<User> response = getUserById(current_id);
             String belongUserId = response.source().getBelongUserId();
-            boolQuery.must(m -> m.term(t -> t.field("belongUserId").value(belongUserId)));
+            boolQuery.must(m -> m.term(t -> t.field("belong_user_id").value(belongUserId)));
         }
         Map<String, Object> filters = new HashMap<>();
-        if (user_name != null) filters.put("userName", user_name);
-        if (user_account != null) filters.put("userAccount", user_account);
-        if (user_email != null) filters.put("userEmail", user_email);
-        if (belong_user_name != null) filters.put("belongUserName", belong_user_name);
-        if (status != null) filters.put("status", status);
+        if (user_name != null && !user_name.isEmpty()) {
+            filters.put("user_name", user_name);
+        }
+        if (user_account != null && !user_account.isEmpty()) {
+            filters.put("user_account", user_account);
+        }
+        if (user_email != null && !user_email.isEmpty()) {
+            filters.put("user_email", user_email);
+        }
+        if (belong_user_name != null && !belong_user_name.isEmpty()) {
+            filters.put("belong_user_name", belong_user_name);
+        }
+        if (status != null) {
+            filters.put("status", status);
+        }
         filters.forEach((key, value) -> {
             if (value != null && !value.toString().isEmpty()) {
                 switch (key) {
-                    case "userName":
-                    case "userAccount":
-                    case "userEmail":
-                    case "belongUserName":
+                    case "user_name":
+                    case "user_account":
+                    case "user_email":
+                    case "belong_user_name":
                         boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
                         break;
                     case "status":
@@ -116,7 +125,7 @@ public FilterUserVo filterUser(String user_name, String user_account, String use
                         user.getBelongUserId(),
                         user.getUserAccount(),
                         user.getUserEmail(),
-                        String.valueOf(user.getStatus())
+                        user.getStatus()
                 );
                 userVoList.add(userVo);
             }
@@ -125,7 +134,7 @@ public FilterUserVo filterUser(String user_name, String user_account, String use
         return new FilterUserVo(items, page_num, page_size, userVoList);
     }catch (Exception e) {
         e.printStackTrace();
-        return null;
+        throw new IOException("查询失败");
 
     }
 }
