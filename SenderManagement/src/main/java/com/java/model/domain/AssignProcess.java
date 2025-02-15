@@ -27,7 +27,7 @@ public class AssignProcess {
     @JsonProperty("assignee_name")
     private String assigneeName; // 被分配者名称
 
-    @Field(type = FieldType.Keyword,name="assign_date")
+    @Field(type = FieldType.Date,name="assign_date")
     @JsonProperty("assign_date")
     private String assignDate;  // 分配日期
 }

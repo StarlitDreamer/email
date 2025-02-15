@@ -1,6 +1,8 @@
 package com.java.model.domain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 @AllArgsConstructor
 @NoArgsConstructor
 @Document(indexName = "user")
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)  // 添加这个注解
 public class User {
     @Id
     @Field(type = FieldType.Keyword, name = "user_id")

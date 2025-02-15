@@ -169,16 +169,16 @@ public CheckUserVo checkUser(String user_id) throws IOException {
 public void updateUserinfo(UpdateUserDto user) throws IOException {
     //修改用户信息
     Map<String, String> map = Stream.of(
-                    new AbstractMap.SimpleEntry<>("userName", user.getUser_name()),
-                    new AbstractMap.SimpleEntry<>("userAccount", user.getUser_account()),
-                    new AbstractMap.SimpleEntry<>("userEmail", user.getUser_email()),
-                    new AbstractMap.SimpleEntry<>("userPassword", user.getUser_password()),
-                    new AbstractMap.SimpleEntry<>("userEmailCode", user.getUser_email_code())
+                    new AbstractMap.SimpleEntry<>("user_name", user.getUser_name()),
+                    new AbstractMap.SimpleEntry<>("user_account", user.getUser_account()),
+                    new AbstractMap.SimpleEntry<>("user_email", user.getUser_email()),
+                    new AbstractMap.SimpleEntry<>("user_password", user.getUser_password()),
+                    new AbstractMap.SimpleEntry<>("user_email_code", user.getUser_email_code())
             )
             .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    if(map.containsKey("userPassword")){
-        map.put("userPassword", DigestUtil.md5Hex(map.get("userPassword")));
+    if(map.containsKey("user_password")){
+        map.put("user_password", DigestUtil.md5Hex(map.get("user_password")));
     }
     if(map.isEmpty()){
         throw new IOException("没有需要修改的信息");

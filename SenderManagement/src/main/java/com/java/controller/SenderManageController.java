@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+
 @RestController
 @RequestMapping("/userManage")
 public class SenderManageController {
@@ -30,7 +31,7 @@ public class SenderManageController {
 
     @PostMapping("/createUser")
 //    @PreAuthorize("hasAuthority('AUTH_9')")
-    public Result createUser(@RequestBody@Validated CreateUserDto user) throws IOException {
+    public Result createUser(@RequestBody @Validated CreateUserDto user) throws IOException {
 //        String currentUserId = ThreadLocalUtil.getUserId();//通过treadLocal获取当前操作者的用户id
         try {
 //            if (!userService.hasAuth(currentUserId, Auth.USER_MANAGE.auth_id())) {
@@ -42,11 +43,12 @@ public class SenderManageController {
             return ResultUtils.error(e.getMessage());
         }
     }
+
     @GetMapping("/filterUser")
 //    @PreAuthorize("hasAuthority('AUTH_9')")
     public Result filterUser(@RequestParam(value = "user_name", required = false) String user_name, @RequestParam(value = "user_account", required = false) String user_account,
-                             @RequestParam(value = "user_email", required = false) String user_email, @RequestParam(value = "belong_user_name") String belong_user_name, @RequestParam(value = "status",required = false) Integer status, @RequestParam(value = "page_num") Integer page_num,
-                             @RequestParam(value = "page_size") Integer page_size) {
+                             @RequestParam(value = "user_email", required = false) String user_email, @RequestParam(value = "belong_user_name", required = false) String belong_user_name, @RequestParam(value = "status", required = false) Integer status, @RequestParam(value = "page_num", defaultValue = "1") Integer page_num,
+                             @RequestParam(value = "page_size", defaultValue = "10") Integer page_size) {
 //        String currentUserId = ThreadLocalUtil.getUserId();
         try {
 //            if (!userService.hasAuth(currentUserId, Auth.USER_MANAGE.auth_id())) {
@@ -73,9 +75,10 @@ public class SenderManageController {
             return ResultUtils.error(e.getMessage());
         }
     }
+
     @PostMapping("/updateUserinfo")
 //    @PreAuthorize("hasAuthority('AUTH_9')")
-    public Result updateUserinfo(@RequestBody@Validated UpdateUserDto user)  {
+    public Result updateUserinfo(@RequestBody @Validated UpdateUserDto user) {
 //        String currentUserId = ThreadLocalUtil.getUserId();
         try {
 //            if (!userService.hasAuth(currentUserId, Auth.USER_MANAGE.auth_id())) {
@@ -90,7 +93,7 @@ public class SenderManageController {
 
     @PostMapping("/updateUserAuth")
 //    @PreAuthorize("hasAuthority('AUTH_4')")
-    public Result updateUserAuth(@RequestParam(value = "user_id") String user_id, @RequestParam(value = "user_auth_id",required = false) List<String> user_auth_id, @RequestParam(value = "user_role",required = false) Integer user_role) {
+    public Result updateUserAuth(@RequestParam(value = "user_id") String user_id, @RequestParam(value = "user_auth_id", required = false) List<String> user_auth_id, @RequestParam(value = "user_role", required = false) Integer user_role) {
         try {
             userService.updateUserAuth(user_id, user_auth_id, user_role);
             return ResultUtils.success();
@@ -108,22 +111,24 @@ public class SenderManageController {
 //            if (!userService.hasAuth(currentUserId, Auth.USER_MANAGE.auth_id())) {
 //                return ResultUtils.error("没有权限删除用户");
 //            }
-           userService.deleteUser(user_id);
+            userService.deleteUser(user_id);
             return ResultUtils.success();
         } catch (Exception e) {
             return ResultUtils.error(e.getMessage());
         }
     }
+
     @PostMapping("/assignUser")
-    public Result assignUser(@RequestParam(value = "belong_user_id") String belong_user_id) {
+    public Result assignUser(@RequestParam(value = "user_id") String user_id,@RequestParam(value = "belong_user_id") String belong_user_id) {
         try {
-            userAssignService.assignUser(belong_user_id);
+            userAssignService.assignUser(user_id,belong_user_id);
             return ResultUtils.success();
         } catch (Exception e) {
             return ResultUtils.error("操作失败");
         }
     }
-    @GetMapping("/getAssignUserDetails")
+
+    @GetMapping("/assignUserDetails")
     public Result getAssignUserDetails(@RequestParam(value = "user_id") String user_id, @RequestParam(value = "page_num") String page_num, @RequestParam(value = "page_size") String page_size) {
         try {
             AssignUserDetailsVo assignUserDetailsVo = userAssignService.assignUserDetails(user_id, page_num, page_size);
@@ -134,22 +139,23 @@ public class SenderManageController {
     }
 
 
-@PostMapping("/importUser")
-public Result<String> uploadCsvFile(@RequestParam("file") MultipartFile file) {
-    if (file.isEmpty()) {
-        return ResultUtils.error("文件不能为空");
+    @PostMapping("/importUser")
+    public Result<String> uploadCsvFile(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResultUtils.error("文件不能为空");
+        }
+        try {
+            // 将文件转化为 Java 对象
+            List<CsvUserDto> persons = CsvUtil.parseCsvFile(file);
+            userAssignService.BatchUserImport(persons);
+            return ResultUtils.success();
+        } catch (IOException e) {
+            return ResultUtils.error("操作失败");
+        }
     }
-    try {
-        // 将文件转化为 Java 对象
-        List<CsvUserDto> persons = CsvUtil.parseCsvFile(file);
-        userAssignService.BatchUserImport(persons);
-        return  ResultUtils.success();
-    } catch (IOException e) {
-        return ResultUtils.error("操作失败");
+
+    @GetMapping("/getAuth")
+    public Result getAuth() {
+        return ResultUtils.success(Auth.getAllAuths());
     }
-}
-   @GetMapping("/getAuth")
-   public Result getAuth() {
-       return ResultUtils.success(Auth.getAllAuths());
-  }
 }
