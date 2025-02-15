@@ -1,9 +1,9 @@
 package com.java.email.common;
 
+import com.java.email.esdao.repository.AuthRepository;
+import com.java.email.model.entity.AuthDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import com.java.email.model.entity.AuthDocument;
-import com.java.email.esdao.repository.AuthRepository;
 
 @Service
 public class AuthService {

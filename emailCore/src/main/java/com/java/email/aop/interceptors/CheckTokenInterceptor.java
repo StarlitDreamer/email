@@ -2,10 +2,10 @@ package com.java.email.aop.interceptors;
 
 
 import com.java.email.common.Redis.RedisService;
+import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.constant.RedisConstData;
 import com.java.email.utils.JwtUtil;
 import com.java.email.utils.LogUtil;
-import com.java.email.common.userCommon.ThreadLocalUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.util.Strings;

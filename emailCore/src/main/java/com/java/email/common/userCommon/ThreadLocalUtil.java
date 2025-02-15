@@ -19,10 +19,7 @@ public class ThreadLocalUtil {
     private static final ThreadLocal<Object> THREAD_LOCAL = new ThreadLocal<>();
 
     @Autowired
-    public void setUserRepository(UserRepository userRepository) {
-        ThreadLocalUtil.userRepository = userRepository;
-    }
-
+    public void setUserRepository(UserRepository userRepository) {ThreadLocalUtil.userRepository = userRepository;}
     //提供get方法，拿取线程存储的值
     public static <T> T get(){
         try {
@@ -32,7 +29,6 @@ public class ThreadLocalUtil {
             return null;
         }
     }
-
     //getUserId，拿取线程存储的UserId
     public static String getUserId() {
         try {
@@ -52,7 +48,6 @@ public class ThreadLocalUtil {
             return null;
         }
     }
-
      // 获取用户角色
      public static Integer getUserRole() {
         try {
@@ -67,7 +62,6 @@ public class ThreadLocalUtil {
             return null;
         }
     }
-
     // 获取用户名
     public static String getUserName() {
         try {
@@ -82,7 +76,6 @@ public class ThreadLocalUtil {
             return null;
         }
     }
-
     //提供set方法，向线程内写入值
     public static void set(Object value){
         try {
@@ -91,7 +84,6 @@ public class ThreadLocalUtil {
             logUtil.error("ThreadLocalUtil set value error : " + e);
         }
     }
-
     //使用完毕，移除线程，防止内存泄漏
     public static void remove(){
         try {
@@ -100,8 +92,4 @@ public class ThreadLocalUtil {
             logUtil.error("ThreadLocalUtil remove value error : " + e);
         }
     }
-
-    
-
-
 }

@@ -2,10 +2,10 @@ package com.java.email.exception;
 
 import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
+import com.java.email.utils.LogUtil;
 import org.elasticsearch.ElasticsearchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import com.java.email.utils.LogUtil;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {

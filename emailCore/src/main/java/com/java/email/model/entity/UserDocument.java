@@ -11,45 +11,43 @@ import java.util.List;
 @Data
 @Document(indexName = "user")
 public class UserDocument {
+    
     @Id
-    private String id;
-
-    @Field(name = "user_id", type = FieldType.Keyword)
     private String userId;
 
-    @Field(name = "user_role", type = FieldType.Integer)
+    @Field(type = FieldType.Integer)
     private Integer userRole;
 
-    @Field(name = "creator_id", type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword)
     private String creatorId;
 
-    @Field(name = "belong_user_id", type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword)
     private String belongUserId;
 
-    @Field(name = "user_name", type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(type = FieldType.Text, analyzer = "ik_max_word")
     private String userName;
 
-    @Field(name = "user_account", type = FieldType.Text)
+    @Field(type = FieldType.Text, analyzer = "ik_max_word")
     private String userAccount;
 
-    @Field(name = "user_password", type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword)
     private String userPassword;
 
-    @Field(name = "user_email", type = FieldType.Text)
+    @Field(type = FieldType.Text, analyzer = "ik_max_word")
     private String userEmail;
 
-    @Field(name = "user_email_code", type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword)
     private String userEmailCode;
 
-    @Field(name = "user_auth_id", type = FieldType.Keyword)
+    @Field(type = FieldType.Keyword)
     private List<String> userAuthId;
 
-    @Field(name = "status", type = FieldType.Integer)
+    @Field(type = FieldType.Integer)
     private Integer status;
 
-    @Field(name = "created_at", type = FieldType.Date)
+    @Field(type = FieldType.Date, index = false)
     private String createdAt;
 
-    @Field(name = "updated_at", type = FieldType.Date)
+    @Field(type = FieldType.Date,index = false)
     private String updatedAt;
 } 

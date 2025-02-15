@@ -1,6 +1,7 @@
 package com.java.email.model.domain;
 
 import lombok.Data;
+
 import java.util.List;
 
 @Data

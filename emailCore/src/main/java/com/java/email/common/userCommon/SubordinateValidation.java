@@ -1,11 +1,13 @@
 package com.java.email.common.userCommon;
 
-import com.java.email.model.entity.UserDocument;
 import com.java.email.esdao.repository.user.UserRepository;
+import com.java.email.model.entity.UserDocument;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
