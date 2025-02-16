@@ -4,9 +4,15 @@ spring:
     activate:
       on-profile: test
   elasticsearch:
-    uris: http://112.35.176.43:9201
+    uris: http://es:9200
+    #uris: http://112.35.176.43:9201
     connection-timeout: 50000
     socket-timeout: 50000
+  data:
+    redis:
+      host: email-redis
+      port: 6379
+      database: 0
   servlet:
     multipart:
       max-file-size: 10MB
