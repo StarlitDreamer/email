@@ -3,6 +3,7 @@ package com.java.service.impl;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.digest.DigestUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -70,7 +71,10 @@ public class UserAssignServiceImpl implements UserAssignService {
         esClient.update(u -> u
                 .index(USER_INDEX_NAME)
                 .id(user_id)
-                .doc(Map.of("status", 2)), User.class);
+                .doc(Map.of("status", 2,
+                        "belong_user_id", assignee.getUserId(),
+                        "updated_at", System.currentTimeMillis() / 1000
+                )), User.class);
         // 检查 currentUser_id 文档是否存在
         GetResponse<UserAssign> currentUserResponse = esClient.get(g -> g
                 .index(INDEX_NAME)
@@ -83,7 +87,11 @@ public class UserAssignServiceImpl implements UserAssignService {
                     .document(userAssign));
         } else {
             // 如果存在，更新文档
-            List<AssignProcess> collect = Stream.concat(currentUserResponse.source().getAssignProcess().stream(), Stream.of(assignProcess)).distinct().collect(Collectors.toList());
+            List<AssignProcess> collect = Stream.concat(
+                            Stream.of(assignProcess),  // 新元素放在前面
+                            currentUserResponse.source().getAssignProcess().stream()
+                    ).distinct()
+                    .collect(Collectors.toList());
             esClient.update(u -> u
                     .index(INDEX_NAME)
                     .id(user_id)
@@ -131,7 +139,12 @@ public class UserAssignServiceImpl implements UserAssignService {
                 user.setCreatorId(currentUserId);
                 user.setBelongUserId(belongUserId);
                 user.setUserAuthId(Auth.roleAuthMap.get(user.getUserRole()));
-                user.setStatus(2);
+                // 大管理导入的用户都是未分配的
+                if (user.getUserRole() == 2) {
+                    user.setStatus(1);
+                } else {
+                    user.setStatus(2);
+                }
                 user.setCreatedAt(UserServiceImpl.getTimestampWithTimezone());
                 user.setUpdatedAt(UserServiceImpl.getTimestampWithTimezone());
                 String[] parts = csvUser.getUserEmail().split("@");
@@ -165,7 +178,7 @@ public class UserAssignServiceImpl implements UserAssignService {
             }
 
             // 执行批量操作
-                 esClient.bulk(b -> b
+            esClient.bulk(b -> b
                     .operations(operations)
             );
 
@@ -182,13 +195,13 @@ public class UserAssignServiceImpl implements UserAssignService {
     public AssignUserDetailsVo assignUserDetails(String user_id, String page_num, String page_size) throws IOException {
         int pageNum = Integer.parseInt(page_num);
         int pageSize = Integer.parseInt(page_size);
+        //不在查询层做分页，因为分配过程是个子字段，es查询不了。直接拿出整个分配过程数组，再单独做分页
         SearchResponse<UserAssign> searchResponse = esClient.search(s -> s
                 .index(INDEX_NAME)
                 .query(q -> q.bool(b -> b
                         .must(m -> m.term(t -> t.field("user_id").value(user_id)))
-                ))
-                .from((pageNum - 1) * pageSize)
-                .size(pageSize), UserAssign.class);
+                )), UserAssign.class);
+
         List<AssignProcess> assignProcessList = new ArrayList<>();
         for (Hit<UserAssign> hit : searchResponse.hits().hits()) {
             UserAssign userAssign = hit.source();
@@ -196,11 +209,22 @@ public class UserAssignServiceImpl implements UserAssignService {
                 assignProcessList.addAll(userAssign.getAssignProcess());
             }
         }
-        assignProcessList = assignProcessList.stream()
-                .sorted(Comparator.comparing(AssignProcess::getAssignDate)) // 按照 scheduleTime 排序
-                .collect(Collectors.toList());
+        // 计算总数
+        int totalItems = assignProcessList.size();
 
-        int totalItems = (int) searchResponse.hits().total().value();
-        return new AssignUserDetailsVo(totalItems, pageNum, pageSize, assignProcessList);
+        // 计算分页
+        int start = (pageNum - 1) * pageSize;
+        int end = Math.min(start + pageSize, assignProcessList.size());
+
+        // 获取当前页的数据
+        List<AssignProcess> pageData = new ArrayList<>();
+        if (start < assignProcessList.size()) {
+            pageData = assignProcessList.subList(start, end);
+        }
+        // assignProcessList = pageData.stream()
+        //         .sorted(Comparator.comparing(AssignProcess::getAssignDate).reversed()) // 按照 scheduleTime 排序
+        //         .collect(Collectors.toList());
+
+        return new AssignUserDetailsVo(totalItems, pageNum, pageSize, pageData);
     }
 }

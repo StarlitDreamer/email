@@ -158,8 +158,8 @@ public class SenderManageController {
     public Result getAuth() {
         return ResultUtils.success(Auth.getAllAuths());
     }
-    @GetMapping("/getUserAuth/{user_id}")
-    public Result getUserAuth(@PathVariable("user_id") String user_id)  {
+    @GetMapping("/getUserAuth")
+    public Result getUserAuth(@RequestParam("user_id") String user_id)  {
         try {
             return ResultUtils.success(userService.getUserAuth(user_id));
     }catch (IOException e){
