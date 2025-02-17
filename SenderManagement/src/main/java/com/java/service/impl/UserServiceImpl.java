@@ -284,6 +284,10 @@ public class UserServiceImpl implements UserService {
                         .id(user.getUser_id())
                         .doc(map),
                 User.class);
+        boolean redisDelete = redisService.delete(RedisConstData.USER_LOGIN_TOKEN + user.getUser_id());
+        if(!redisDelete){
+            throw new IOException("更新用户信息，删除token失败");
+        }
     }
 
     @Override
@@ -366,36 +370,40 @@ public class UserServiceImpl implements UserService {
                 .doc(updateData), User.class);
 
 
-        // 更新权限后，也更新token。
-        // 获取用户信息
-        GetResponse<User> userResponse = esClient.get(g -> g
-                .index(INDEX_NAME)
-                .id(user_id), User.class);
-        User userDoc = userResponse.source();
-        if (userDoc == null) {
-            throw new IOException("用户不存在");
+        // 更新权限后，删除token。
+        boolean redisDelete = redisService.delete(RedisConstData.USER_LOGIN_TOKEN + user_id);
+        if(!redisDelete){
+            throw new IOException("更新用户信息，删除token失败");
         }
-        String userId = userDoc.getUserId();
-        if (userId == null) {
-            throw new IOException("用户信息有误");
-        }
-        String userName = userDoc.getUserName();
-        if (userName == null) {
-            throw new IOException("用户姓名信息有误");
-        }
-        Integer userRole = userDoc.getUserRole();
-        if (userRole == null || userRole != 1 && userRole != 2 && userRole != 3 && userRole != 4) {
-            throw new IOException("用户角色信息有误");
-        }
-        Map<String, Object> userMap = new HashMap<>();
-        userMap.put("id", userId);
-        userMap.put("name", userName);
-        userMap.put("role", userRole); // Use the userRole variable declared earlier
-        String token = JwtUtil.genToken(userMap);
-        boolean redisSet = redisService.set(RedisConstData.USER_LOGIN_TOKEN + userId, token, MagicMathConstData.REDIS_VERIFY_TOKEN_TIMEOUT, TimeUnit.HOURS);
-        if (!redisSet) {
-            throw new IOException("redis存入token失败");
-        }
+        // 下发新token，获取用户信息
+//        GetResponse<User> userResponse = esClient.get(g -> g
+//                .index(INDEX_NAME)
+//                .id(user_id), User.class);
+//        User userDoc = userResponse.source();
+//        if (userDoc == null) {
+//            throw new IOException("用户不存在");
+//        }
+//        String userId = userDoc.getUserId();
+//        if (userId == null) {
+//            throw new IOException("用户信息有误");
+//        }
+//        String userName = userDoc.getUserName();
+//        if (userName == null) {
+//            throw new IOException("用户姓名信息有误");
+//        }
+//        Integer userRole = userDoc.getUserRole();
+//        if (userRole == null || userRole != 1 && userRole != 2 && userRole != 3 && userRole != 4) {
+//            throw new IOException("用户角色信息有误");
+//        }
+//        Map<String, Object> userMap = new HashMap<>();
+//        userMap.put("id", userId);
+//        userMap.put("name", userName);
+//        userMap.put("role", userRole); // Use the userRole variable declared earlier
+//        String token = JwtUtil.genToken(userMap);
+//        boolean redisSet = redisService.set(RedisConstData.USER_LOGIN_TOKEN + userId, token, MagicMathConstData.REDIS_VERIFY_TOKEN_TIMEOUT, TimeUnit.HOURS);
+//        if (!redisSet) {
+//            throw new IOException("redis存入token失败");
+//        }
     }
 
     // 删除用户的方法
@@ -424,6 +432,10 @@ public class UserServiceImpl implements UserService {
         // 如果是公司或大管理员，不允许删除
         if (userRole == 1 || userRole == 2) {
             throw new IOException("不能删除公司或大管理员账号");
+        }
+        boolean redisDelete = redisService.delete(RedisConstData.USER_LOGIN_TOKEN + userId);
+        if(!redisDelete){
+            throw new IOException("删除token失败");
         }
         deleteUserFromUserIndex(userId);
         deleteUserFromUserAssignIndex(userId);
