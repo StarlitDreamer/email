@@ -1,5 +1,6 @@
 package com.java.email.service.impl.user;
 
+import cn.hutool.crypto.digest.DigestUtil;
 import com.java.email.common.Redis.RedisService;
 import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
@@ -56,7 +57,7 @@ public class UserLoginServiceImpl implements UserLoginService {
         if (userDoc == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
-        if (!userDoc.getUserPassword().equals(password)) {
+        if (!userDoc.getUserPassword().equals(DigestUtil.md5Hex(password))) {
             return new Result(ResultCode.R_PasswordError);
         }
         if (!userDoc.getUserRole().equals(userRole)) {

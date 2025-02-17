@@ -116,7 +116,13 @@
             <artifactId>aws-java-sdk-s3</artifactId>
             <version>1.12.261</version>
         </dependency>
-        
+
+        <!--    密码加密    -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.26</version>
+        </dependency>
     </dependencies>
 
     <build>
