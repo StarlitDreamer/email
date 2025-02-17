@@ -1,20 +1,28 @@
 package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import lombok.extern.slf4j.Slf4j;
 import com.java.email.pojo.User;
 import com.java.email.service.UserService;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.ArrayList;
+
 @Slf4j
 @Service
 public class UserServiceImpl implements UserService {
     private final ElasticsearchClient esClient;
-    private static final String INDEX_NAME = "email_users";
+    private static final String INDEX_NAME = "user";
 
     public UserServiceImpl(ElasticsearchClient esClient) {
         this.esClient = esClient;
@@ -68,16 +76,34 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User findByUserEmail(String email) throws IOException {
-        SearchResponse<User> response= esClient.search(s -> {
-            s.index(INDEX_NAME);
-            if(email!=null){
-                s.query(q->q.term(t->t.field("userEmail").value(email)));
-            }
-            return s;
-        },User.class);
+    public User findByUserEmail(String email) {
+        try {
+            // 构建精确匹配查询
+            Query query = new Query.Builder()
+                .match(t -> t
+                    .field("user_email")
+                    .query(email)
+                )
+                .build();
 
-        return response.hits().hits().get(0).source();
+            // 执行搜索
+            SearchResponse<User> response = esClient.search(s -> s
+                .index(INDEX_NAME)
+                .query(query), 
+                User.class
+            );
+
+            // 检查结果
+            if (response.hits().total().value() > 0) {
+                return response.hits().hits().get(0).source();
+            }
+            
+            return null;  // 如果没有找到用户，返回 null
+            
+        } catch (Exception e) {
+            log.error("Error finding user by email: " + e.getMessage());
+            return null;
+        }
     }
 
     @Override
@@ -85,12 +111,48 @@ public class UserServiceImpl implements UserService {
         SearchResponse<User> response= esClient.search(s -> {
             s.index(INDEX_NAME);
             if(senderName!=null){
-                s.query(q->q.term(t->t.field("userName").value(senderName)));
+                s.query(q->q.match(t->t.field("user_name").query(senderName)));
             }
             return s;
         },User.class);
 
         return response.hits().hits().get(0).source().getUserEmail();
+    }
+
+    @Override
+    public List<String> findManagedUserEmails(String managerId) {
+        try {
+            // 构建精确匹配查询
+            Query query = new Query.Builder()
+                .term(t -> t
+                    .field("belong_user_id")
+                    .value(managerId)
+                )
+                .build();
+
+            // 执行搜索
+            SearchResponse<User> response = esClient.search(s -> s
+                .index(INDEX_NAME)
+                .query(query)
+                .size(1000),  // 设置合适的大小
+                User.class
+            );
+
+            // 提取邮箱列表
+            List<String> emails = new ArrayList<>();
+            for (Hit<User> hit : response.hits().hits()) {
+                User user = hit.source();
+                if (user != null && user.getUserEmail() != null) {
+                    emails.add(user.getUserEmail());
+                }
+            }
+
+            return emails;
+            
+        } catch (Exception e) {
+            log.error("Error finding managed user emails: " + e.getMessage());
+            return new ArrayList<>();  // 返回空列表而不是 null
+        }
     }
 
 }

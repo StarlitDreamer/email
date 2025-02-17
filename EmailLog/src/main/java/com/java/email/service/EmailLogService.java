@@ -43,21 +43,21 @@ public class EmailLogService {
         return emailTaskService.findById(id);
     }
 
-    public List<UndeliveredEmail> findAllEmail(String emailTaskId) throws IOException {
-        return emailService.findAllEmail(emailTaskId);
+    public List<UndeliveredEmail> findAllEmail(String emailTaskId,Integer userRole,String userEmail,List<String> managedUserEmails) throws IOException {
+        return emailService.findAllEmail(emailTaskId, userRole, userEmail, managedUserEmails);
     }
 
     public void deleteByEmailId(String id) throws IOException {
         emailService.deleteById(id);
     }
 
-    public List<EmailTask> findByDynamicQueryEmailTask(Map<String, String> params, int page, int size) throws IOException {
-        return emailTaskService.findByDynamicQueryEmailTask(params, page, size);
+    public List<EmailTask> findByDynamicQueryEmailTask(Map<String, String> params, int page, int size,Integer userRole,String userEmail,List<String> managedUserEmails) throws IOException {
+        return emailTaskService.findByDynamicQueryEmailTask(params, page, size, userRole, userEmail, managedUserEmails);
     }
 
-    public List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException {
+    public List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size,Integer userRole,String userEmail,List<String> managedUserEmails) throws IOException {
 
-        return emailService.findByDynamicQueryEmail(params, page, size);
+        return emailService.findByDynamicQueryEmail(params, page, size, userRole, userEmail, managedUserEmails);
     }
 
     public List<UndeliveredEmail> findByDynamicQueryFailEmail(Map<String, String> params, int page, int size) throws IOException {
@@ -66,7 +66,7 @@ public class EmailLogService {
     }
 
 
-    public List<EmailTask> findByEmailTasks(Map<String, String> params) throws IOException {
-        return emailTaskService.findByEmailTasks(params);
+    public List<EmailTask> findByEmailTasks(Map<String, String> params,Integer userRole,String userEmail ,List<String> managedUserEmails) throws IOException {
+        return emailTaskService.findByEmailTasks(params, userRole, userEmail,managedUserEmails);
     }
 }

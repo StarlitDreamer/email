@@ -18,7 +18,7 @@ public class FilterEmailVo implements Serializable {
     private String receiverName;
     private String receiverEmail;
     private String receiverBirth;
-    private int receiverLevel;
+    private long receiverLevel;
     private String startDate;
     private String endDate;
     private int emailStatus;

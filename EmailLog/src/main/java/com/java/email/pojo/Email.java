@@ -26,6 +26,14 @@ public class Email implements Serializable {
     private long createdAt;          // 创建时间，秒级时间戳
     private long startDate;          // 开始时间，秒级时间戳
     private long endDate;            // 结束时间，秒级时间戳
+    /**
+     * 接受者姓名
+     */
+    private String receiverName;
+    /**
+     * 发送者姓名
+     */
+    private String senderName;
 
     // 定义索引映射
     public static TypeMapping createMapping() {
@@ -40,6 +48,8 @@ public class Email implements Serializable {
             .properties("receiverId", Property.of(p -> p.keyword(k -> k)))
             .properties("senderId", Property.of(p -> p.keyword(k -> k)))
             .properties("startDate", Property.of(p -> p.long_(l -> l)))
+                .properties("receiverName", Property.of(p -> p.keyword(t -> t)))
+                .properties("senderName", Property.of(p -> p.keyword(t -> t)))
             .build();
     }
 } 

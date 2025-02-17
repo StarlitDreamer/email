@@ -1,7 +1,12 @@
 package com.java.email.service;
 
+import com.java.email.common.Redis.RedisService;
+import com.java.email.constant.MagicMathConstData;
+import com.java.email.constant.RedisConstData;
+import com.java.email.pojo.Customer;
 import com.java.email.pojo.EmailTask;
 import com.java.email.pojo.UndeliveredEmail;
+import com.java.email.utils.JwtUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,6 +15,8 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -23,6 +30,35 @@ class EmailLogServiceTest {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private RedisService redisService;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private CustomerService customerService;
+
+    @Test
+    void tokenTest() {
+
+
+        // 2. 准备token数据
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("id","U0001");
+        claims.put("role", 2);
+        claims.put("name", "张三");
+
+        // 3. 生成token
+        String token = JwtUtil.genToken(claims);
+
+        // 4. 存储到Redis（用于token验证）
+        String redisKey = RedisConstData.USER_LOGIN_TOKEN + "U0001";
+        redisService.set(redisKey, token);
+        System.out.println("token: " + token);
+
+
+    }
     @Test
     void crudTest() throws IOException {
         // 日期格式解析器
@@ -38,17 +74,20 @@ class EmailLogServiceTest {
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(UUID.randomUUID().toString());
         emailTask.setEmailTypeId("d9e90f04-0dd1-42a6-9753-a95097e3cc86");
-        emailTask.setSubject("生日宴请，宾朋满座");
-        emailTask.setEmailContent("生日庆祝，大家一起来玩，一块刷耍！");
+        emailTask.setSubject("生sfsadffsa 起哈哈哈");
+        emailTask.setEmailContent("生日快gsaa嘎尔哥块刷耍！");
         emailTask.setTaskType(3); // 节日发送
         emailTask.setStartDate(startDate);
         emailTask.setEndDate(endDate);
         emailTask.setCreatedAt(LocalDateTime.now().atZone(ZoneId.systemDefault()).toEpochSecond());
-        emailTask.setBounceAmount(0L);
-        emailTask.setUnsubscribeAmount(2L);
-        emailTask.setReceiverId(new String[]{"zhangsan@example.com", "wangwu@example.com"});
-        emailTask.setSenderId(new String[]{"lisi@example.com"});
+        emailTask.setBounceAmount(1L);
+        emailTask.setUnsubscribeAmount(0L);
+        emailTask.setReceiverId(new String[]{"zhaoliu@example.com"});
+        emailTask.setSenderId(new String[]{"wangwu@example.com", });
         emailTask.setTemplateId(null);
+        emailTask.setSenderName(new String[]{"王五"});
+        emailTask.setReceiverName(new String[]{"赵六"});
+
 
 
         emailLogService.saveEmailTask(emailTask);
@@ -62,36 +101,36 @@ class EmailLogServiceTest {
     public void T1() throws IOException {
         // 示例用户：张三
         User user1 = new User(
-                UUID.randomUUID().toString(),   // belongUserid
+                "071f17d9-00dd-4448-8c8c-3039ab8102aa",   // belongUserid
                 "2025-01-14T10:00:00",         // createdAt
                 UUID.randomUUID().toString(),   // creatorid
-                1,                             // status
+                2,                             // status
                 "2025-01-14T12:00:00",         // updatedAt
-                "zhangsan",                    // userAccount
+                "wangwu",                    // userAccount
                 new String[]{"auth1", "auth2"},// userAuthid
-                "zhangsan@example.com",        // userEmail
+                "wangwu@example.com",        // userEmail
                 "emailcode123",                // userEmailCode
-                "U0001",   // userid
-                "张三",                         // userName
+                "U0003",   // userid
+                "王五",                         // userName
                 "5d41402abc4b2a76b9719d911017c592", // userPassword (MD5加密: "hello")
                 4                              // userRole
         );
 
         // 示例用户：李四
         User user2 = new User(
-                UUID.randomUUID().toString(),   // belongUserid
+                "071f17d9-00dd-4448-8c8c-3039ab8102aa",   // belongUserid
                 "2025-01-14T11:00:00",         // createdAt
                 UUID.randomUUID().toString(),   // creatorid
                 2,                             // status
                 "2025-01-14T13:00:00",         // updatedAt
-                "lisi",                        // userAccount
+                "zhaoliu",                        // userAccount
                 new String[]{"auth3"},         // userAuthid
-                "lisi@example.com",            // userEmail
+                "zhaoliu@example.com",            // userEmail
                 "emailcode456",                // userEmailCode
-                "U0002",   // userid
-                "李四",                         // userName
+                "U0005",   // userid
+                "赵六",                         // userName
                 "5f4dcc3b5aa765d61d8327deb882cf99", // userPassword (MD5加密: "password")
-                3                              // userRole
+                4                              // userRole
         );
         userService.saveUser(user1);
         userService.saveUser(user2);
@@ -108,15 +147,33 @@ class EmailLogServiceTest {
                 .atZone(ZoneId.systemDefault()).toEpochSecond();
         UndeliveredEmail undeliveredEmail=new UndeliveredEmail();
         undeliveredEmail.setEmailId(UUID.randomUUID().toString());
-        undeliveredEmail.setEmailTaskId("42fdbaeb-37f5-41ee-946b-becef7040fcb");
-        undeliveredEmail.setErrorCode(6);
-        undeliveredEmail.setErrorMsg("未送达");
+        undeliveredEmail.setEmailTaskId("5cc0ec87-8a9c-4529-8477-efec7b0eb9ed");
+        undeliveredEmail.setErrorCode(200);
+        undeliveredEmail.setErrorMsg("无");
 
         undeliveredEmail.setStartDate(startDate);
         undeliveredEmail.setEndDate(endDate);
-        undeliveredEmail.setSenderId(new String[]{"lisi@example.com"});
-        undeliveredEmail.setReceiverId(new String[]{"wangwu@example.com"});
-        emailLogService.saveUndeliveredEmail(undeliveredEmail);
+        undeliveredEmail.setSenderId(new String[]{"zhangsan@example.com"});
+        undeliveredEmail.setReceiverId(new String[]{"zhaoliu@example.com"});
+        undeliveredEmail.setSenderName("张三");
+        undeliveredEmail.setReceiverName("赵六");
+
+        emailService.saveEmailTask(undeliveredEmail);
+    }
+    @Test
+    public void T3() throws IOException {
+        Customer customer = new Customer();
+        customer.setBirth("2023-01-02");
+        customer.setBelongUserid(null);
+        customer.setCustomerid(UUID.randomUUID().toString());
+        customer.setCustomerName("李四");
+        customer.setCustomerLevel(3L);
+        customer.setEmails(new String[]{"wangwu@example.com"});
+        customer.setSex("男");
+        customer.setStatus(3L);
+        customerService.saveCustomer(customer);
+
+
     }
 }
 

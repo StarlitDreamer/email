@@ -2,6 +2,8 @@ package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -9,20 +11,27 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import com.java.email.pojo.EmailTask;
 import com.java.email.service.EmailTaskService;
+import com.java.email.service.UserService;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Objects;
+import java.util.Arrays;
 
+@Slf4j
 @Service
 public class EmailTaskServiceImpl implements EmailTaskService {
+    private final UserService userService;
     private final ElasticsearchClient esClient;
     private static final String INDEX_NAME = "email_task_log";
 
-    public EmailTaskServiceImpl(ElasticsearchClient esClient) {
+    public EmailTaskServiceImpl(ElasticsearchClient esClient, UserService userService) {
         this.esClient = esClient;
+        this.userService = userService;
     }
 
     // 初始化索引和映射
@@ -53,76 +62,121 @@ public class EmailTaskServiceImpl implements EmailTaskService {
     }
 
     @Override
-    public List<EmailTask> findByDynamicQueryEmailTask(Map<String, String> params, int page, int size) throws IOException {
-        SearchResponse<EmailTask> response = esClient.search(s -> {
-            s.index(INDEX_NAME);
-            s.from(page * size);
-            s.size(size);
+    public List<EmailTask> findByDynamicQueryEmailTask(Map<String, String> params, int page, int size, 
+            Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
+        try {
+            SearchResponse<EmailTask> response = esClient.search(s -> {
+                s.index(INDEX_NAME);
+                s.from(page * size);
+                s.size(size);
 
-            // 如果参数不为空，则构造查询条件
-            if (!params.isEmpty()) {
                 s.query(q -> q.bool(b -> {
-                    params.forEach((key, value) -> {
-                        if (value != null) {
-                            switch (key) {
-                                case "emailTaskId":
-                                    b.must(m -> m.term(t -> t.field("emailTaskId").value(value)));
-                                    break;
-                                case "emailTypeId": // 修正字段名
-                                    b.must(m -> m.term(t -> t.field("emailTypeId").value(value)));
-                                    break;
-                                case "subject":
-                                    b.must(m -> m.match(t -> t.field("subject").query(value)));
-                                    break;
-                                case "taskStatus":
-                                    b.must(m -> m.term(t -> t.field("taskStatus").value(value)));
-                                    break;
-                                case "taskType":
-                                    b.must(m -> m.term(t -> t.field("taskType").value(value)));
-                                    break;
-                                case "startDate":
-                                    b.must(m -> m.range(r -> r.field("startDate").gte(JsonData.of(Long.parseLong(value)))));
-                                    break;
-                                case "endDate":
-                                    b.must(m -> m.range(r -> r.field("endDate").lte(JsonData.of(Long.parseLong(value)))));
-                                    break;
-                                case "senderId": // 查询数组中是否包含指定值
-                                    b.must(m -> m.term(t -> t.field("senderId").value(value)));
-                                    break;
-                                case "receiverId": // 查询数组中是否包含指定值
-                                    b.must(m -> m.term(t -> t.field("receiverId").value(value)));
-                                    break;
-                                case "senderName":
-                                    b.must(m -> m.match(t -> t.field("senderName").query(value)));
-                                    break;
-                                case "receiverName":
-                                    b.must(m -> m.match(t -> t.field("receiverName").query(value)));
-                                    break;
-                                case "createdAt":
-                                    b.must(m -> m.match(r -> r.field("createdAt").query((FieldValue) JsonData.of(Long.parseLong(value)))));
-                                    break;
-                                default:
-                                    // 忽略未定义的查询字段
-                                    break;
-                            }
-                        }
-                    });
+
+                    // 根据用户角色添加权限过滤
+                    addRoleBasedFilter(b, userRole, userEmail, managedUserEmails);
+
+                    // 处理其他查询参数
+                    addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
+
                     return b;
                 }));
-            } else {
-                // 如果没有任何查询参数，则查询所有数据
-                s.query(q -> q.matchAll(m -> m));
-            }
 
-            return s;
-        }, EmailTask.class);
+                // 添加排序
+                s.sort(sort -> sort
+                    .field(f -> f
+                        .field("created_at")
+                        .order(SortOrder.Desc)
+                    )
+                );
 
-        // 返回查询结果，映射为 EmailTask 对象列表
-        return response.hits().hits().stream()
-                .map(Hit::source)
-                .collect(Collectors.toList());
+                return s;
+            }, EmailTask.class);
+
+            return response.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error while searching email tasks: ", e);
+            throw e;
+        }
     }
 
+    private void addRoleBasedFilter(BoolQuery.Builder b, Integer userRole, 
+            String userEmail, List<String> managedUserEmails) {
+        switch (userRole) {
+            case 2: // 大管理员，不需要额外限制
+                break;
+            case 3: // 小管理员，只能查看管理用户的任务
+                if (managedUserEmails != null && !managedUserEmails.isEmpty()) {
+                    b.must(m -> m.terms(t -> t
+                        .field("sender_id")
+                        .terms(tt -> tt.value(managedUserEmails.stream()
+                            .map(FieldValue::of)
+                            .collect(Collectors.toList())))
+                    ));
+                }
+                break;
+            case 4: // 普通用户，只能查看自己的任务
+                if (userEmail != null && !userEmail.isEmpty()) {
+                    b.must(m -> m.term(t -> t.field("sender_id").value(userEmail)));
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid user role: " + userRole);
+        }
+    }
+
+    private void addOtherQueryParams(BoolQuery.Builder b, Map<String, String> params,
+                                     Integer userRole, String userEmail, List<String> managedUserEmails) {
+        params.forEach((key, value) -> {
+            if (value != null)
+                {
+                switch (key) {
+                    case "email_task_id":
+                        b.must(m -> m.term(t -> t.field("email_task_id").value(value)));
+                        break;
+                    case "emailTypeId":
+                        b.must(m -> m.term(t -> t.field("email_type_id").value(value)));
+                        break;
+                    case "subject":
+                        b.must(m -> m.match(t -> t.field("subject.keyword").query(value)));
+                        break;
+                    case "taskType":
+                        b.must(m -> m.term(t -> t.field("task_type").value(value)));
+                        break;
+                    case "sender_id":
+                        validateSenderAccess(userRole, userEmail, managedUserEmails, value);
+                        b.must(m -> m.term(t -> t.field("sender_id").value(value)));
+                        break;
+                    case "receiver_id":
+                        b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
+                        break;
+                    case "startDate":
+                        b.must(m -> m.range(r -> r.field("start_date").gte(JsonData.of(Long.parseLong(value)))));
+                        break;
+                    case "endDate":
+                        b.must(m -> m.range(r -> r.field("end_date").lte(JsonData.of(Long.parseLong(value)))));
+                        break;
+                    case "senderName":
+                        b.must(m -> m.term(t -> t.field("sender_name").value(value)));
+                        break;
+                    case "receiver_name":
+                        b.must(m -> m.term(t -> t.field("receiver_name").value(value)));
+                        break;
+                }
+            }
+        });
+    }
+
+    private void validateSenderAccess(Integer userRole, String userEmail, 
+            List<String> managedUserEmails, String requestedSenderId) {
+        if (userRole == 4 && !userEmail.equals(requestedSenderId)) {
+            throw new IllegalArgumentException("User can only query their own tasks");
+        } else if (userRole == 3 && !managedUserEmails.contains(requestedSenderId)) {
+            throw new IllegalArgumentException("Manager can only query managed users' tasks");
+        }
+    }
 
     @Override
     public EmailTask findById(String id) throws IOException {
@@ -155,56 +209,65 @@ public class EmailTaskServiceImpl implements EmailTaskService {
     }
 
     @Override
-    public List<EmailTask> findByEmailTasks(Map<String, String> params) throws IOException {
+    public List<EmailTask> findByEmailTasks(Map<String, String> params, Integer userRole, String userEmail,List<String> managedUserEmails) throws IOException {
         SearchResponse<EmailTask> response = esClient.search(s -> {
             s.index(INDEX_NAME);
 
-            // 如果参数不为空，则构造查询条件
-            if (!params.isEmpty()) {
-                s.query(q -> q.bool(b -> {
+            s.query(q -> q.bool(b -> {
+                // 根据用户角色添加基础查询条件
+                switch (userRole) {
+                    case 2: // 大管理员可以查看所有
+                        break;
+                    case 3: // 小管理员只能查看自己管理的用户的任务
+
+                        if (!managedUserEmails.isEmpty()) {
+                            b.must(m -> m.terms(t -> t
+                                .field("sender_id")
+                                .terms(tt -> tt.value(managedUserEmails.stream()
+                                    .map(FieldValue::of)
+                                    .collect(Collectors.toList())))
+                            ));
+                        }
+                        break;
+                    case 4: // 普通用户只能查看自己的任务
+                        b.must(m -> m.term(t -> t.field("sender_id").value(userEmail)));
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Invalid user role: " + userRole);
+                }
+
+                // 处理其他查询参数
+                if (!params.isEmpty()) {
                     params.forEach((key, value) -> {
                         if (value != null) {
                             switch (key) {
-                                case "emailTaskId":
-                                    b.must(m -> m.term(t -> t.field("emailTaskId").value(value)));
+                                case "task_id":
+                                    b.must(m -> m.term(t -> t.field("email_task_id").value(value)));
                                     break;
-                                case "emailTypeId": // 修正字段名
-                                    b.must(m -> m.term(t -> t.field("emailTypeId").value(value)));
-                                    break;
-                                case "subject":
-                                    b.must(m -> m.match(t -> t.field("subject").query(value)));
-                                    break;
-                                case "taskStatus":
-                                    b.must(m -> m.term(t -> t.field("taskStatus").value(value)));
+                                case "emailTypeId":
+                                    b.must(m -> m.term(t -> t.field("email_type_id").value(value)));
                                     break;
                                 case "taskType":
-                                    b.must(m -> m.term(t -> t.field("taskType").value(value)));
+                                    b.must(m -> m.term(t -> t.field("task_type").value(value)));
                                     break;
-                                case "startDate":
-                                    b.must(m -> m.range(r -> r.field("startDate").gte(JsonData.of(Long.parseLong(value)))));
-                                    break;
-                                case "endDate":
-                                    b.must(m -> m.range(r -> r.field("endDate").lte(JsonData.of(Long.parseLong(value)))));
+                                case "subject":
+                                    b.must(m -> m.match(t -> t.field("subject.keyword").query(value)));
                                     break;
                                 default:
-                                    // 忽略未定义的查询字段
                                     break;
                             }
                         }
                     });
-                    return b;
-                }));
-            } else {
-                // 如果没有任何查询参数，则查询所有数据
-                s.query(q -> q.matchAll(m -> m));
-            }
+                }
+                return b;
+            }));
 
             return s;
         }, EmailTask.class);
+
         return response.hits().hits().stream()
                 .map(Hit::source)
                 .collect(Collectors.toList());
     }
-
 
 }

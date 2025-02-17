@@ -1,6 +1,7 @@
 package com.java.email.service;
 
 import com.java.email.pojo.Email;
+import com.java.email.pojo.EmailTask;
 import com.java.email.pojo.UndeliveredEmail;
 
 import java.io.IOException;
@@ -10,11 +11,15 @@ import java.util.Map;
 public interface EmailService {
 
 
-     List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size) throws IOException;
+     void saveEmailTask(UndeliveredEmail emailTask) throws IOException;
+
+     List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size,
+                                                    Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException;
 
      Email findById(String id) throws IOException;
 
-     List<UndeliveredEmail> findAllEmail(String emaIlTaskId) throws IOException;
+     List<UndeliveredEmail> findAllEmail(String emailTaskId, Integer userRole, String userEmail,
+             List<String> managedUserEmails) throws IOException;
 
      List<Email> findAll() throws IOException;
 

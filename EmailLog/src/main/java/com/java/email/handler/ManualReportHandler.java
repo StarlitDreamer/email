@@ -1,6 +1,7 @@
 package com.java.email.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.java.email.common.userCommon.ThreadLocalUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -12,27 +13,33 @@ import com.java.email.pojo.UndeliveredEmail;
 import com.java.email.result.Result;
 import com.java.email.service.EmailLogService;
 import com.java.email.vo.ReportVo;
+import com.java.email.service.UserService;
+
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Collections;
 
 @Slf4j
 public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final EmailLogService emailLogService;
     private final ObjectMapper objectMapper;
+    private final UserService userService;
+    private static final int MAX_PAGE_SIZE = 10000;
 
-    public ManualReportHandler(EmailLogService emailLogService) {
+    public ManualReportHandler(EmailLogService emailLogService, UserService userService) {
         this.emailLogService = emailLogService;
+        this.userService = userService;
         this.objectMapper = new ObjectMapper();
     }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) {
         QueryStringDecoder decoder = new QueryStringDecoder(request.uri());
-        if (request.method() != HttpMethod.GET || !"/api/email/manual-report".equals(decoder.path())) {
+        if (request.method() != HttpMethod.GET || !"/reportManage/checkManualReport".equals(decoder.path())) {
             ctx.fireChannelRead(request.retain());
             return;
         }
@@ -46,9 +53,30 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
     }
 
     private void handleManualReportRequest(ChannelHandlerContext ctx, QueryStringDecoder decoder) throws Exception {
+        // 获取用户信息
+        Map<String, Object> userInfo = ThreadLocalUtil.get();
+        if (userInfo == null) {
+            sendResponse(ctx, HttpResponseStatus.UNAUTHORIZED, "未登录");
+            return;
+        }
+
+        Integer userRole = (Integer) userInfo.get("role");
+        String userEmail = userService.findById(ThreadLocalUtil.getUserId()).getUserEmail() ;
+
+
+        if (userRole == null || userEmail == null) {
+            sendResponse(ctx, HttpResponseStatus.FORBIDDEN, 
+                objectMapper.writeValueAsString(Result.fail("无法获取用户信息")));
+            return;
+        }
+
+        // 获取管理的用户邮箱列表
+        List<String> managedUserEmails = userRole == 3 ? 
+            userService.findManagedUserEmails(userEmail) : Collections.emptyList();
+
         // 参数验证
-        String startTime = getRequiredParameter(decoder, "startTime");
-        String endTime = getRequiredParameter(decoder, "endTime");
+        String startTime = getRequiredParameter(decoder, "start_date");
+        String endTime = getRequiredParameter(decoder, "end_date");
         
         if (startTime == null || endTime == null) {
             sendResponse(ctx, HttpResponseStatus.BAD_REQUEST, 
@@ -62,7 +90,10 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         params.put("endDate", endTime);
 
         // 获取时间范围内的所有手动发送任务
-        List<EmailTask> emailTasks = emailLogService.findByEmailTasks(params);
+        List<EmailTask> emailTasks = emailLogService.findByDynamicQueryEmailTask(
+            params, 0, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
+        params.remove("startDate");
+        params.remove("endDate");
         
         // 汇总统计数据
         long totalEmailCount = 0;
@@ -72,10 +103,15 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
 
         // 遍历所有任务并汇总数据
         for (EmailTask emailTask : emailTasks) {
-            List<UndeliveredEmail> emailList = emailLogService.findAllEmail(emailTask.getEmailTaskId());
+            params.put("emailTaskId", emailTask.getEmailTaskId());
+            List<UndeliveredEmail> emailList = emailLogService.findByDynamicQueryEmail(
+                params, 0, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
+            params.remove("emailTaskId");
             
             totalEmailCount += emailList.size();
-            totalSendNum += emailList.stream().filter(email -> email.getErrorCode() == 5).count();
+            totalSendNum += emailList.stream()
+                    .filter(email -> email.getErrorCode() == 200L)
+                    .count();
             totalBounceAmount += emailTask.getBounceAmount();
             totalUnsubscribeAmount += emailTask.getUnsubscribeAmount();
         }

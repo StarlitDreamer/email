@@ -2,6 +2,7 @@ package com.java.email.config;
 
 import com.java.email.common.Redis.RedisService;
 import com.java.email.handler.*;
+import com.java.email.service.CustomerService;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -26,6 +27,7 @@ public class NettyServerConfig {
     private final NioEventLoopGroup workerGroup = new NioEventLoopGroup();
     private final EmailLogService emailLogService;
     private final UserService userService;
+    private final CustomerService customerService;
 
     @Value("${netty.port}")
     private int port;
@@ -33,9 +35,10 @@ public class NettyServerConfig {
     @Autowired
     private RedisService redisService;
 
-    public NettyServerConfig(EmailLogService emailLogService, UserService userService) {
+    public NettyServerConfig(EmailLogService emailLogService, UserService userService, CustomerService customerService) {
         this.emailLogService = emailLogService;
         this.userService = userService;
+        this.customerService = customerService;
         startNettyServer();
     }
     @PostConstruct
@@ -50,15 +53,16 @@ public class NettyServerConfig {
                             ch.pipeline()
                                 .addLast(new HttpServerCodec())
                                 .addLast(new HttpObjectAggregator(65536))
-                                .addLast(new EmailLogHandler(emailLogService))
-                                .addLast(new QueryLogHandler(emailLogService,userService))
-                                .addLast(new FailLogHandler(emailLogService,userService))
-                                .addLast(new ReportHandler(emailLogService))
-                                    .addLast(new ManualReportHandler(emailLogService))
-                                .addLast(new QueryOneLogHandler(emailLogService,userService))
+                                    .addLast(new TokenCheckHandler(redisService))
+                                //.addLast(new EmailLogHandler(emailLogService))
+                                //.addLast(new QueryLogHandler(emailLogService,userService))
+                               // .addLast(new FailLogHandler(emailLogService,userService))
+                                .addLast(new ReportHandler(emailLogService,userService))
+                                    .addLast(new ManualReportHandler(emailLogService,userService))
+                               // .addLast(new QueryOneLogHandler(emailLogService,userService))
                                     .addLast(new FilterEmailTaskHandler(emailLogService,userService))
-                                    .addLast(new FilterEmailHandler(emailLogService,userService))
-                                    .addLast(new TokenCheckHandler(redisService));
+                                    .addLast(new FilterEmailHandler(emailLogService,userService,customerService))
+                                    ;
 
                         }
                     })
