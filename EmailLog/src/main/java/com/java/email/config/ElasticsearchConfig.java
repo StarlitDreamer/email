@@ -29,11 +29,11 @@ public class ElasticsearchConfig {
     @Value("${elasticsearch.port}")
     private int port;
 
-    @Value("${elasticsearch.username}")
-    private String username;
-
-    @Value("${elasticsearch.password}")
-    private String password;
+//    @Value("${elasticsearch.username}")
+//    private String username;
+//
+//    @Value("${elasticsearch.password}")
+//    private String password;
 
     @Bean
     public ElasticsearchClient elasticsearchClient() {

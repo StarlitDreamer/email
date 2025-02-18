@@ -12,8 +12,6 @@ import java.util.List;
 @Document(indexName = "user")
 public class UserDocument {
     @Id
-    private String id;
-
     @Field(name = "user_id", type = FieldType.Keyword)
     private String userId;
 

@@ -49,7 +49,7 @@ public class User {
     /**
      * 用户权限ID数组
      */
-    @JsonProperty("user_authid")
+    @JsonProperty("user_auth_id")
     private String[] userAuthid;
 
     /**
@@ -87,6 +87,12 @@ public class User {
      */
     @JsonProperty("user_role")
     private Integer userRole;
+
+    /**
+     * 用户邮箱后缀
+     */
+    @JsonProperty("user_host")
+    private String userHost;
 
     // 定义索引映射
     public static TypeMapping createMapping() {

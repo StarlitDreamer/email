@@ -27,7 +27,7 @@ import java.util.Arrays;
 public class EmailTaskServiceImpl implements EmailTaskService {
     private final UserService userService;
     private final ElasticsearchClient esClient;
-    private static final String INDEX_NAME = "email_task_log";
+    private static final String INDEX_NAME = "email_task";
 
     public EmailTaskServiceImpl(ElasticsearchClient esClient, UserService userService) {
         this.esClient = esClient;
