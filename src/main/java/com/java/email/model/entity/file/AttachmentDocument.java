@@ -12,31 +12,34 @@ import java.util.List;
 @Data
 @Document(indexName = "attachment")
 public class AttachmentDocument {
-    
     @Id
+    @Field(name = "id", type = FieldType.Keyword)
+    private String id;
+
+    @Field(name = "attachment_id", type = FieldType.Keyword)
     private String attachmentId;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "attachment_url", type = FieldType.Keyword)
     private String attachmentUrl;
 
-    @Field(type = FieldType.Keyword)
-    private String attachmentSize;
+    @Field(name = "attachment_size", type = FieldType.Long)
+    private Long attachmentSize;
 
-    @Field(type = FieldType.Text, analyzer = "ik_max_word")
+    @Field(name = "attachment_name", type = FieldType.Text, analyzer = "ik_max_word")
     private String attachmentName;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "creator_id", type = FieldType.Keyword)
     private String creatorId;
 
-    @Field(type = FieldType.Keyword)
+    @Field(name = "belong_user_id", type = FieldType.Keyword)
     private List<String> belongUserId;
 
-    @Field(type = FieldType.Integer)
+    @Field(name = "status", type = FieldType.Integer)
     private Integer status;
 
-    @Field(type = FieldType.Date, format = DateFormat.basic_date_time)
-    private String createdAt;
+    @Field(name = "created_at", type = FieldType.Long)
+    private Long createdAt;
 
-    @Field(type = FieldType.Date, format = DateFormat.basic_date_time)
-    private String updatedAt;
+    @Field(name = "updated_at", type = FieldType.Long)
+    private Long updatedAt;
 } 
