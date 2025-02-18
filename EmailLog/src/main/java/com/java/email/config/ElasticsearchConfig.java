@@ -37,34 +37,19 @@ public class ElasticsearchConfig {
 
     @Bean
     public ElasticsearchClient elasticsearchClient() {
-        // 创建凭证提供者
-        final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        credentialsProvider.setCredentials(AuthScope.ANY,
-                new UsernamePasswordCredentials(username, password));
-
-        // 创建低级客户端
         RestClient restClient = RestClient.builder(
-                        new HttpHost(host, port))
-                .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder
-                        .setDefaultCredentialsProvider(credentialsProvider)
-                        .setDefaultIOReactorConfig(
-                                IOReactorConfig.custom()
-                                        .setIoThreadCount(1)
-                                        .setSoKeepAlive(true)
-                                        .build()
-                        )
-                )
-                .setRequestConfigCallback(builder ->
-                        builder.setConnectTimeout(5000)
-                                .setSocketTimeout(60000)
-                )
-                .build();
+                new HttpHost(host, port)
+        ).setRequestConfigCallback(requestConfigBuilder ->
+                requestConfigBuilder
+                        .setConnectTimeout(10000)
+                        .setSocketTimeout(60000)
+        ).build();
 
-        // 创建传输层
         ElasticsearchTransport transport = new RestClientTransport(
-                restClient, new JacksonJsonpMapper());
+                restClient,
+                new JacksonJsonpMapper()
+        );
 
-        // 创建 API 客户端
         return new ElasticsearchClient(transport);
     }
 }

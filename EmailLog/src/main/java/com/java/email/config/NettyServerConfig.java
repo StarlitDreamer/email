@@ -3,6 +3,7 @@ package com.java.email.config;
 import com.java.email.common.Redis.RedisService;
 import com.java.email.handler.*;
 import com.java.email.service.CustomerService;
+import com.java.email.service.EmailManageService;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -28,6 +29,7 @@ public class NettyServerConfig {
     private final EmailLogService emailLogService;
     private final UserService userService;
     private final CustomerService customerService;
+    private final EmailManageService emailManageService;
 
     @Value("${netty.port}")
     private int port;
@@ -35,10 +37,11 @@ public class NettyServerConfig {
     @Autowired
     private RedisService redisService;
 
-    public NettyServerConfig(EmailLogService emailLogService, UserService userService, CustomerService customerService) {
+    public NettyServerConfig(EmailLogService emailLogService, UserService userService, CustomerService customerService, EmailManageService emailManageService) {
         this.emailLogService = emailLogService;
         this.userService = userService;
         this.customerService = customerService;
+        this.emailManageService = emailManageService;
         startNettyServer();
     }
     @PostConstruct
@@ -60,7 +63,7 @@ public class NettyServerConfig {
                                 .addLast(new ReportHandler(emailLogService,userService))
                                     .addLast(new ManualReportHandler(emailLogService,userService))
                                // .addLast(new QueryOneLogHandler(emailLogService,userService))
-                                    .addLast(new FilterEmailTaskHandler(emailLogService,userService))
+                                    .addLast(new FilterEmailTaskHandler(emailLogService,userService,emailManageService))
                                     .addLast(new FilterEmailHandler(emailLogService,userService,customerService))
                                     ;
 
