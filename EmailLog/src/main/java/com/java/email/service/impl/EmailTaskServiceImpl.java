@@ -140,7 +140,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                         b.must(m -> m.term(t -> t.field("email_type_id").value(value)));
                         break;
                     case "subject":
-                        b.must(m -> m.term(t -> t.field("subject").value(value)));
+                        b.must(m -> m.match(t -> t.field("subject").query(value)));
                         break;
                     case "taskType":
                         b.must(m -> m.term(t -> t.field("task_type").value(value)));
@@ -159,10 +159,10 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                         b.must(m -> m.range(r -> r.field("end_date").lte(JsonData.of(Long.parseLong(value)))));
                         break;
                     case "senderName":
-                        b.must(m -> m.term(t -> t.field("sender_name").value(value)));
+                        b.must(m -> m.match(t -> t.field("sender_name").query(value)));
                         break;
                     case "receiver_name":
-                        b.must(m -> m.term(t -> t.field("receiver_name").value(value)));
+                        b.must(m -> m.match(t -> t.field("receiver_name").query(value)));
                         break;
                 }
             }
@@ -251,7 +251,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                                     b.must(m -> m.term(t -> t.field("task_type").value(value)));
                                     break;
                                 case "subject":
-                                    b.must(m -> m.match(t -> t.field("subject.keyword").query(value)));
+                                    b.must(m -> m.match(t -> t.field("subject").query(value)));
                                     break;
                                 default:
                                     break;

@@ -7,8 +7,6 @@ import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.java.email.pojo.Customer;
-import com.java.email.pojo.Email;
-import com.java.email.pojo.EmailTask;
 import com.java.email.service.CustomerService;
 import org.springframework.stereotype.Service;
 import java.io.IOException;

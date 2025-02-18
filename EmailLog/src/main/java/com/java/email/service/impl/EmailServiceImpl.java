@@ -162,7 +162,7 @@ public class EmailServiceImpl implements EmailService {
             if (value != null && !value.isEmpty() && 
                 !Arrays.asList("error_code", "customer_level", "birth").contains(key)) {
                 switch (key) {
-                    case "email_id":
+                    case "emailId":
                         b.must(m -> m.term(t -> t.field("email_id").value(value)));
                         break;
                     case "emailTaskId":
@@ -176,10 +176,10 @@ public class EmailServiceImpl implements EmailService {
                             b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
                             break;
                     case "senderName":
-                        b.must(m -> m.term(t -> t.field("sender_name.keyword").value(value)));
+                        b.must(m -> m.match(t -> t.field("sender_name").query(value)));
                         break;
                         case "receiverName":
-                            b.must(m -> m.term(t -> t.field("receiver_name.keyword").value(value)));
+                            b.must(m -> m.match(t -> t.field("receiver_name").query(value)));
                             break;
                     case "startDate":
                         b.must(m -> m.range(r -> r.field("start_date").gte(JsonData.of(Long.parseLong(value)))));

@@ -80,9 +80,9 @@ public class UserServiceImpl implements UserService {
         try {
             // 构建精确匹配查询
             Query query = new Query.Builder()
-                .match(t -> t
+                .term(t -> t
                     .field("user_email")
-                    .query(email)
+                    .value(email)
                 )
                 .build();
 
