@@ -32,7 +32,7 @@ public class EmailServiceImpl implements EmailService {
     private final ElasticsearchClient esClient;
     private final UserService userService;
     private final CustomerService customerService;
-    private static final String INDEX_NAME = "undelivered_email";
+    private static final String INDEX_NAME = "email_details";
 
     public EmailServiceImpl(ElasticsearchClient esClient, UserService userService, CustomerService customerService) {
         this.esClient = esClient;
@@ -240,7 +240,7 @@ public class EmailServiceImpl implements EmailService {
 
                 // 添加emailTaskId过滤
                 if (emailTaskId != null) {
-                    b.must(m -> m.term(t -> t.field("emailTaskId.keyword").value(emailTaskId)));
+                    b.must(m -> m.term(t -> t.field("emailTaskId").value(emailTaskId)));
                 }
                 
                 return b;

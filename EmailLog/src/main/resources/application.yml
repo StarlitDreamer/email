@@ -11,3 +11,9 @@ spring:
     uris: http://localhost:9200
     connection-timeout: 5000
     socket-timeout: 5000
+
+elasticsearch:
+  host: localhost
+  port: 9200
+  username: elastic  # ES 用户名
+  password:   # ES 密码

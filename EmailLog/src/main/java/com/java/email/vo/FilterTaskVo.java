@@ -17,8 +17,8 @@ public class FilterTaskVo implements Serializable {
     private String subject;
     private String senderName;
     private String senderEmail;
-    private int taskStatus;
-    private int operateStatus;
+    private long taskStatus;
+    private long operateStatus;
     private String startDate;
     private String endDate;
     private int page;

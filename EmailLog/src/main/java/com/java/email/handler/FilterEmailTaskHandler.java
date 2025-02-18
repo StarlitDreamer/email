@@ -2,6 +2,8 @@ package com.java.email.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.email.result.Result;
+import com.java.email.service.EmailManageService;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -14,6 +16,7 @@ import com.java.email.service.EmailLogService;
 import com.java.email.service.UserService;
 import com.java.email.vo.FilterTaskVo;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -32,10 +35,11 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
     private final EmailLogService emailLogService;
     private final UserService userService;
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    public FilterEmailTaskHandler(EmailLogService emailLogService, UserService userService) {
+    private final EmailManageService emailManageService;
+    public FilterEmailTaskHandler(EmailLogService emailLogService, UserService userService, EmailManageService emailManageService) {
         this.emailLogService = emailLogService;
         this.userService = userService;
+        this.emailManageService = emailManageService;
     }
 
     @Override
@@ -72,7 +76,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                     case 2: // 大管理员，不需要额外限制
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
-                        managedUserEmails = userService.findManagedUserEmails(userEmail);
+                        managedUserEmails = userService.findManagedUserEmails((String) userInfo.get("id"));
                         if (params.containsKey("senderId")) {
                             String requestedSender = params.get("senderId");
                             if (!managedUserEmails.contains(requestedSender)) {
@@ -120,6 +124,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                                 BeanUtils.copyProperties(emailTask, filterTaskVo);
                                 filterTaskVo.setStartDate(dateTimeFormatter(emailTask.getStartDate()));
                                 filterTaskVo.setEndDate(dateTimeFormatter(emailTask.getEndDate()));
+                                filterTaskVo.setTaskStatus(emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId()));
                                 filterTaskVo.setPage(page);
                                 filterTaskVo.setSize(size);
                                 if (emailTask.getSenderId() != null && emailTask.getSenderId().length > 0) {
@@ -133,7 +138,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                             .collect(Collectors.toList());
 
                     // 返回结果
-                    String responseContent = objectMapper.writeValueAsString(emailFilterTaskVoList);
+                    String responseContent = objectMapper.writeValueAsString(Result.ok(emailFilterTaskVoList));
                     sendResponse(ctx, HttpResponseStatus.OK, responseContent);
 
                 } catch (IllegalArgumentException e) {

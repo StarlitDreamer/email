@@ -3,6 +3,7 @@ package com.java.email.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.pojo.Customer;
+import com.java.email.result.Result;
 import com.java.email.service.CustomerService;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -156,6 +157,7 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
+                                emailVo.setEmailStatus(email.getErrorCode());
                                 emailVo.setStartDate(dateTimeFormatter(email.getStartDate()));
                                 emailVo.setEndDate(dateTimeFormatter(email.getEndDate()));
                                 
@@ -193,7 +195,7 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                 });
 
                 // 返回结果
-                String responseContent = objectMapper.writeValueAsString(pagedResults);
+                String responseContent = objectMapper.writeValueAsString(Result.ok(pagedResults));
                 sendResponse(ctx, HttpResponseStatus.OK, responseContent);
             } catch (Exception e) {
                 log.error("Error processing request", e);

@@ -140,7 +140,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                         b.must(m -> m.term(t -> t.field("email_type_id").value(value)));
                         break;
                     case "subject":
-                        b.must(m -> m.match(t -> t.field("subject.keyword").query(value)));
+                        b.must(m -> m.term(t -> t.field("subject").value(value)));
                         break;
                     case "taskType":
                         b.must(m -> m.term(t -> t.field("task_type").value(value)));

@@ -72,7 +72,7 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         // 获取管理的用户邮箱列表
         List<String> managedUserEmails = userRole == 3 ? 
-            userService.findManagedUserEmails(userEmail) : Collections.emptyList();
+            userService.findManagedUserEmails((String) userInfo.get("id")) : Collections.emptyList();
 
         // 参数验证
         String emailTaskId = getRequiredParameter(decoder, "emailTaskId");
