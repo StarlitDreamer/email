@@ -45,15 +45,15 @@ class EmailLogServiceTest {
 
         // 2. 准备token数据
         Map<String, Object> claims = new HashMap<>();
-        claims.put("id","U0001");
-        claims.put("role", 2);
-        claims.put("name", "张三");
+        claims.put("id","b4699547-9403-4a1f-92ca-81fc49fda3c8");
+        claims.put("role", 3);
+        claims.put("name", "小管理");
 
         // 3. 生成token
         String token = JwtUtil.genToken(claims);
 
         // 4. 存储到Redis（用于token验证）
-        String redisKey = RedisConstData.USER_LOGIN_TOKEN + "U0001";
+        String redisKey = RedisConstData.USER_LOGIN_TOKEN + "b4699547-9403-4a1f-92ca-81fc49fda3c8";
         redisService.set(redisKey, token);
         System.out.println("token: " + token);
 
@@ -80,12 +80,12 @@ class EmailLogServiceTest {
         emailTask.setStartDate(startDate);
         emailTask.setEndDate(endDate);
         emailTask.setCreatedAt(LocalDateTime.now().atZone(ZoneId.systemDefault()).toEpochSecond());
-        emailTask.setBounceAmount(1L);
-        emailTask.setUnsubscribeAmount(0L);
+        emailTask.setBounceAmount(1);
+        emailTask.setUnsubscribeAmount(0);
         emailTask.setReceiverId(new String[]{"zhaoliu@example.com"});
-        emailTask.setSenderId(new String[]{"wangwu@example.com", });
+        emailTask.setSenderId("wangwu@example.com");
         emailTask.setTemplateId(null);
-        emailTask.setSenderName(new String[]{"王五"});
+        emailTask.setSenderName("王五");
         emailTask.setReceiverName(new String[]{"赵六"});
 
 
@@ -100,40 +100,40 @@ class EmailLogServiceTest {
     @Test
     public void T1() throws IOException {
         // 示例用户：张三
-        User user1 = new User(
-                "071f17d9-00dd-4448-8c8c-3039ab8102aa",   // belongUserid
-                "2025-01-14T10:00:00",         // createdAt
-                UUID.randomUUID().toString(),   // creatorid
-                2,                             // status
-                "2025-01-14T12:00:00",         // updatedAt
-                "wangwu",                    // userAccount
-                new String[]{"auth1", "auth2"},// userAuthid
-                "wangwu@example.com",        // userEmail
-                "emailcode123",                // userEmailCode
-                "U0003",   // userid
-                "王五",                         // userName
-                "5d41402abc4b2a76b9719d911017c592", // userPassword (MD5加密: "hello")
-                4                              // userRole
-        );
-
-        // 示例用户：李四
-        User user2 = new User(
-                "071f17d9-00dd-4448-8c8c-3039ab8102aa",   // belongUserid
-                "2025-01-14T11:00:00",         // createdAt
-                UUID.randomUUID().toString(),   // creatorid
-                2,                             // status
-                "2025-01-14T13:00:00",         // updatedAt
-                "zhaoliu",                        // userAccount
-                new String[]{"auth3"},         // userAuthid
-                "zhaoliu@example.com",            // userEmail
-                "emailcode456",                // userEmailCode
-                "U0005",   // userid
-                "赵六",                         // userName
-                "5f4dcc3b5aa765d61d8327deb882cf99", // userPassword (MD5加密: "password")
-                4                              // userRole
-        );
-        userService.saveUser(user1);
-        userService.saveUser(user2);
+//        User user1 = new User(
+//                "071f17d9-00dd-4448-8c8c-3039ab8102aa",   // belongUserid
+//                "2025-01-14T10:00:00",         // createdAt
+//                UUID.randomUUID().toString(),   // creatorid
+//                2,                             // status
+//                "2025-01-14T12:00:00",         // updatedAt
+//                "wangwu",                    // userAccount
+//                new String[]{"auth1", "auth2"},// userAuthid
+//                "wangwu@example.com",        // userEmail
+//                "emailcode123",                // userEmailCode
+//                "U0003",   // userid
+//                "王五",                         // userName
+//                "5d41402abc4b2a76b9719d911017c592", // userPassword (MD5加密: "hello")
+//                4                              // userRole
+//        );
+//
+//        // 示例用户：李四
+//        User user2 = new User(
+//                "071f17d9-00dd-4448-8c8c-3039ab8102aa",   // belongUserid
+//                "2025-01-14T11:00:00",         // createdAt
+//                UUID.randomUUID().toString(),   // creatorid
+//                2,                             // status
+//                "2025-01-14T13:00:00",         // updatedAt
+//                "zhaoliu",                        // userAccount
+//                new String[]{"auth3"},         // userAuthid
+//                "zhaoliu@example.com",            // userEmail
+//                "emailcode456",                // userEmailCode
+//                "U0005",   // userid
+//                "赵六",                         // userName
+//                "5f4dcc3b5aa765d61d8327deb882cf99", // userPassword (MD5加密: "password")
+//                4                              // userRole
+//        );
+//        userService.saveUser(user1);
+//        userService.saveUser(user2);
 
     }
     @Test
@@ -153,8 +153,8 @@ class EmailLogServiceTest {
 
         undeliveredEmail.setStartDate(startDate);
         undeliveredEmail.setEndDate(endDate);
-        undeliveredEmail.setSenderId(new String[]{"zhangsan@example.com"});
-        undeliveredEmail.setReceiverId(new String[]{"zhaoliu@example.com"});
+        undeliveredEmail.setSenderId("zhangsan@example.com");
+        undeliveredEmail.setReceiverId("zhaoliu@example.com");
         undeliveredEmail.setSenderName("张三");
         undeliveredEmail.setReceiverName("赵六");
 

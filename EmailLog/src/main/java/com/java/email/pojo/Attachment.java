@@ -2,36 +2,46 @@ package com.java.email.pojo;
 
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.mapping.TypeMapping;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Attachment {
-    private String attachmentid;     // 附件id，上传到cdn返回来的id
-    private String attachmentName;   // 附件名称
-    private String attachmentSize;   // 附件大小
-    private String attachmenturl;    // 附件url，cdn访问该文件的url
-    private String[] belongUserid;   // 所属用户id
-    private String createdAt;        // 创建日期
-    private String creatorid;        // 创建人
-    private int status;             // 分配状态 1:未分配 2:已分配
-    private String updatedAt;        // 更新日期
+    @JsonProperty("attachment_id")
+    private String attachmentId;
 
-    // 定义索引映射
-    public static TypeMapping createMapping() {
-        return new TypeMapping.Builder()
-            .properties("attachmentid", Property.of(p -> p.keyword(k -> k)))
-            .properties("attachmentName", Property.of(p -> p.text(t -> t)))
-            .properties("attachmentSize", Property.of(p -> p.keyword(k -> k)))
-            .properties("attachmenturl", Property.of(p -> p.keyword(k -> k)))
-            .properties("belongUserid", Property.of(p -> p.keyword(k -> k)))
-            .properties("createdAt", Property.of(p -> p.date(d -> d)))
-            .properties("creatorid", Property.of(p -> p.keyword(k -> k)))
-            .properties("status", Property.of(p -> p.long_(l -> l)))
-            .properties("updatedAt", Property.of(p -> p.date(d -> d)))
-            .build();
-    }
-} 
+    @JsonProperty("attachment_name")
+    private String attachmentName;
+
+    @JsonProperty("attachment_size")
+    private long attachmentSize;
+
+    @JsonProperty("attachment_url")
+    private String attachmentUrl;
+
+    @JsonProperty("belong_user_id")
+    private String[] belongUserId; // ES 不是数组
+
+    @JsonProperty("created_at")
+    private long createdAt;
+
+    @JsonProperty("creator_id")
+    private String creatorId;
+
+    @JsonProperty("status")
+    private int status; // ES 是 integer
+
+    @JsonProperty("updated_at")
+    private long updatedAt;
+}
+

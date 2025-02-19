@@ -5,6 +5,7 @@ import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.pojo.Customer;
 import com.java.email.result.Result;
 import com.java.email.service.CustomerService;
+import com.java.email.service.EmailRecipientService;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -34,14 +35,15 @@ import java.util.stream.Collectors;
 public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final EmailLogService emailLogService;
     private final UserService userService;
-    private final CustomerService customerService;
+    private final EmailRecipientService emailRecipientService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final int MAX_PAGE_SIZE = 10000;  // ES默认最大返回10000条
 
-    public FilterEmailHandler(EmailLogService emailLogService, UserService userService, CustomerService customerService) {
+    public FilterEmailHandler(EmailLogService emailLogService, UserService userService, EmailRecipientService emailRecipientService) {
         this.emailLogService = emailLogService;
         this.userService = userService;
-        this.customerService = customerService;
+
+        this.emailRecipientService = emailRecipientService;
     }
 
     @Override
@@ -78,8 +80,8 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
                          managedUserEmails = userService.findManagedUserEmails((String) userInfo.get("id"));
-                        if (params.containsKey("senderId")) {
-                            String requestedSender = params.get("senderId");
+                        if (params.containsKey("sender_id")) {
+                            String requestedSender = params.get("sender_id");
                             if (!managedUserEmails.contains(requestedSender)) {
                                 sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无权查看该用户的邮件");
                                 return;
@@ -89,7 +91,7 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                         }
                         break;
                     case 4: // 普通用户，只能查看自己的邮件
-                        params.put("senderId", userEmail);
+                        params.put("sender_id", userEmail);
                         break;
                     default:
                         sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "未知的用户角色");
@@ -133,7 +135,7 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                 List<FilterEmailVo> allEmailVos = emailTasks.stream()
                     .flatMap(emailTask -> {
                         try {
-                            params.put("emailTaskId", emailTask.getEmailTaskId());
+                            params.put("email_task_id", emailTask.getEmailTaskId());
                             List<UndeliveredEmail> logList = emailLogService.findByDynamicQueryEmail(
                                 params, 
                                 0,  // from
@@ -142,7 +144,7 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                                 userEmail, 
                                 finalManagedUserEmails
                             );
-                            params.remove("emailTaskId");
+                            params.remove("email_task_id");
                             
                             return logList.stream().map(email -> {
                                 FilterEmailVo emailVo = new FilterEmailVo();
@@ -150,28 +152,19 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                                 emailVo.setTaskType(emailTask.getSubject());
                                 emailVo.setEmailTaskId(emailTask.getEmailTaskId());
                                 BeanUtils.copyProperties(email, emailVo);
-                                Customer customer=null;
-                                try {
-                                    customer=customerService.findCustomerByEmail(email.getReceiverId()[0]);
-                                    emailVo.setReceiverLevel(customer.getCustomerLevel());
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
+                                Map<String, String> receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId());
                                 emailVo.setEmailStatus(email.getErrorCode());
                                 emailVo.setStartDate(dateTimeFormatter(email.getStartDate()));
                                 emailVo.setEndDate(dateTimeFormatter(email.getEndDate()));
+                                emailVo.setReceiverLevel(Long.parseLong(receiverInfo.get("level")));
                                 
-                                try {
-//                                 User sender = userService.findByUserEmail(email.getSenderId()[0]);
-                                    User receiver = userService.findByUserEmail(email.getReceiverId()[0]);
-                                    emailVo.setSenderEmail(email.getSenderId()[0]);
+
+//
+                                    emailVo.setSenderEmail(email.getSenderId());
                                     emailVo.setSenderName(email.getSenderName());
-                                    emailVo.setReceiverEmail(receiver.getUserEmail());
-                                    emailVo.setReceiverName(receiver.getUserName());
-                                    emailVo.setReceiverBirth(customer.getBirth());
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
+                                    emailVo.setReceiverEmail(email.getReceiverId());
+                                    emailVo.setReceiverName(email.getReceiverName());
+                                    emailVo.setReceiverBirth(receiverInfo.get("birth"));
                                 return emailVo;
                             });
                         } catch (IOException e) {

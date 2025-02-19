@@ -86,14 +86,14 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
 
         // 构建查询参数
         Map<String, String> params = new HashMap<>();
-        params.put("startDate", startTime);
-        params.put("endDate", endTime);
+        params.put("start_date", startTime);
+        params.put("end_date", endTime);
 
         // 获取时间范围内的所有手动发送任务
         List<EmailTask> emailTasks = emailLogService.findByDynamicQueryEmailTask(
             params, 0, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
-        params.remove("startDate");
-        params.remove("endDate");
+        params.remove("start_date");
+        params.remove("end_date");
         
         // 汇总统计数据
         long totalEmailCount = 0;

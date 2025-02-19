@@ -3,6 +3,7 @@ package com.java.email.pojo;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
 import co.elastic.clients.elasticsearch._types.mapping.TypeMapping;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -11,6 +12,7 @@ import java.io.Serializable;
  * customer 客户表
  */
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Customer implements Serializable {
     private static final long serialVersionUID = 10045L;
     /**

@@ -2,6 +2,7 @@ package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
@@ -9,6 +10,7 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import com.java.email.pojo.EmailTask;
+import com.java.email.service.EmailRecipientService;
 import lombok.extern.slf4j.Slf4j;
 import com.java.email.pojo.Email;
 import com.java.email.pojo.UndeliveredEmail;
@@ -25,19 +27,20 @@ import java.util.Objects;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Service
 public class EmailServiceImpl implements EmailService {
     private final ElasticsearchClient esClient;
-    private final UserService userService;
-    private final CustomerService customerService;
+    private final EmailRecipientService emailRecipientService;
     private static final String INDEX_NAME = "email_details";
 
-    public EmailServiceImpl(ElasticsearchClient esClient, UserService userService, CustomerService customerService) {
+    public EmailServiceImpl(ElasticsearchClient esClient, EmailRecipientService emailRecipientService) {
         this.esClient = esClient;
-        this.userService = userService;
-        this.customerService = customerService;
+        this.emailRecipientService = emailRecipientService;
     }
 
     // 初始化索引和映射
@@ -71,6 +74,10 @@ public class EmailServiceImpl implements EmailService {
     public List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size, 
             Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
         try {
+            // 先获取符合条件的收件人邮箱
+            Set<String> recipientEmails = params != null ? 
+                emailRecipientService.findMatchingRecipientEmails(params) : null;
+            
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
                 s.from(page * size);
@@ -78,7 +85,7 @@ public class EmailServiceImpl implements EmailService {
 
                 s.query(q -> q.bool(b -> {
                     // 处理邮件状态查询
-                    if (params.containsKey("error_code")) {
+                    if (params != null && params.containsKey("error_code")) {
                         String status = params.get("error_code");
                         if ("200".equals(status)) {
                             // 发送成功的邮件
@@ -90,18 +97,11 @@ public class EmailServiceImpl implements EmailService {
                         // 如果status不是200或500，忽略此条件
                     }
 
-                    // 处理客户等级和生日查询
-                    List<String> customerEmails = null;
-                    try {
-                        customerEmails = customerService.findMatchingCustomerEmails(params);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    if (!customerEmails.isEmpty()) {
-                        List<String> finalCustomerEmails = customerEmails;
+                    // 添加收件人邮箱过滤（仅当recipientEmails不为null且不为空时）
+                    if (recipientEmails != null && !recipientEmails.isEmpty()) {
                         b.must(m -> m.terms(t -> t
                             .field("receiver_id")
-                            .terms(tt -> tt.value(finalCustomerEmails.stream()
+                            .terms(tt -> tt.value(recipientEmails.stream()
                                 .map(FieldValue::of)
                                 .collect(Collectors.toList())))
                         ));
@@ -111,7 +111,9 @@ public class EmailServiceImpl implements EmailService {
                     addRoleBasedFilter(b, userRole, userEmail, managedUserEmails);
 
                     // 处理其他查询参数
-                    addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
+                    if (params != null&& !params.isEmpty()) {
+                        addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
+                    }else b.must(m -> m.matchAll(ma->ma));
 
                     return b;
                 }));
@@ -124,7 +126,8 @@ public class EmailServiceImpl implements EmailService {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            log.error("Error while searching emails: ", e);
+            log.error("Error while searching emails: params={}, userRole={}, userEmail={}", 
+                params, userRole, userEmail, e);
             throw e;
         }
     }
@@ -158,33 +161,37 @@ public class EmailServiceImpl implements EmailService {
 
     private void addOtherQueryParams(BoolQuery.Builder b, Map<String, String> params, 
             Integer userRole, String userEmail, List<String> managedUserEmails) {
+        // 如果params为空，不添加任何查询条件，返回所有结果
+        if (params == null || params.isEmpty()) {
+            return;
+        }
         params.forEach((key, value) -> {
             if (value != null && !value.isEmpty() && 
                 !Arrays.asList("error_code", "customer_level", "birth").contains(key)) {
                 switch (key) {
-                    case "emailId":
+                    case "email_id":
                         b.must(m -> m.term(t -> t.field("email_id").value(value)));
                         break;
-                    case "emailTaskId":
+                    case "email_task_id":
                         b.must(m -> m.term(t -> t.field("email_task_id").value(value)));
                         break;
-                    case "senderId":
+                    case "sender_id":
                         validateSenderAccess(userRole, userEmail, managedUserEmails, value);
                         b.must(m -> m.term(t -> t.field("sender_id").value(value)));
                         break;
-                        case "receiverId":
+                        case "receiver_id":
                             b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
                             break;
-                    case "senderName":
+                    case "sender_name":
                         b.must(m -> m.match(t -> t.field("sender_name").query(value)));
                         break;
-                        case "receiverName":
+                        case "receiver_name":
                             b.must(m -> m.match(t -> t.field("receiver_name").query(value)));
                             break;
-                    case "startDate":
+                    case "start_date":
                         b.must(m -> m.range(r -> r.field("start_date").gte(JsonData.of(Long.parseLong(value)))));
                         break;
-                    case "endDate":
+                    case "end_date":
                         b.must(m -> m.range(r -> r.field("end_date").lte(JsonData.of(Long.parseLong(value)))));
                         break;
                 }
@@ -210,67 +217,6 @@ public class EmailServiceImpl implements EmailService {
         return response.found() ? response.source() : null;
     }
 
-    @Override
-    public List<UndeliveredEmail> findAllEmail(String emailTaskId, Integer userRole, String userEmail, 
-            List<String> managedUserEmails) throws IOException {
-        SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
-            s.index(INDEX_NAME);
-            
-            s.query(q -> q.bool(b -> {
-                // 添加权限过滤
-                switch (userRole) {
-                    case 2: // 大管理员
-                        break;
-                    case 3: // 小管理员
-                        if (!managedUserEmails.isEmpty()) {
-                            b.must(m -> m.terms(t -> t
-                                .field("senderId")
-                                .terms(tt -> tt.value(managedUserEmails.stream()
-                                    .map(FieldValue::of)
-                                    .collect(Collectors.toList())))
-                            ));
-                        }
-                        break;
-                    case 4: // 普通用户
-                        b.must(m -> m.term(t -> t.field("senderId").value(userEmail)));
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Invalid user role: " + userRole);
-                }
 
-                // 添加emailTaskId过滤
-                if (emailTaskId != null) {
-                    b.must(m -> m.term(t -> t.field("emailTaskId").value(emailTaskId)));
-                }
-                
-                return b;
-            }));
-            
-            return s;
-        }, UndeliveredEmail.class);
-        
-        return response.hits().hits().stream()
-                .map(Hit::source)
-                .collect(Collectors.toList());
-    }
 
-    @Override
-    public List<Email> findAll() throws IOException {
-        SearchResponse<Email> response = esClient.search(s -> s
-                        .index(INDEX_NAME)
-                        .query(q -> q.matchAll(m -> m)),
-                Email.class
-        );
-        return response.hits().hits().stream()
-                .map(Hit::source)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public void deleteById(String id) throws IOException {
-        esClient.delete(d -> d
-                .index(INDEX_NAME)
-                .id(id)
-        );
-    }
 }

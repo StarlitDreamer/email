@@ -2,8 +2,7 @@ package com.java.email.config;
 
 import com.java.email.common.Redis.RedisService;
 import com.java.email.handler.*;
-import com.java.email.service.CustomerService;
-import com.java.email.service.EmailManageService;
+import com.java.email.service.*;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -15,8 +14,6 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
-import com.java.email.service.EmailLogService;
-import com.java.email.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +25,7 @@ public class NettyServerConfig {
     private final NioEventLoopGroup workerGroup = new NioEventLoopGroup();
     private final EmailLogService emailLogService;
     private final UserService userService;
-    private final CustomerService customerService;
+    private final EmailRecipientService emailRecipientService;
     private final EmailManageService emailManageService;
 
     @Value("${netty.port}")
@@ -37,10 +34,11 @@ public class NettyServerConfig {
     @Autowired
     private RedisService redisService;
 
-    public NettyServerConfig(EmailLogService emailLogService, UserService userService, CustomerService customerService, EmailManageService emailManageService) {
+    public NettyServerConfig(EmailLogService emailLogService, UserService userService, EmailRecipientService emailRecipientService, EmailManageService emailManageService) {
         this.emailLogService = emailLogService;
         this.userService = userService;
-        this.customerService = customerService;
+        this.emailRecipientService = emailRecipientService;
+
         this.emailManageService = emailManageService;
         startNettyServer();
     }
@@ -64,7 +62,7 @@ public class NettyServerConfig {
                                     .addLast(new ManualReportHandler(emailLogService,userService))
                                // .addLast(new QueryOneLogHandler(emailLogService,userService))
                                     .addLast(new FilterEmailTaskHandler(emailLogService,userService,emailManageService))
-                                    .addLast(new FilterEmailHandler(emailLogService,userService,customerService))
+                                    .addLast(new FilterEmailHandler(emailLogService,userService,emailRecipientService))
                                     ;
 
                         }

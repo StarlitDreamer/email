@@ -75,7 +75,7 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
             userService.findManagedUserEmails((String) userInfo.get("id")) : Collections.emptyList();
 
         // 参数验证
-        String emailTaskId = getRequiredParameter(decoder, "emailTaskId");
+        String emailTaskId = getRequiredParameter(decoder, "email_task_id");
         if (emailTaskId == null) {
             sendResponse(ctx, HttpResponseStatus.BAD_REQUEST, 
                 objectMapper.writeValueAsString(Result.fail("缺少必要的参数: emailTaskId")));
@@ -84,7 +84,7 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         // 构建查询参数
         Map<String, String> params = new HashMap<>();
-        params.put("emailTaskId", emailTaskId);
+        params.put("email_task_id", emailTaskId);
 
         // 获取邮件任务
         List<EmailTask> emailTasks = emailLogService.findByDynamicQueryEmailTask(

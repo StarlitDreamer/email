@@ -35,24 +35,24 @@ public class EmailTaskServiceImpl implements EmailTaskService {
     }
 
     // 初始化索引和映射
-    public void initEmailTaskIndex() throws IOException {
-        // 检查索引是否存在
-        boolean exists = esClient.indices().exists(e -> e
-                .index(INDEX_NAME)
-        ).value();
-
-        if (!exists) {
-            // 创建索引并设置映射
-            esClient.indices().create(c -> c
-                    .index(INDEX_NAME)
-                    .mappings(EmailTask.createMapping())  // 使用Email类中定义的映射
-            );
-        }
-    }
+//    public void initEmailTaskIndex() throws IOException {
+//        // 检查索引是否存在
+//        boolean exists = esClient.indices().exists(e -> e
+//                .index(INDEX_NAME)
+//        ).value();
+//
+//        if (!exists) {
+//            // 创建索引并设置映射
+//            esClient.indices().create(c -> c
+//                    .index(INDEX_NAME)
+//                    .mappings(EmailTask.createMapping())  // 使用Email类中定义的映射
+//            );
+//        }
+//    }
 
     @Override
     public void saveEmailTask(EmailTask emailTask) throws IOException {
-        initEmailTaskIndex();
+        //initEmailTaskIndex();
 
         IndexResponse response = esClient.index(i -> i
                 .index(INDEX_NAME)
@@ -76,18 +76,13 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                     addRoleBasedFilter(b, userRole, userEmail, managedUserEmails);
 
                     // 处理其他查询参数
-                    addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
+                    if (params != null&& !params.isEmpty()) {
+                        addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
+                    }else b.must(m -> m.matchAll(ma->ma));
+
 
                     return b;
                 }));
-
-                // 添加排序
-                s.sort(sort -> sort
-                    .field(f -> f
-                        .field("created_at")
-                        .order(SortOrder.Desc)
-                    )
-                );
 
                 return s;
             }, EmailTask.class);
@@ -136,29 +131,29 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                     case "email_task_id":
                         b.must(m -> m.term(t -> t.field("email_task_id").value(value)));
                         break;
-                    case "emailTypeId":
+                    case "email_type_id":
                         b.must(m -> m.term(t -> t.field("email_type_id").value(value)));
                         break;
                     case "subject":
                         b.must(m -> m.match(t -> t.field("subject").query(value)));
                         break;
-                    case "taskType":
+                    case "task_type":
                         b.must(m -> m.term(t -> t.field("task_type").value(value)));
                         break;
-                    case "sender_id":
+                    case "sender_email":
                         validateSenderAccess(userRole, userEmail, managedUserEmails, value);
                         b.must(m -> m.term(t -> t.field("sender_id").value(value)));
                         break;
                     case "receiver_id":
                         b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
                         break;
-                    case "startDate":
+                    case "start_date":
                         b.must(m -> m.range(r -> r.field("start_date").gte(JsonData.of(Long.parseLong(value)))));
                         break;
-                    case "endDate":
+                    case "end_date":
                         b.must(m -> m.range(r -> r.field("end_date").lte(JsonData.of(Long.parseLong(value)))));
                         break;
-                    case "senderName":
+                    case "sender_name":
                         b.must(m -> m.match(t -> t.field("sender_name").query(value)));
                         break;
                     case "receiver_name":
@@ -241,17 +236,21 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                     params.forEach((key, value) -> {
                         if (value != null) {
                             switch (key) {
-                                case "task_id":
+                                case "email_task_id":
                                     b.must(m -> m.term(t -> t.field("email_task_id").value(value)));
                                     break;
-                                case "emailTypeId":
+                                case "email_type_id":
                                     b.must(m -> m.term(t -> t.field("email_type_id").value(value)));
                                     break;
-                                case "taskType":
+                                case "task_type":
                                     b.must(m -> m.term(t -> t.field("task_type").value(value)));
                                     break;
                                 case "subject":
                                     b.must(m -> m.match(t -> t.field("subject").query(value)));
+                                    break;
+                                case "sender_id":
+                                    validateSenderAccess(userRole, userEmail, managedUserEmails, value);
+                                    b.must(m -> m.term(t -> t.field("sender_id").value(value)));
                                     break;
                                 default:
                                     break;

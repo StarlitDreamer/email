@@ -28,13 +28,13 @@ public class UndeliveredEmail {
      * 当前版本数组内只需插入当前用户的id
      */
     @JsonProperty("sender_id")
-    private String[] senderId;
+    private String senderId;
     
     /**
      * 收件人id数组
      */
     @JsonProperty("receiver_id")
-    private String[] receiverId;
+    private String receiverId;
     
     /**
      * 错误代码，status为2或3时填写

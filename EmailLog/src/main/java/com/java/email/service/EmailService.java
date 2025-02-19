@@ -18,10 +18,6 @@ public interface EmailService {
 
      Email findById(String id) throws IOException;
 
-     List<UndeliveredEmail> findAllEmail(String emailTaskId, Integer userRole, String userEmail,
-             List<String> managedUserEmails) throws IOException;
 
-     List<Email> findAll() throws IOException;
 
-     void deleteById(String id) throws IOException;
 }

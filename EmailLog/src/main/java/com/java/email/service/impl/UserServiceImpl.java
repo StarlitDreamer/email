@@ -2,10 +2,13 @@ package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import com.java.email.pojo.Customer;
+import com.java.email.pojo.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import com.java.email.pojo.User;
 import com.java.email.service.UserService;
@@ -17,6 +20,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 
 @Slf4j
 @Service
@@ -120,38 +126,72 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<String> findManagedUserEmails(String managerId) {
+    public List<String> findManagedUserEmails(String userId) {
+        Set<String> emails = new HashSet<>();  // 使用Set避免重复邮箱
+        
         try {
-            // 构建精确匹配查询
-            Query query = new Query.Builder()
-                .term(t -> t
-                    .field("belong_user_id")
-                    .value(managerId)
-                )
-                .build();
-
-            // 执行搜索
-            SearchResponse<User> response = esClient.search(s -> s
+            // 先查询用户信息获取belong_user_id
+            GetResponse<User> userResponse = esClient.get(g -> g
                 .index(INDEX_NAME)
-                .query(query)
-                .size(1000),  // 设置合适的大小
+                .id(userId),
                 User.class
             );
+            
+            if (!userResponse.found() || userResponse.source() == null) {
+                log.warn("User not found: userId={}", userId);
+                return new ArrayList<>();
+            }
+            
+            String belongUserId = userResponse.source().getBelongUserid();
+            if (belongUserId == null) {
+                log.warn("User has no belong_user_id: userId={}", userId);
+                return new ArrayList<>();
+            }
 
-            // 提取邮箱列表
-            List<String> emails = new ArrayList<>();
-            for (Hit<User> hit : response.hits().hits()) {
-                User user = hit.source();
-                if (user != null && user.getUserEmail() != null) {
-                    emails.add(user.getUserEmail());
+            // 构建精确匹配查询
+            Query query = TermQuery.of(t -> t
+                .field("belong_user_id")
+                .value(belongUserId)
+            )._toQuery();
+
+            // 查询Customer索引
+            SearchResponse<Customer> customerResponse = esClient.search(s -> s
+                .index("customer")
+                .query(query)
+                .size(1000),
+                Customer.class
+            );
+
+            // 提取Customer邮箱
+            for (Hit<Customer> hit : customerResponse.hits().hits()) {
+                Customer customer = hit.source();
+                if (customer != null && customer.getEmails() != null) {
+                    emails.addAll(Arrays.asList(customer.getEmails()));
                 }
             }
 
-            return emails;
+            // 查询Supplier索引
+            SearchResponse<Supplier> supplierResponse = esClient.search(s -> s
+                .index("supplier")
+                .query(query)
+                .size(1000),
+                Supplier.class
+            );
+
+            // 提取Supplier邮箱
+            for (Hit<Supplier> hit : supplierResponse.hits().hits()) {
+                Supplier supplier = hit.source();
+                if (supplier != null && supplier.getEmails() != null) {
+                    emails.addAll(Arrays.asList(supplier.getEmails()));
+                }
+            }
+
+            return new ArrayList<>(emails);  // 转换为List返回
             
         } catch (Exception e) {
-            log.error("Error finding managed user emails: " + e.getMessage());
-            return new ArrayList<>();  // 返回空列表而不是 null
+            log.error("Error finding managed emails from customer and supplier: userId={}, error={}", 
+                userId, e.getMessage(), e);
+            return new ArrayList<>();
         }
     }
 

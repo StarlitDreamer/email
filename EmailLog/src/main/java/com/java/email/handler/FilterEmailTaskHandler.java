@@ -77,8 +77,8 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
                         managedUserEmails = userService.findManagedUserEmails((String) userInfo.get("id"));
-                        if (params.containsKey("senderId")) {
-                            String requestedSender = params.get("senderId");
+                        if (params.containsKey("sender_id")) {
+                            String requestedSender = params.get("sender_id");
                             if (!managedUserEmails.contains(requestedSender)) {
                                 sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无权查看该用户的邮件");
                                 return;
@@ -88,7 +88,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                         }
                         break;
                     case 4: // 普通用户，只能查看自己的邮件
-                        params.put("senderId", userEmail);
+                        params.put("sender_id", userEmail);
                         break;
                     default:
                         sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "未知的用户角色");
@@ -127,10 +127,10 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                                 filterTaskVo.setTaskStatus(emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId()));
                                 filterTaskVo.setPage(page);
                                 filterTaskVo.setSize(size);
-                                if (emailTask.getSenderId() != null && emailTask.getSenderId().length > 0) {
+                                if (emailTask.getSenderId() != null ) {
 
-                                        filterTaskVo.setSenderName(emailTask.getSenderName()[0]);
-                                        filterTaskVo.setSenderEmail(emailTask.getSenderId()[0]);
+                                        filterTaskVo.setSenderName(emailTask.getSenderName());
+                                        filterTaskVo.setSenderEmail(emailTask.getSenderId());
 
                                 }
                                 return filterTaskVo;
