@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.result.Result;
 import com.java.email.service.EmailManageService;
+import com.java.email.vo.EmailTaskVo;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -114,8 +115,10 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
 
                 try {
                     // 使用新的查询方法
-                    List<EmailTask> emailTaskList = emailLogService.findByDynamicQueryEmailTask(
+                    EmailTaskVo emailTaskVo = emailLogService.findByDynamicQueryEmailTask(
                             params, page, size, userRole, userEmail, managedUserEmails);
+                    List<EmailTask> emailTaskList =  emailTaskVo.getEmailTask();
+
 
                     // 转换为VO对象
                     List<FilterTaskVo> emailFilterTaskVoList = emailTaskList.stream()
@@ -127,6 +130,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                                 filterTaskVo.setTaskStatus(emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId()));
                                 filterTaskVo.setPage(page);
                                 filterTaskVo.setSize(size);
+                                filterTaskVo.setTotal(emailTaskVo.getTotal());
                                 if (emailTask.getSenderId() != null ) {
 
                                         filterTaskVo.setSenderName(emailTask.getSenderName());

@@ -23,5 +23,6 @@ public class FilterTaskVo implements Serializable {
     private String endDate;
     private int page;
     private int size;
+    private long total;
 
 }

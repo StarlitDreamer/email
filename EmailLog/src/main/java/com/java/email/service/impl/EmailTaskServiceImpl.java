@@ -12,6 +12,7 @@ import co.elastic.clients.json.JsonData;
 import com.java.email.pojo.EmailTask;
 import com.java.email.service.EmailTaskService;
 import com.java.email.service.UserService;
+import com.java.email.vo.EmailTaskVo;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
@@ -62,12 +63,12 @@ public class EmailTaskServiceImpl implements EmailTaskService {
     }
 
     @Override
-    public List<EmailTask> findByDynamicQueryEmailTask(Map<String, String> params, int page, int size, 
-            Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
+    public EmailTaskVo findByDynamicQueryEmailTask(Map<String, String> params, int page, int size,
+                                                   Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
         try {
             SearchResponse<EmailTask> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
-                s.from(page * size);
+                s.from((page - 1) * size);
                 s.size(size);
 
                 s.query(q -> q.bool(b -> {
@@ -78,7 +79,9 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                     // 处理其他查询参数
                     if (params != null&& !params.isEmpty()) {
                         addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
-                    }else b.must(m -> m.matchAll(ma->ma));
+                    }else {
+                        b.must(m -> m.matchAll(ma->ma));
+                    }
 
 
                     return b;
@@ -86,11 +89,14 @@ public class EmailTaskServiceImpl implements EmailTaskService {
 
                 return s;
             }, EmailTask.class);
-
-            return response.hits().hits().stream()
+            long totalHits = response.hits().total().value();  // 这个是总数，不受分页影响
+            EmailTaskVo emailTaskVo = new EmailTaskVo();
+            emailTaskVo.setTotal(totalHits);
+            emailTaskVo.setEmailTask(response.hits().hits().stream()
                     .map(Hit::source)
                     .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
+            return emailTaskVo;
         } catch (Exception e) {
             log.error("Error while searching email tasks: ", e);
             throw e;

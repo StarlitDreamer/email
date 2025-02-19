@@ -3,6 +3,7 @@ package com.java.email.service;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import com.java.email.pojo.EmailTask;
 import com.java.email.pojo.UndeliveredEmail;
+import com.java.email.vo.EmailTaskVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -36,7 +37,7 @@ public class EmailLogService {
 
 
 
-    public List<EmailTask> findByDynamicQueryEmailTask(Map<String, String> params, int page, int size,Integer userRole,String userEmail,List<String> managedUserEmails) throws IOException {
+    public EmailTaskVo findByDynamicQueryEmailTask(Map<String, String> params, int page, int size, Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
         return emailTaskService.findByDynamicQueryEmailTask(params, page, size, userRole, userEmail, managedUserEmails);
     }
 

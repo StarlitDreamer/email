@@ -2,6 +2,7 @@ package com.java.email.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.email.vo.EmailTaskVo;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -90,11 +91,11 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         params.put("end_date", endTime);
 
         // 获取时间范围内的所有手动发送任务
-        List<EmailTask> emailTasks = emailLogService.findByDynamicQueryEmailTask(
+        EmailTaskVo emailTaskVo = emailLogService.findByDynamicQueryEmailTask(
             params, 0, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
         params.remove("start_date");
         params.remove("end_date");
-        
+        List<EmailTask> emailTasks = emailTaskVo.getEmailTask();
         // 汇总统计数据
         long totalEmailCount = 0;
         long totalSendNum = 0;

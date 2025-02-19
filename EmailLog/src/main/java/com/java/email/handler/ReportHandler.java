@@ -2,6 +2,7 @@ package com.java.email.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.email.vo.EmailTaskVo;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -87,9 +88,10 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         params.put("email_task_id", emailTaskId);
 
         // 获取邮件任务
-        List<EmailTask> emailTasks = emailLogService.findByDynamicQueryEmailTask(
+        EmailTaskVo emailTaskVo = emailLogService.findByDynamicQueryEmailTask(
             params, 0, 1, userRole, userEmail, managedUserEmails);
-        
+        List<EmailTask> emailTasks = emailTaskVo.getEmailTask();
+
         if (emailTasks.isEmpty()) {
             sendResponse(ctx, HttpResponseStatus.NOT_FOUND, 
                 objectMapper.writeValueAsString(Result.fail("未找到指定的邮件任务")));

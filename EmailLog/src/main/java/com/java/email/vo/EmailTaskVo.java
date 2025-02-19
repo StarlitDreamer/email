@@ -1,9 +1,11 @@
 package com.java.email.vo;
 
+import com.java.email.pojo.EmailTask;
 import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -13,12 +15,6 @@ import java.util.UUID;
 public class EmailTaskVo implements Serializable {
     @Serial
     private static final long serialVersionUID = 5012L;
-
-    private String emailTaskId;
-    private String subject;
-    private int taskType;
-    private String emailTypeId;
-    private String senderName;
-    private int taskStatus;
-    private String createdAt;
+    private List<EmailTask> emailTask;
+    private long total;
 }
