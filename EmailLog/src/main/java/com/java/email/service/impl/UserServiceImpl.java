@@ -131,27 +131,27 @@ public class UserServiceImpl implements UserService {
         
         try {
             // 先查询用户信息获取belong_user_id
-            GetResponse<User> userResponse = esClient.get(g -> g
-                .index(INDEX_NAME)
-                .id(userId),
-                User.class
-            );
-            
-            if (!userResponse.found() || userResponse.source() == null) {
-                log.warn("User not found: userId={}", userId);
-                return new ArrayList<>();
-            }
-            
-            String belongUserId = userResponse.source().getBelongUserid();
-            if (belongUserId == null) {
-                log.warn("User has no belong_user_id: userId={}", userId);
-                return new ArrayList<>();
-            }
+//            GetResponse<User> userResponse = esClient.get(g -> g
+//                .index(INDEX_NAME)
+//                .id(userId),
+//                User.class
+//            );
+//
+//            if (!userResponse.found() || userResponse.source() == null) {
+//                log.warn("User not found: userId={}", userId);
+//                return new ArrayList<>();
+//            }
+//
+//            String belongUserId = userResponse.source().getBelongUserid();
+//            if (belongUserId == null) {
+//                log.warn("User has no belong_user_id: userId={}", userId);
+//                return new ArrayList<>();
+//            }
 
             // 构建精确匹配查询
             Query query = TermQuery.of(t -> t
                 .field("belong_user_id")
-                .value(belongUserId)
+                .value(userId)
             )._toQuery();
 
             // 查询Customer索引
