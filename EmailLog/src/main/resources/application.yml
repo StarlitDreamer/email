@@ -10,11 +10,11 @@ spring:
     uris: http://112.35.176.43:9201
     connection-timeout: 5000
     socket-timeout: 5000
-#  data:
-#    redis:
-#      host: 112.35.176.43
-#      port: 9500
-#      database: 0
+  data:
+    redis:
+      host: 112.35.176.43
+      port: 9500
+      database: 0
 elasticsearch:
   host: 112.35.176.43
   port: 9201
