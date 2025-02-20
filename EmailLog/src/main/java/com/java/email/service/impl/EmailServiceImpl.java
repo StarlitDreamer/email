@@ -78,7 +78,8 @@ public class EmailServiceImpl implements EmailService {
             // 先获取符合条件的收件人邮箱
             Set<String> recipientEmails = params != null ? 
                 emailRecipientService.findMatchingRecipientEmails(params) : null;
-            
+
+
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
                 s.from((page-1) * size);
@@ -118,6 +119,14 @@ public class EmailServiceImpl implements EmailService {
 
                     return b;
                 }));
+
+                // 添加默认排序
+                s.sort(sort -> sort
+                    .field(f -> f
+                        .field("start_date")
+                        .order(SortOrder.Desc)
+                    )
+                );
 
                 return s;
             }, UndeliveredEmail.class);
@@ -181,11 +190,11 @@ public class EmailServiceImpl implements EmailService {
                     case "email_task_id":
                         b.must(m -> m.term(t -> t.field("email_task_id").value(value)));
                         break;
-                    case "sender_id":
+                    case "sender_email":
                         validateSenderAccess(userRole, userEmail, managedUserEmails, value);
                         b.must(m -> m.term(t -> t.field("sender_id").value(value)));
                         break;
-                        case "receiver_id":
+                        case "receiver_email":
                             b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
                             break;
                     case "sender_name":

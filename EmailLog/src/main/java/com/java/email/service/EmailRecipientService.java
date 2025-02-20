@@ -14,6 +14,8 @@ public interface EmailRecipientService {
      */
     Map<String, String> getRecipientDetail(String email);
 
+    Map<String, String> getRecipientDetail(String email,String level);
+
     /**
      * 从Customer和Supplier索引中查找符合条件的收件人邮箱
      */

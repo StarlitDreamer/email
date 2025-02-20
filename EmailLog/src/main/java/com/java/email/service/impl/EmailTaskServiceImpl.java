@@ -149,7 +149,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                         validateSenderAccess(userRole, userEmail, managedUserEmails, value);
                         b.must(m -> m.term(t -> t.field("sender_id").value(value)));
                         break;
-                    case "receiver_id":
+                    case "receiver_email":
                         b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
                         break;
                     case "start_date":
