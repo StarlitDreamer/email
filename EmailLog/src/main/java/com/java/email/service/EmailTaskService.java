@@ -19,5 +19,5 @@ public interface EmailTaskService {
      void deleteById(String id) throws IOException;
 
 
-     List<EmailTask> findByEmailTasks(Map<String, String> params, Integer userRole, String userEmail,List<String> managedUserEmails) throws IOException;
+     EmailTask findByEmailTasks(Map<String, String> params, Integer userRole, String userEmail,List<String> managedUserEmails) throws IOException;
 }

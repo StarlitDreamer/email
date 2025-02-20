@@ -3,6 +3,7 @@ package com.java.email.handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.vo.EmailTaskVo;
+import com.java.email.vo.EmailVo;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -89,7 +90,7 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         // 获取邮件任务
         EmailTaskVo emailTaskVo = emailLogService.findByDynamicQueryEmailTask(
-            params, 0, 1, userRole, userEmail, managedUserEmails);
+            params, 1, 1, userRole, userEmail, managedUserEmails);
         List<EmailTask> emailTasks = emailTaskVo.getEmailTask();
 
         if (emailTasks.isEmpty()) {
@@ -100,9 +101,10 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
 
         EmailTask emailTask = emailTasks.get(0);
 
+        EmailVo emailVo=emailLogService.findByDynamicQueryEmail(
+                params, 1, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
         // 获取任务相关的所有邮件
-        List<UndeliveredEmail> emailList = emailLogService.findByDynamicQueryEmail(
-            params, 0, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
+        List<UndeliveredEmail> emailList = emailVo.getEmailList();
 
         // 统计数据
         long totalEmailCount = emailList.size();

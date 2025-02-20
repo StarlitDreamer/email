@@ -12,17 +12,15 @@ public class FilterTaskVo implements Serializable {
     @Serial
     private static final long serialVersionUID = 5052L;
 
-    private String emailTaskId;
+    private String task_id;
     private int taskType;
     private String subject;
-    private String senderName;
-    private String senderEmail;
-    private long taskStatus;
-    private long operateStatus;
-    private String startDate;
-    private String endDate;
-    private int page;
-    private int size;
-    private long total;
+    private String sender_name;
+    private String sender_email;
+    private String email_type_name;
+    private long task_status;
+    private String start_date;
+    private String end_date;
+
 
 }

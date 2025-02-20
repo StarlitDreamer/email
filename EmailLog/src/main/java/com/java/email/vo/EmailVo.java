@@ -1,10 +1,13 @@
 package com.java.email.vo;
 
 import co.elastic.clients.elasticsearch.ilm.PutLifecycleRequest;
+import com.java.email.pojo.UndeliveredEmail;
 import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
+
 /**
  * @author EvoltoStar
  */
@@ -13,17 +16,6 @@ public class EmailVo implements Serializable {
     @Serial
     private static final long serialVersionUID = 5022L;
 
-    private String emailId;
-    private String emailTaskId;
-    private String subject;
-    private String taskType;
-    private String senderName;
-    private String senderEmail;
-    private String receiverName;
-    private String receiverEmail;
-    private String level;
-    private String startDate;
-    private String endDate;
-    private Integer errorCode;
-    private String errorMsg;
+    private List<UndeliveredEmail> emailList;
+    private long total;
 }

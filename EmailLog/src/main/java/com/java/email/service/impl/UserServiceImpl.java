@@ -130,29 +130,34 @@ public class UserServiceImpl implements UserService {
         Set<String> emails = new HashSet<>();  // 使用Set避免重复邮箱
         
         try {
-            // 先查询用户信息获取belong_user_id
-//            GetResponse<User> userResponse = esClient.get(g -> g
-//                .index(INDEX_NAME)
-//                .id(userId),
-//                User.class
-//            );
-//
-//            if (!userResponse.found() || userResponse.source() == null) {
-//                log.warn("User not found: userId={}", userId);
-//                return new ArrayList<>();
-//            }
-//
-//            String belongUserId = userResponse.source().getBelongUserid();
-//            if (belongUserId == null) {
-//                log.warn("User has no belong_user_id: userId={}", userId);
-//                return new ArrayList<>();
-//            }
+
+            GetResponse<User> userResponse = esClient.get(g -> g
+                .index(INDEX_NAME)
+                .id(userId),
+                User.class
+            );
+
+            if (!userResponse.found() || userResponse.source() == null) {
+                log.warn("User not found: userId={}", userId);
+                return new ArrayList<>();
+            }
+
+            String email = userResponse.source().getUserEmail();
+
 
             // 构建精确匹配查询
             Query query = TermQuery.of(t -> t
                 .field("belong_user_id")
                 .value(userId)
             )._toQuery();
+
+            //查询User索引
+            SearchResponse<User> userResponse2 = esClient.search(s -> s
+                .index(INDEX_NAME)
+                .query(query)
+                .size(1000),
+                User.class
+            );
 
             // 查询Customer索引
             SearchResponse<Customer> customerResponse = esClient.search(s -> s
@@ -161,6 +166,14 @@ public class UserServiceImpl implements UserService {
                 .size(1000),
                 Customer.class
             );
+
+            // 提取User邮箱
+            for (Hit<User> hit : userResponse2.hits().hits()) {
+                User user = hit.source();
+                if (user != null && user.getUserEmail() != null) {
+                    emails.add(user.getUserEmail());
+                }
+            }
 
             // 提取Customer邮箱
             for (Hit<Customer> hit : customerResponse.hits().hits()) {
@@ -185,6 +198,7 @@ public class UserServiceImpl implements UserService {
                     emails.addAll(Arrays.asList(supplier.getEmails()));
                 }
             }
+            emails.add(email);
 
             return new ArrayList<>(emails);  // 转换为List返回
             

@@ -25,6 +25,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     private final ElasticsearchClient esClient;
     private static final String CUSTOMER_INDEX = "customer";
     private static final String SUPPLIER_INDEX = "supplier";
+    private static final String USER_INDEX = "user";
 
     @Autowired
     public EmailRecipientServiceImpl(ElasticsearchClient esClient) {
@@ -36,6 +37,8 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
      * @param email 邮箱
      * @return Map包含用户类型和用户信息
      */
+
+    @Override
     public Map<String, String> getRecipientDetail(String email) {
         try {
             Map<String, String> result = new HashMap<>();
@@ -99,6 +102,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     /**
      * 从Customer和Supplier索引中查找符合条件的收件人邮箱
      */
+    @Override
     public Set<String> findMatchingRecipientEmails(Map<String, String> params) {
         Set<String> emails = new HashSet<>();
         try {

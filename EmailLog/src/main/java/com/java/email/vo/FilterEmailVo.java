@@ -13,15 +13,15 @@ public class FilterEmailVo implements Serializable {
     private String emailTaskId;
     private String subject;
     private String taskType;
-    private String senderName;
-    private String senderEmail;
-    private String receiverName;
-    private String receiverEmail;
-    private String receiverBirth;
-    private long receiverLevel;
-    private String startDate;
-    private String endDate;
-    private int emailStatus;
-    private int page;
-    private int size;
+    private String sender_name;
+    private String sender_email;
+    private String receiver_name;
+    private String receiver_email;
+    private String receiver_birth;
+    private long receiver_level;
+    private String start_date;
+    private String end_date;
+    private int email_status;
+    private String error_msg;
+
 }

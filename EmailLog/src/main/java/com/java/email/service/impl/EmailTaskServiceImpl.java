@@ -26,13 +26,12 @@ import java.util.Arrays;
 @Slf4j
 @Service
 public class EmailTaskServiceImpl implements EmailTaskService {
-    private final UserService userService;
     private final ElasticsearchClient esClient;
     private static final String INDEX_NAME = "email_task";
 
-    public EmailTaskServiceImpl(ElasticsearchClient esClient, UserService userService) {
+    public EmailTaskServiceImpl(ElasticsearchClient esClient) {
         this.esClient = esClient;
-        this.userService = userService;
+
     }
 
     // 初始化索引和映射
@@ -210,7 +209,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
     }
 
     @Override
-    public List<EmailTask> findByEmailTasks(Map<String, String> params, Integer userRole, String userEmail,List<String> managedUserEmails) throws IOException {
+    public EmailTask findByEmailTasks(Map<String, String> params, Integer userRole, String userEmail,List<String> managedUserEmails) throws IOException {
         SearchResponse<EmailTask> response = esClient.search(s -> {
             s.index(INDEX_NAME);
 
@@ -270,9 +269,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
             return s;
         }, EmailTask.class);
 
-        return response.hits().hits().stream()
-                .map(Hit::source)
-                .collect(Collectors.toList());
+        return response.hits().hits().get(0).source();
     }
 
 }

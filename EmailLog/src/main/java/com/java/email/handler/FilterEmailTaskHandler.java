@@ -5,6 +5,7 @@ import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.result.Result;
 import com.java.email.service.EmailManageService;
 import com.java.email.vo.EmailTaskVo;
+import com.java.email.vo.ResultEmailTaskVo;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -84,8 +85,6 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                                 sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无权查看该用户的邮件");
                                 return;
                             }
-                        } else {
-                            params.put("senderIds", String.join(",", managedUserEmails));
                         }
                         break;
                     case 4: // 普通用户，只能查看自己的邮件
@@ -97,7 +96,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                 }
 
                 // 获取分页参数
-                int page = Integer.parseInt(params.getOrDefault("page_num", "0"));
+                int page = Integer.parseInt(params.getOrDefault("page_num", "1"));
                 int size = Integer.parseInt(params.getOrDefault("page_size", "5"));
 
 //                // 处理发件人名称查询
@@ -125,24 +124,35 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                             .map(emailTask -> {
                                 FilterTaskVo filterTaskVo = new FilterTaskVo();
                                 BeanUtils.copyProperties(emailTask, filterTaskVo);
-                                filterTaskVo.setStartDate(dateTimeFormatter(emailTask.getStartDate()));
-                                filterTaskVo.setEndDate(dateTimeFormatter(emailTask.getEndDate()));
-                                filterTaskVo.setTaskStatus(emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId()));
-                                filterTaskVo.setPage(page);
-                                filterTaskVo.setSize(size);
-                                filterTaskVo.setTotal(emailTaskVo.getTotal());
+                                filterTaskVo.setTask_id(emailTask.getEmailTaskId());
+                                filterTaskVo.setStart_date(dateTimeFormatter(emailTask.getStartDate()));
+                                filterTaskVo.setEnd_date(dateTimeFormatter(emailTask.getEndDate()));
+
+                                filterTaskVo.setTask_status(emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId()));
+
+                                try {
+                                    filterTaskVo.setEmail_type_name(emailLogService.findByEmailTypeName(emailTask.getEmailTypeId()));
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
                                 if (emailTask.getSenderId() != null ) {
 
-                                        filterTaskVo.setSenderName(emailTask.getSenderName());
-                                        filterTaskVo.setSenderEmail(emailTask.getSenderId());
+                                        filterTaskVo.setSender_name(emailTask.getSenderName());
+                                        filterTaskVo.setSender_email(emailTask.getSenderId());
 
                                 }
                                 return filterTaskVo;
                             })
                             .collect(Collectors.toList());
 
+                    ResultEmailTaskVo resultEmailTaskVo = new ResultEmailTaskVo();
+                    resultEmailTaskVo.setTask_info(emailFilterTaskVoList);
+                    resultEmailTaskVo.setPage_num(page);
+                    resultEmailTaskVo.setPage_size(size);
+                    resultEmailTaskVo.setTotal_items(emailTaskVo.getTotal());
+
                     // 返回结果
-                    String responseContent = objectMapper.writeValueAsString(Result.ok(emailFilterTaskVoList));
+                    String responseContent = objectMapper.writeValueAsString(Result.ok(resultEmailTaskVo));
                     sendResponse(ctx, HttpResponseStatus.OK, responseContent);
 
                 } catch (IllegalArgumentException e) {

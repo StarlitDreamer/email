@@ -11,6 +11,7 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import com.java.email.pojo.EmailTask;
 import com.java.email.service.EmailRecipientService;
+import com.java.email.vo.EmailVo;
 import lombok.extern.slf4j.Slf4j;
 import com.java.email.pojo.Email;
 import com.java.email.pojo.UndeliveredEmail;
@@ -71,7 +72,7 @@ public class EmailServiceImpl implements EmailService {
 
 
     @Override
-    public List<UndeliveredEmail> findByDynamicQueryEmail(Map<String, String> params, int page, int size, 
+    public EmailVo findByDynamicQueryEmail(Map<String, String> params, int page, int size,
             Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
         try {
             // 先获取符合条件的收件人邮箱
@@ -80,7 +81,7 @@ public class EmailServiceImpl implements EmailService {
             
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
-                s.from(page * size);
+                s.from((page-1) * size);
                 s.size(size);
 
                 s.query(q -> q.bool(b -> {
@@ -120,11 +121,16 @@ public class EmailServiceImpl implements EmailService {
 
                 return s;
             }, UndeliveredEmail.class);
-
-            return response.hits().hits().stream()
+            assert response.hits().total() != null;
+            long totalHits = response.hits().total().value();
+            EmailVo emailVo = new EmailVo();
+            emailVo.setEmailList(response.hits().hits().stream()
                     .map(Hit::source)
                     .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList()));
+            emailVo.setTotal(totalHits);
+
+            return emailVo;
         } catch (Exception e) {
             log.error("Error while searching emails: params={}, userRole={}, userEmail={}", 
                 params, userRole, userEmail, e);

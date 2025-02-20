@@ -2,7 +2,9 @@ package com.java.email.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.email.utils.HttpUtil;
 import com.java.email.vo.EmailTaskVo;
+import com.java.email.vo.EmailVo;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -92,7 +94,7 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
 
         // 获取时间范围内的所有手动发送任务
         EmailTaskVo emailTaskVo = emailLogService.findByDynamicQueryEmailTask(
-            params, 0, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
+            params, 1, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
         params.remove("start_date");
         params.remove("end_date");
         List<EmailTask> emailTasks = emailTaskVo.getEmailTask();
@@ -105,8 +107,9 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         // 遍历所有任务并汇总数据
         for (EmailTask emailTask : emailTasks) {
             params.put("emailTaskId", emailTask.getEmailTaskId());
-            List<UndeliveredEmail> emailList = emailLogService.findByDynamicQueryEmail(
-                params, 0, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
+            EmailVo emailVo=emailLogService.findByDynamicQueryEmail(
+                    params, 1, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
+            List<UndeliveredEmail> emailList = emailVo.getEmailList();
             params.remove("emailTaskId");
             
             totalEmailCount += emailList.size();
@@ -166,15 +169,7 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
     }
 
     private void sendResponse(ChannelHandlerContext ctx, HttpResponseStatus status, String content) {
-        FullHttpResponse response = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1,
-                status,
-                Unpooled.copiedBuffer(content, CharsetUtil.UTF_8)
-        );
-        response.headers()
-                .set(HttpHeaderNames.CONTENT_TYPE, "application/json")
-                .setInt(HttpHeaderNames.CONTENT_LENGTH, response.content().readableBytes());
-        ctx.writeAndFlush(response);
+        HttpUtil.sendResponse(ctx, status, content);
     }
 
     @Override

@@ -6,6 +6,8 @@ import com.java.email.pojo.Customer;
 import com.java.email.result.Result;
 import com.java.email.service.CustomerService;
 import com.java.email.service.EmailRecipientService;
+import com.java.email.vo.EmailVo;
+import com.java.email.vo.ResultEmailVo;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -86,8 +88,6 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                                 sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无权查看该用户的邮件");
                                 return;
                             }
-                        } else {
-                            params.put("senderIds", String.join(",", managedUserEmails));
                         }
                         break;
                     case 4: // 普通用户，只能查看自己的邮件
@@ -99,8 +99,8 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                 }
 
                 // 获取分页参数
-                int page = Integer.parseInt(params.getOrDefault("page_num", "0"));
-                int size = Integer.parseInt(params.getOrDefault("page_size", "10"));
+                int page = Integer.parseInt(params.getOrDefault("page_num", "1"));
+                int size = Integer.parseInt(params.getOrDefault("page_size", "5"));
 
 //                // 处理发件人和收件人名称查询
 //                if(params.containsKey("senderName")){
@@ -127,68 +127,53 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                 params.remove("page_num");
                 params.remove("page_size");
 
-                // 获取所有符合条件的邮件任务
-                List<EmailTask> emailTasks = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
+//                // 获取所有符合条件的邮件任务
+                EmailTask emailTask = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
 
                 // 收集所有邮件记录
                 List<String> finalManagedUserEmails = managedUserEmails;
-                List<FilterEmailVo> allEmailVos = emailTasks.stream()
-                    .flatMap(emailTask -> {
-                        try {
-                            params.put("email_task_id", emailTask.getEmailTaskId());
-                            List<UndeliveredEmail> logList = emailLogService.findByDynamicQueryEmail(
-                                params, 
-                                0,  // from
-                                MAX_PAGE_SIZE,  // 使用请求的大小和最大限制中的较小值
-                                userRole, 
-                                userEmail, 
-                                finalManagedUserEmails
-                            );
-                            params.remove("email_task_id");
-                            
-                            return logList.stream().map(email -> {
-                                FilterEmailVo emailVo = new FilterEmailVo();
-                                emailVo.setSubject(emailTask.getSubject());
-                                emailVo.setTaskType(emailTask.getSubject());
-                                emailVo.setEmailTaskId(emailTask.getEmailTaskId());
-                                BeanUtils.copyProperties(email, emailVo);
-                                Map<String, String> receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId());
-                                emailVo.setEmailStatus(email.getErrorCode());
-                                emailVo.setStartDate(dateTimeFormatter(email.getStartDate()));
-                                emailVo.setEndDate(dateTimeFormatter(email.getEndDate()));
-                                emailVo.setReceiverLevel(Long.parseLong(receiverInfo.get("level")));
-                                
+                EmailVo emailVo = emailLogService.findByDynamicQueryEmail(
+                        params,
+                        page,  // from
+                        size,  // 使用请求的大小和最大限制中的较小值
+                        userRole,
+                        userEmail,
+                        finalManagedUserEmails
+                );
 
-//
-                                    emailVo.setSenderEmail(email.getSenderId());
-                                    emailVo.setSenderName(email.getSenderName());
-                                    emailVo.setReceiverEmail(email.getReceiverId());
-                                    emailVo.setReceiverName(email.getReceiverName());
-                                    emailVo.setReceiverBirth(receiverInfo.get("birth"));
-                                return emailVo;
-                            });
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
-                    .collect(Collectors.toList());
+                            List<UndeliveredEmail> logList = emailVo.getEmailList();
 
-                // 对总结果进行分页
-                int fromIndex = page * size;
-                int toIndex = Math.min(fromIndex + size, allEmailVos.size());
-                
-                List<FilterEmailVo> pagedResults = fromIndex < allEmailVos.size() 
-                    ? allEmailVos.subList(fromIndex, toIndex)
-                    : List.of();
+                    List<FilterEmailVo> Results =logList.stream().map(email -> {
+                                FilterEmailVo filterEmailVo = new FilterEmailVo();
+                    filterEmailVo.setSubject(emailTask.getSubject());
+                    filterEmailVo.setTaskType(emailTask.getSubject());
+                    filterEmailVo.setEmailTaskId(emailTask.getEmailTaskId());
+                    BeanUtils.copyProperties(email, filterEmailVo);
+                    Map<String, String> receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId());
+                    filterEmailVo.setEmail_status(email.getErrorCode());
+                    filterEmailVo.setError_msg(email.getErrorMsg());
+                    filterEmailVo.setStart_date(dateTimeFormatter(email.getStartDate()));
+                    filterEmailVo.setEnd_date(dateTimeFormatter(email.getEndDate()));
+                    filterEmailVo.setReceiver_level(Long.parseLong(receiverInfo.get("level")));
 
-                // 设置分页信息
-                pagedResults.forEach(emailVo -> {
-                    emailVo.setPage(page);
-                    emailVo.setSize(size);
-                });
+                    filterEmailVo.setSender_email(email.getSenderId());
+                    filterEmailVo.setSender_name(email.getSenderName());
+                    filterEmailVo.setReceiver_email(email.getReceiverId());
+                    filterEmailVo.setReceiver_name(email.getReceiverName());
+                    filterEmailVo.setReceiver_birth(receiverInfo.get("birth"));
+                                return filterEmailVo;
+                            }).toList();
+
+
+                    ResultEmailVo resultEmailVo=new ResultEmailVo();
+                    resultEmailVo.setTotal_items(emailVo.getTotal());
+                    resultEmailVo.setPage_num(page);
+                    resultEmailVo.setPage_size(size);
+                    resultEmailVo.setEmail_info(Results);
+
 
                 // 返回结果
-                String responseContent = objectMapper.writeValueAsString(Result.ok(pagedResults));
+                String responseContent = objectMapper.writeValueAsString(Result.ok(resultEmailVo));
                 sendResponse(ctx, HttpResponseStatus.OK, responseContent);
             } catch (Exception e) {
                 log.error("Error processing request", e);
