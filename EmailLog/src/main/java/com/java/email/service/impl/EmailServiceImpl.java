@@ -59,6 +59,7 @@ public class EmailServiceImpl implements EmailService {
             );
         }
     }
+
     @Override
     public void saveEmailTask(UndeliveredEmail emailTask) throws IOException {
         initEmailIndex();
@@ -73,16 +74,16 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public EmailVo findByDynamicQueryEmail(Map<String, String> params, int page, int size,
-            Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
+                                           Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
         try {
             // 先获取符合条件的收件人邮箱
-            Set<String> recipientEmails = params != null ? 
-                emailRecipientService.findMatchingRecipientEmails(params) : null;
+            Set<String> recipientEmails = params != null ?
+                    emailRecipientService.findMatchingRecipientEmails(params) : null;
 
 
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
-                s.from((page-1) * size);
+                s.from((page - 1) * size);
                 s.size(size);
 
                 s.query(q -> q.bool(b -> {
@@ -102,10 +103,10 @@ public class EmailServiceImpl implements EmailService {
                     // 添加收件人邮箱过滤（仅当recipientEmails不为null且不为空时）
                     if (recipientEmails != null && !recipientEmails.isEmpty()) {
                         b.must(m -> m.terms(t -> t
-                            .field("receiver_id")
-                            .terms(tt -> tt.value(recipientEmails.stream()
-                                .map(FieldValue::of)
-                                .collect(Collectors.toList())))
+                                .field("receiver_id")
+                                .terms(tt -> tt.value(recipientEmails.stream()
+                                        .map(FieldValue::of)
+                                        .collect(Collectors.toList())))
                         ));
                     }
 
@@ -113,19 +114,19 @@ public class EmailServiceImpl implements EmailService {
                     addRoleBasedFilter(b, userRole, userEmail, managedUserEmails);
 
                     // 处理其他查询参数
-                    if (params != null&& !params.isEmpty()) {
+                    if (params != null && !params.isEmpty()) {
                         addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
-                    }else b.must(m -> m.matchAll(ma->ma));
+                    } else b.must(m -> m.matchAll(ma -> ma));
 
                     return b;
                 }));
 
                 // 添加默认排序
                 s.sort(sort -> sort
-                    .field(f -> f
-                        .field("start_date")
-                        .order(SortOrder.Desc)
-                    )
+                        .field(f -> f
+                                .field("start_date")
+                                .order(SortOrder.Desc)
+                        )
                 );
 
                 return s;
@@ -141,12 +142,11 @@ public class EmailServiceImpl implements EmailService {
 
             return emailVo;
         } catch (Exception e) {
-            log.error("Error while searching emails: params={}, userRole={}, userEmail={}", 
-                params, userRole, userEmail, e);
+            log.error("Error while searching emails: params={}, userRole={}, userEmail={}",
+                    params, userRole, userEmail, e);
             throw e;
         }
     }
-
 
 
     private void addRoleBasedFilter(BoolQuery.Builder b, Integer userRole,
@@ -157,10 +157,10 @@ public class EmailServiceImpl implements EmailService {
             case 3: // 小管理员，只能查看管理用户的邮件
                 if (managedUserEmails != null && !managedUserEmails.isEmpty()) {
                     b.must(m -> m.terms(t -> t
-                        .field("sender_id")
-                        .terms(tt -> tt.value(managedUserEmails.stream()
-                            .map(FieldValue::of)
-                            .collect(Collectors.toList())))
+                            .field("sender_id")
+                            .terms(tt -> tt.value(managedUserEmails.stream()
+                                    .map(FieldValue::of)
+                                    .collect(Collectors.toList())))
                     ));
                 }
                 break;
@@ -174,15 +174,15 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    private void addOtherQueryParams(BoolQuery.Builder b, Map<String, String> params, 
-            Integer userRole, String userEmail, List<String> managedUserEmails) {
+    private void addOtherQueryParams(BoolQuery.Builder b, Map<String, String> params,
+                                     Integer userRole, String userEmail, List<String> managedUserEmails) {
         // 如果params为空，不添加任何查询条件，返回所有结果
         if (params == null || params.isEmpty()) {
             return;
         }
         params.forEach((key, value) -> {
-            if (value != null && !value.isEmpty() && 
-                !Arrays.asList("error_code", "customer_level", "birth").contains(key)) {
+            if (value != null && !value.isEmpty() &&
+                    !Arrays.asList("error_code", "customer_level", "birth").contains(key)) {
                 switch (key) {
                     case "email_id":
                         b.must(m -> m.term(t -> t.field("email_id").value(value)));
@@ -194,21 +194,26 @@ public class EmailServiceImpl implements EmailService {
                         validateSenderAccess(userRole, userEmail, managedUserEmails, value);
                         b.must(m -> m.term(t -> t.field("sender_id").value(value)));
                         break;
-                        case "receiver_email":
-                            b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
-                            break;
+                    case "receiver_email":
+                        b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
+                        break;
                     case "sender_name":
                         b.must(m -> m.match(t -> t.field("sender_name").query(value)));
                         break;
-                        case "receiver_name":
-                            b.must(m -> m.match(t -> t.field("receiver_name").query(value)));
-                            break;
+                    case "receiver_name":
+                        b.must(m -> m.match(t -> t.field("receiver_name").query(value)));
+                        break;
                     case "start_date":
-                        b.must(m -> m.range(r -> r.field("start_date").gte(JsonData.of(Long.parseLong(value)))));
+                        b.must(m -> m.range(r -> r
+                                .field("end_date")
+                                .gte(JsonData.of(Long.parseLong(value)))
+                        ));
                         break;
                     case "end_date":
-                        b.must(m -> m.range(r -> r.field("end_date").lte(JsonData.of(Long.parseLong(value)))));
-                        break;
+                        b.must(m -> m.range(r -> r
+                                .field("start_date")
+                                .lte(JsonData.of(Long.parseLong(value)))
+                        ));
                 }
             }
         });
@@ -231,7 +236,6 @@ public class EmailServiceImpl implements EmailService {
         );
         return response.found() ? response.source() : null;
     }
-
 
 
 }

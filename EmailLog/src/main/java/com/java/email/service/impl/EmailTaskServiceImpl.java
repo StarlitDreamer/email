@@ -153,10 +153,16 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                         b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
                         break;
                     case "start_date":
-                        b.must(m -> m.range(r -> r.field("start_date").gte(JsonData.of(Long.parseLong(value)))));
+                        b.must(m -> m.range(r -> r
+                            .field("end_date")
+                            .gte(JsonData.of(Long.parseLong(value)))
+                        ));
                         break;
                     case "end_date":
-                        b.must(m -> m.range(r -> r.field("end_date").lte(JsonData.of(Long.parseLong(value)))));
+                        b.must(m -> m.range(r -> r
+                            .field("start_date")
+                            .lte(JsonData.of(Long.parseLong(value)))
+                        ));
                         break;
                     case "sender_name":
                         b.must(m -> m.match(t -> t.field("sender_name").query(value)));
