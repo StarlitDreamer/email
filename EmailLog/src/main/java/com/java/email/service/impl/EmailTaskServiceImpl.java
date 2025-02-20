@@ -11,27 +11,27 @@ import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
 import com.java.email.pojo.EmailTask;
 import com.java.email.service.EmailTaskService;
+import com.java.email.service.EmailTaskStatusService;
 import com.java.email.service.UserService;
 import com.java.email.vo.EmailTaskVo;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Objects;
-import java.util.Arrays;
 
 @Slf4j
 @Service
 public class EmailTaskServiceImpl implements EmailTaskService {
     private final ElasticsearchClient esClient;
+    private final EmailTaskStatusService emailTaskStatusService;
     private static final String INDEX_NAME = "email_task";
 
-    public EmailTaskServiceImpl(ElasticsearchClient esClient) {
+    public EmailTaskServiceImpl(ElasticsearchClient esClient, EmailTaskStatusService emailTaskStatusService) {
         this.esClient = esClient;
 
+        this.emailTaskStatusService = emailTaskStatusService;
     }
 
     // 初始化索引和映射
@@ -86,6 +86,13 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                     return b;
                 }));
 
+                // 添加默认排序
+                s.sort(sort -> sort
+                        .field(f -> f
+                                .field("start_date")
+                                .order(SortOrder.Desc)
+                        )
+                );
                 return s;
             }, EmailTask.class);
             long totalHits = response.hits().total().value();  // 这个是总数，不受分页影响
@@ -129,6 +136,21 @@ public class EmailTaskServiceImpl implements EmailTaskService {
 
     private void addOtherQueryParams(BoolQuery.Builder b, Map<String, String> params,
                                      Integer userRole, String userEmail, List<String> managedUserEmails) {
+
+        if(params.containsKey("task_status")) {
+            Set<String> emailTaskIds;
+            try {
+                emailTaskIds = emailTaskStatusService.findEmailTaskIds(Long.parseLong(params.get("task_status")));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            b.must(m -> m.terms(t -> t
+                    .field("email_task_id")
+                    .terms(tt -> tt.value(emailTaskIds.stream()
+                            .map(FieldValue::of)
+                            .collect(Collectors.toList())))
+            ));
+        }
         params.forEach((key, value) -> {
             if (value != null)
                 {

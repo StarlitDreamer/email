@@ -41,24 +41,53 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     @Override
     public Map<String, String> getRecipientDetail(String email) {
         try {
+            // 并行查询Customer和Supplier索引
+            CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    Query query = TermQuery.of(t -> t
+                        .field("emails")
+                        .value(email)
+                    )._toQuery();
+
+                    return esClient.search(s -> s
+                        .index(CUSTOMER_INDEX)
+                        .query(query)
+                        .size(1),
+                        Customer.class
+                    );
+                } catch (Exception e) {
+                    log.error("Customer search error: {}", e.getMessage(), e);
+                    return null;
+                }
+            });
+
+            CompletableFuture<SearchResponse<Supplier>> supplierFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    Query query = TermQuery.of(t -> t
+                        .field("emails")
+                        .value(email)
+                    )._toQuery();
+
+                    return esClient.search(s -> s
+                        .index(SUPPLIER_INDEX)
+                        .query(query)
+                        .size(1),
+                        Supplier.class
+                    );
+                } catch (Exception e) {
+                    log.error("Supplier search error: {}", e.getMessage(), e);
+                    return null;
+                }
+            });
+
+            // 等待所有查询完成
+            CompletableFuture.allOf(customerFuture, supplierFuture).join();
+
             Map<String, String> result = new HashMap<>();
 
-            // 构建查询
-            Query query = TermQuery.of(t -> t
-                    .field("emails")
-                    .value(email)
-            )._toQuery();
-
-            // 先查询Customer索引
-            SearchResponse<Customer> customerResponse = esClient.search(s -> s
-                            .index(CUSTOMER_INDEX)
-                            .query(query)
-                            .size(1),
-                    Customer.class
-            );
-
-            // 如果在Customer中找到
-            if (customerResponse.hits().total().value() > 0) {
+            // 处理Customer结果
+            SearchResponse<Customer> customerResponse = customerFuture.get();
+            if (customerResponse != null && customerResponse.hits().total().value() > 0) {
                 Customer customer = customerResponse.hits().hits().get(0).source();
                 if (customer != null) {
                     result.put("name", customer.getCustomerName());
@@ -69,16 +98,9 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                 }
             }
 
-            // 如果Customer中没找到，查询Supplier索引
-            SearchResponse<Supplier> supplierResponse = esClient.search(s -> s
-                            .index(SUPPLIER_INDEX)
-                            .query(query)
-                            .size(1),
-                    Supplier.class
-            );
-
-            // 如果在Supplier中找到
-            if (supplierResponse.hits().total().value() > 0) {
+            // 处理Supplier结果
+            SearchResponse<Supplier> supplierResponse = supplierFuture.get();
+            if (supplierResponse != null && supplierResponse.hits().total().value() > 0) {
                 Supplier supplier = supplierResponse.hits().hits().get(0).source();
                 if (supplier != null) {
                     result.put("name", supplier.getSupplierName());
@@ -101,33 +123,69 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     @Override
     public Map<String, String> getRecipientDetail(String email, String level) {
         try {
+            // 并行查询Customer和Supplier索引
+            CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    BoolQuery.Builder customerBoolQuery = new BoolQuery.Builder()
+                        .must(TermQuery.of(t -> t
+                            .field("emails")
+                            .value(email)
+                        )._toQuery());
+
+                        if (level != null && !level.isEmpty()) {
+                            customerBoolQuery.must(TermQuery.of(t -> t
+                                .field("customer_level")
+                                .value(Long.parseLong(level))
+                            )._toQuery());
+                        }
+
+                        return esClient.search(s -> s
+                            .index(CUSTOMER_INDEX)
+                            .query(customerBoolQuery.build()._toQuery())
+                            .size(1),
+                            Customer.class
+                        );
+                } catch (Exception e) {
+                    log.error("Customer search error: {}", e.getMessage(), e);
+                    return null;
+                }
+            });
+
+            CompletableFuture<SearchResponse<Supplier>> supplierFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    BoolQuery.Builder supplierBoolQuery = new BoolQuery.Builder()
+                        .must(TermQuery.of(t -> t
+                            .field("emails")
+                            .value(email)
+                        )._toQuery());
+
+                        if (level != null && !level.isEmpty()) {
+                            supplierBoolQuery.must(TermQuery.of(t -> t
+                                .field("supplier_level")
+                                .value(level)
+                            )._toQuery());
+                        }
+
+                        return esClient.search(s -> s
+                            .index(SUPPLIER_INDEX)
+                            .query(supplierBoolQuery.build()._toQuery())
+                            .size(1),
+                            Supplier.class
+                        );
+                } catch (Exception e) {
+                    log.error("Supplier search error: {}", e.getMessage(), e);
+                    return null;
+                }
+            });
+
+            // 等待所有查询完成
+            CompletableFuture.allOf(customerFuture, supplierFuture).join();
+
             Map<String, String> result = new HashMap<>();
 
-            // 构建Customer查询
-            BoolQuery.Builder customerBoolQuery = new BoolQuery.Builder()
-                .must(TermQuery.of(t -> t
-                    .field("emails")
-                    .value(email)
-                )._toQuery());
-
-            // 如果level不为空，添加level查询条件
-            if (level != null && !level.isEmpty()) {
-                customerBoolQuery.must(TermQuery.of(t -> t
-                    .field("customer_level")
-                    .value(Long.parseLong(level))
-                )._toQuery());
-            }
-
-            // 先查询Customer索引
-            SearchResponse<Customer> customerResponse = esClient.search(s -> s
-                .index(CUSTOMER_INDEX)
-                .query(customerBoolQuery.build()._toQuery())
-                .size(1),
-                Customer.class
-            );
-
-            // 如果在Customer中找到
-            if (customerResponse.hits().total().value() > 0) {
+            // 处理Customer结果
+            SearchResponse<Customer> customerResponse = customerFuture.get();
+            if (customerResponse != null && customerResponse.hits().total().value() > 0) {
                 Customer customer = customerResponse.hits().hits().get(0).source();
                 if (customer != null) {
                     result.put("name", customer.getCustomerName());
@@ -138,31 +196,9 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                 }
             }
 
-            // 构建Supplier查询
-            BoolQuery.Builder supplierBoolQuery = new BoolQuery.Builder()
-                .must(TermQuery.of(t -> t
-                    .field("emails")
-                    .value(email)
-                )._toQuery());
-
-            // 如果level不为空，添加level查询条件
-            if (level != null && !level.isEmpty()) {
-                supplierBoolQuery.must(TermQuery.of(t -> t
-                    .field("supplier_level")
-                    .value(level)
-                )._toQuery());
-            }
-
-            // 查询Supplier索引
-            SearchResponse<Supplier> supplierResponse = esClient.search(s -> s
-                .index(SUPPLIER_INDEX)
-                .query(supplierBoolQuery.build()._toQuery())
-                .size(1),
-                Supplier.class
-            );
-
-            // 如果在Supplier中找到
-            if (supplierResponse.hits().total().value() > 0) {
+            // 处理Supplier结果
+            SearchResponse<Supplier> supplierResponse = supplierFuture.get();
+            if (supplierResponse != null && supplierResponse.hits().total().value() > 0) {
                 Supplier supplier = supplierResponse.hits().hits().get(0).source();
                 if (supplier != null) {
                     result.put("name", supplier.getSupplierName());
@@ -177,7 +213,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             return null;
 
         } catch (Exception e) {
-            log.error("获取收件人详细信息失败: email={}, level={}, error={}",
+            log.error("获取收件人详细信息失败: email={}, level={}, error={}", 
                 email, level, e.getMessage(), e);
             return null;
         }
@@ -193,7 +229,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
         try {
             // 如果没有查询条件，返回null表示不需要邮箱过滤
             if (params == null || params.isEmpty() || 
-                (!params.containsKey("receiver_level") && !params.containsKey("birth"))) {
+                (!params.containsKey("receiver_level") && !params.containsKey("receiver_birth"))) {
                 return null;
             }
 
@@ -215,11 +251,11 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                                 }
                                 
                                 // 处理生日查询
-                                if (params.containsKey("birth")) {
+                                if (params.containsKey("receiver_birth")) {
                                     b.must(m -> m
                                         .term(t -> t
                                             .field("birth")
-                                            .value(params.get("birth"))
+                                            .value(params.get("receiver_birth"))
                                         )
                                     );
                                 }
@@ -252,11 +288,11 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                                 }
 
                                 // 处理生日查询
-                                if (params.containsKey("birth")) {
+                                if (params.containsKey("receiver_birth")) {
                                     b.must(m -> m
                                         .term(t -> t
                                             .field("birth")
-                                            .value(params.get("birth"))
+                                            .value(params.get("receiver_birth"))
                                         )
                                     );
                                 }

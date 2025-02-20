@@ -159,13 +159,6 @@ public class UserServiceImpl implements UserService {
                 User.class
             );
 
-            // 查询Customer索引
-            SearchResponse<Customer> customerResponse = esClient.search(s -> s
-                .index("customer")
-                .query(query)
-                .size(1000),
-                Customer.class
-            );
 
             // 提取User邮箱
             for (Hit<User> hit : userResponse2.hits().hits()) {
@@ -175,29 +168,6 @@ public class UserServiceImpl implements UserService {
                 }
             }
 
-            // 提取Customer邮箱
-            for (Hit<Customer> hit : customerResponse.hits().hits()) {
-                Customer customer = hit.source();
-                if (customer != null && customer.getEmails() != null) {
-                    emails.addAll(Arrays.asList(customer.getEmails()));
-                }
-            }
-
-            // 查询Supplier索引
-            SearchResponse<Supplier> supplierResponse = esClient.search(s -> s
-                .index("supplier")
-                .query(query)
-                .size(1000),
-                Supplier.class
-            );
-
-            // 提取Supplier邮箱
-            for (Hit<Supplier> hit : supplierResponse.hits().hits()) {
-                Supplier supplier = hit.source();
-                if (supplier != null && supplier.getEmails() != null) {
-                    emails.addAll(Arrays.asList(supplier.getEmails()));
-                }
-            }
             emails.add(email);
 
             return new ArrayList<>(emails);  // 转换为List返回

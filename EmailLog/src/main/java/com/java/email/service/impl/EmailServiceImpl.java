@@ -88,8 +88,8 @@ public class EmailServiceImpl implements EmailService {
 
                 s.query(q -> q.bool(b -> {
                     // 处理邮件状态查询
-                    if (params != null && params.containsKey("error_code")) {
-                        String status = params.get("error_code");
+                    if (params != null && params.containsKey("email_status")) {
+                        String status = params.get("email_status");
                         if ("200".equals(status)) {
                             // 发送成功的邮件
                             b.must(m -> m.term(t -> t.field("error_code").value(200)));
@@ -182,7 +182,7 @@ public class EmailServiceImpl implements EmailService {
         }
         params.forEach((key, value) -> {
             if (value != null && !value.isEmpty() &&
-                    !Arrays.asList("error_code", "customer_level", "birth").contains(key)) {
+                    !Arrays.asList("email_status", "receiver_level", "receiver_birth").contains(key)) {
                 switch (key) {
                     case "email_id":
                         b.must(m -> m.term(t -> t.field("email_id").value(value)));
