@@ -14,11 +14,16 @@ spring:
        matching-strategy: ant_path_matcher
   #  profiles:
   #   active: prod
+   data:
+       redis:
+           host: 112.35.176.43
+           port: 9500
+           database: 0
 server:
    tomcat:
      max-swallow-size: -1
 
 elasticsearch:
-  host: es
-  port: 9200
+  host: 112.35.176.43
+  port: 9201
   scheme: http
