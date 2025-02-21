@@ -229,7 +229,17 @@ public class TemplateServiceImpl implements TemplateService {
                     logUtil.error("获取下属列表失败");
                     return new Result(ResultCode.R_Error);
                 }
-                if(!subordinateIds.contains(templateDoc.getBelongUserId()) && !templateDoc.getBelongUserId().contains(currentUserId)){
+                List<String> templateBelongUserIds = templateDoc.getBelongUserId();
+                if (templateBelongUserIds == null || templateBelongUserIds.isEmpty()) {
+                    logUtil.error("模板所属用户ID列表为空");
+                    return new Result(ResultCode.R_Error);
+                }
+
+                // 检查是否至少有一个所属用户ID在下属列表中或者是指定用户
+                boolean hasValidUser = templateBelongUserIds.stream()
+                        .anyMatch(id -> subordinateIds.contains(id) || id.equals(currentUserId));
+
+                if (!hasValidUser) {
                     logUtil.error("无权分配非本人或下属的模板");
                     return new Result(ResultCode.R_NoAuth);
                 }
@@ -293,37 +303,39 @@ public class TemplateServiceImpl implements TemplateService {
             return new Result(ResultCode.R_ParamError);
         }
 
-        String templateId = (String) request.get("template_id");
         Integer pageNum = (Integer) request.get("page_num");
         Integer pageSize = (Integer) request.get("page_size");
         if (pageNum <= 0 || pageSize <= 0) {
             return new Result(ResultCode.R_PageError);
         }
 
-        // 查找模板分配记录
-        TemplateAssignDocument assignDoc = templateAssignRepository.findById(templateId).orElse(null);
-        if (assignDoc == null) {
-            return new Result(ResultCode.R_TemplateNotFound);
-        }
 
         try {
-            List<Map<String, Object>> processList = assignDoc.getAssignProcess();
-            if (processList == null || processList.isEmpty()) {
-                return new Result(ResultCode.R_Ok, new PageResponse<>(0, pageNum, pageSize, new ArrayList<>()));
+            String templateId = (String) request.get("template_id");
+            // 检查附件是否存在
+            TemplateDocument template = templateRepository.findById(templateId).orElse(null);
+            if (template == null) {
+                logUtil.error("模板不存在: " + templateId);
+                return new Result(ResultCode.R_TemplateNotFound);
+            }
+            // 获取分配历史
+            TemplateAssignDocument assignDocument = templateAssignRepository.findById(templateId).orElse(null);
+            if (assignDocument == null || assignDocument.getAssignProcess() == null) {
+                return new Result(ResultCode.R_Ok, new PageResponse<>(0L, pageNum, pageSize, new ArrayList<>()));
             }
 
             // 计算分页
-            int total = processList.size();
+            int total = assignDocument.getAssignProcess().size();
             int start = (pageNum - 1) * pageSize;
             int end = Math.min(start + pageSize, total);
 
             // 验证分页参数
             if (start >= total) {
-                return new Result(ResultCode.R_NoData);
+                return new Result(ResultCode.R_Ok, new PageResponse<>(0L, pageNum, pageSize, new ArrayList<>()));
             }
 
             // 获取当前页的数据
-            List<Map<String, Object>> pageData = processList.subList(start, end);
+            List<Map<String, Object>> pageData = assignDocument.getAssignProcess().subList(start, end);
             return new Result(ResultCode.R_Ok, new PageResponse<>(total, pageNum, pageSize, pageData));
 
         } catch (Exception e) {

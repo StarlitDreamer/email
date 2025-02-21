@@ -9,6 +9,8 @@ import com.java.email.common.Response.Result;
 import com.java.email.common.Response.ResultCode;
 import com.java.email.constant.MagicMathConstData;
 import com.java.email.constant.UserConstData;
+import com.java.email.model.entity.file.AttachmentAssignDocument;
+import com.java.email.model.entity.file.AttachmentDocument;
 import com.java.email.model.entity.file.ImgAssignDocument;
 import com.java.email.model.entity.file.ImgDocument;
 import com.java.email.model.entity.user.UserDocument;
@@ -184,7 +186,17 @@ public class ImgServiceImpl implements ImgService {
                     logUtil.error("获取下属列表失败");
                     return new Result(ResultCode.R_Error);
                 }
-                if(!subordinateIds.contains(imgDoc.getBelongUserId()) && !imgDoc.getBelongUserId().contains(assignId)){
+                List<String> imgBelongUserIds = imgDoc.getBelongUserId();
+                if (imgBelongUserIds == null || imgBelongUserIds.isEmpty()) {
+                    logUtil.error("图片所属用户ID列表为空");
+                    return new Result(ResultCode.R_Error);
+                }
+
+                // 检查是否至少有一个所属用户ID在下属列表中或者是指定用户
+                boolean hasValidUser = imgBelongUserIds.stream()
+                        .anyMatch(id -> subordinateIds.contains(id) || id.equals(assignId));
+
+                if (!hasValidUser) {
                     logUtil.error("无权分配非本人或下属的图片");
                     return new Result(ResultCode.R_NoAuth);
                 }
@@ -255,31 +267,33 @@ public class ImgServiceImpl implements ImgService {
         if (pageNum <= 0 || pageSize <= 0) {
             return new Result(ResultCode.R_PageError);
         }
-        String imgId = (String) request.get("img_id");
-        ImgAssignDocument assignDoc = imgAssignRepository.findById(imgId).orElse(null);
-        if (assignDoc == null) {
-            return new Result(ResultCode.R_ImgNotFound);
-        }
 
         try {
-            // 查找附件分配记录
-            List<Map<String, Object>> processList = assignDoc.getAssignProcess();
-            if (processList == null || processList.isEmpty()) {
-                return new Result(ResultCode.R_Ok, new PageResponse<>(0, pageNum, pageSize, new ArrayList<>()));
+            String imgId = (String) request.get("img_id");
+            // 检查附件是否存在
+            ImgDocument img = imgRepository.findById(imgId).orElse(null);
+            if (img == null) {
+                logUtil.error("图片不存在: " + imgId);
+                return new Result(ResultCode.R_ImgNotFound);
+            }
+            // 获取分配历史
+            ImgAssignDocument assignDocument = imgAssignRepository.findById(imgId).orElse(null);
+            if (assignDocument == null || assignDocument.getAssignProcess() == null) {
+                return new Result(ResultCode.R_Ok, new PageResponse<>(0L, pageNum, pageSize, new ArrayList<>()));
             }
 
             // 计算分页
-            int total = processList.size();
+            int total = assignDocument.getAssignProcess().size();
             int start = (pageNum - 1) * pageSize;
             int end = Math.min(start + pageSize, total);
 
             // 验证分页参数
             if (start >= total) {
-                return new Result(ResultCode.R_NoData);
+                return new Result(ResultCode.R_Ok, new PageResponse<>(0L, pageNum, pageSize, new ArrayList<>()));
             }
 
             // 获取当前页的数据
-            List<Map<String, Object>> pageData = processList.subList(start, end);
+            List<Map<String, Object>> pageData = assignDocument.getAssignProcess().subList(start, end);
             return new Result(ResultCode.R_Ok, new PageResponse<>(total, pageNum, pageSize, pageData));
 
         } catch (Exception e) {
