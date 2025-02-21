@@ -200,11 +200,11 @@ public class CustomerServiceImpl implements CustomerService {
             }
             customerDocument.setBelongUserId(userId);
             customerDocument.setCreatorId(userId);
-            // 默认接受所有邮件类型
-            List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
-                    .map(EmailTypeDocument::getEmailTypeId)
-                    .collect(Collectors.toList());
-            customerDocument.setAcceptEmailTypeId(emailTypeIds);
+            // 默认不接受的邮件类型为空
+            // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
+            //         .map(EmailTypeDocument::getEmailTypeId)
+            //         .collect(Collectors.toList());
+            customerDocument.setNoAcceptEmailTypeId(new ArrayList<>());
             // 获取当前时间
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
             String currentTime = LocalDateTime.now().format(formatter);
@@ -1639,10 +1639,11 @@ public class CustomerServiceImpl implements CustomerService {
                 customer.setEmails(Arrays.asList(emails));
                 
                 // 设置接受的邮件类型ID列表
-                List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
-                        .map(EmailTypeDocument::getEmailTypeId)
-                        .collect(Collectors.toList());
-                customer.setAcceptEmailTypeId(emailTypeIds);
+                // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
+                //         .map(EmailTypeDocument::getEmailTypeId)
+                //         .collect(Collectors.toList());
+                // 默认不接受的邮件类型为空
+                customer.setNoAcceptEmailTypeId(new ArrayList<>());
 
                 // 设置用户相关字段
                 String userId = ThreadLocalUtil.getUserId();
@@ -1725,15 +1726,15 @@ public class CustomerServiceImpl implements CustomerService {
                     
                     // Get email type names from email type ids
                     List<String> emailTypeNames = new ArrayList<>();
-                    if (customer.getAcceptEmailTypeId() != null) {
-                        for (String emailTypeId : customer.getAcceptEmailTypeId()) {
+                    if (customer.getNoAcceptEmailTypeId() != null) {
+                        for (String emailTypeId : customer.getNoAcceptEmailTypeId()) {
                             EmailTypeDocument emailType = emailTypeRepository.findById(emailTypeId).orElse(null);
                             if (emailType != null) {
                                 emailTypeNames.add(emailType.getEmailTypeName());
                             }
                         }
                     }
-                    map.put("accept_email_type_name", emailTypeNames);
+                    map.put("no_accept_email_type_name", emailTypeNames);
                     
                     map.put("status", customer.getStatus());
                     map.put("created_at", customer.getCreatedAt());

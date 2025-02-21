@@ -55,8 +55,8 @@ public class SupplierDocument {
     @Field(name = "belong_user_id", type = FieldType.Keyword)
     private String belongUserId;
 
-    @Field(name = "accept_email_type_id", type = FieldType.Keyword)
-    private List<String> acceptEmailTypeId;
+    @Field(name = "no_accept_email_type_id", type = FieldType.Keyword)
+    private List<String> noAcceptEmailTypeId;
 
     @Field(name = "created_at", type = FieldType.Date)
     private String createdAt;

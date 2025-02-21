@@ -22,5 +22,9 @@ public class FileController {
     public Result filterUser(@RequestBody Map<String, Object> params){
         return fileService.filterUser(params);
     }
+    @PostMapping("/filterAdmin")
+    public Result filterAdmin(@RequestBody Map<String, Object> params){
+        return fileService.filterAdmin(params);
+    }
 
 } 

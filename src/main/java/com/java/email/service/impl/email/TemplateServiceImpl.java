@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.util.StringUtils;
 
@@ -140,6 +141,12 @@ public class TemplateServiceImpl implements TemplateService {
                 if (existingDoc == null) {
                     return new Result(ResultCode.R_TemplateNotFound);
                 }
+                if (userRole == 3) {
+                    // 小管理员只能修改自己的模板和下属的模板
+                    if(!subordinateValidation.isSubordinateOrSelf(existingDoc.getCreatorId(), userId)){
+                        return new Result(ResultCode.R_NoAuth);
+                    }
+                }
                 if (userRole == 4) {
                     // 检查当前用户是否在模板的所属用户列表中且是创建人
                     List<String> belongUserIds = existingDoc.getBelongUserId();
@@ -209,6 +216,10 @@ public class TemplateServiceImpl implements TemplateService {
             }
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
+                // 验证创建人是否是自己或下属，不是不能分配
+                if(!subordinateValidation.isSubordinateOrSelf(templateDoc.getCreatorId(), currentUserId)){
+                    return new Result(ResultCode.R_NoAuth);
+                }
                 if (!belongUserIds.contains(UserConstData.COMPANY_USER_ID)) {
                     for (UserDocument userDoc : userDocs.values()) {
                         // 检查用户是否属于自己管理或者是自己
@@ -350,6 +361,16 @@ public class TemplateServiceImpl implements TemplateService {
                             .match(t -> t
                                     .field("template_name")
                                     .query(templateName)
+                            )
+                    );
+                }
+
+                // 添加模板类型条件
+                if (StringUtils.hasText(templateTypeId)) {
+                    mainQuery.must(m -> m
+                            .term(t -> t
+                                    .field("template_type_id")
+                                    .value(templateTypeId)
                             )
                     );
                 }
@@ -680,7 +701,7 @@ public class TemplateServiceImpl implements TemplateService {
                 Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
                 NativeQuery searchQuery = NativeQuery.builder()
                         .withQuery(q -> q.bool(mainQuery.build()))
-                        .withSort(Sort.by(Sort.Direction.DESC, "updated"))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                         .withPageable(pageable)
                         .build();
 
@@ -744,6 +765,16 @@ public class TemplateServiceImpl implements TemplateService {
                     );
                 }
 
+                // 添加模板类型条件
+                if (StringUtils.hasText(templateTypeId)) {
+                    mainQuery.must(m -> m
+                            .term(t -> t
+                                    .field("template_type_id")
+                                    .value(templateTypeId)
+                            )
+                    );
+                }
+
                 // 无论有没有其他条件，都必须确保所属用户包含自己
                 mainQuery.must(m -> m
                         .term(t -> t
@@ -776,7 +807,9 @@ public class TemplateServiceImpl implements TemplateService {
                             EmailTypeDocument emailTypeDoc = emailTypeRepository.findById(doc.getTemplateTypeId()).orElse(null);
                             if (emailTypeDoc == null) {
                                 item.put("template_type_name", "无");
+                                item.put("template_type_id", "");
                             } else {
+                                item.put("template_type_id", emailTypeDoc.getEmailTypeId());
                                 item.put("template_type_name", emailTypeDoc.getEmailTypeName());
                             }
                             return item;
@@ -795,7 +828,7 @@ public class TemplateServiceImpl implements TemplateService {
             }
             return new Result(ResultCode.R_Error);
         } catch (Exception e) {
-            logUtil.error("Error filtering templates: " + e.getMessage());
+            logUtil.error("Error filtering templates: " + e);
             return new Result(ResultCode.R_Error);
         }
     }
@@ -827,43 +860,9 @@ public class TemplateServiceImpl implements TemplateService {
         if (userRole == 2) {
             // Continue to delete
         }
-        // 角色3需要检查创建者和所属用户
+        // 角色3需要检查创建者是否是自己或下属
         else if (userRole == 3) {
-            String creatorId = templateDoc.getCreatorId();
-            List<String> belongUserIds = templateDoc.getBelongUserId();
-
-            // 检查是否为创建者
-            boolean isCreator = currentUserId.equals(creatorId);
-
-            // 如果是创建者,直接删除
-            if (isCreator) {
-                try {
-                    templateRepository.deleteById(templateId);
-                    templateAssignRepository.deleteById(templateId);
-                    return new Result(ResultCode.R_Ok);
-                } catch (Exception e) {
-                    logUtil.error("Error deleting template: " + e.getMessage());
-                    return new Result(ResultCode.R_Error);
-                }
-            }
-
-            // 检查创建者和所属用户是否都包含下属
-            boolean hasSubordinates = false;
-            // 检查创建者是否为下属
-            UserDocument creator = userRepository.findById(creatorId).orElse(null);
-            boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
-
-            // 检查所属用户是否包含下属
-            boolean hasBelongUserSubordinate = false;
-            if (belongUserIds != null && !belongUserIds.isEmpty()) {
-                hasBelongUserSubordinate = belongUserIds.stream()
-                        .map(id -> userRepository.findById(id).orElse(null))
-                        .filter(user -> user != null)
-                        .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
-            }
-
-            hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
-            if (!hasSubordinates) {
+            if(!subordinateValidation.isSubordinateOrSelf(templateDoc.getCreatorId(), currentUserId)){
                 return new Result(ResultCode.R_NoAuth);
             }
         }

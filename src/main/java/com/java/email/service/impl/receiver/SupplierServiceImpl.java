@@ -225,10 +225,11 @@ public class SupplierServiceImpl implements SupplierService {
             supplierDocument.setBelongUserId(userId);
             supplierDocument.setCreatorId(userId);
             // 默认接受所有邮件类型
-            List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
-                    .map(EmailTypeDocument::getEmailTypeId)
-                    .collect(Collectors.toList());
-            supplierDocument.setAcceptEmailTypeId(emailTypeIds);
+            // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
+            //         .map(EmailTypeDocument::getEmailTypeId)
+            //         .collect(Collectors.toList());
+            // 默认不接受的邮件类型为空
+            supplierDocument.setNoAcceptEmailTypeId(new ArrayList<>());
             // 获取当前时间
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
             String currentTime = LocalDateTime.now().format(formatter);
@@ -1618,12 +1619,17 @@ public class SupplierServiceImpl implements SupplierService {
                     map.put("belong_user_name", belongUser != null ? belongUser.getUserName() : "");
                     
                     // Get email type names from email type ids
-                    List<String> emailTypeNames = supplier.getAcceptEmailTypeId().stream()
-                            .map(id -> emailTypeRepository.findById(id)
-                                    .map(EmailTypeDocument::getEmailTypeName)
-                                    .orElse(""))
-                            .collect(Collectors.toList());
-                    map.put("accept_email_type_name", emailTypeNames);
+                    List<String> emailTypeNames = new ArrayList<>();
+                    if (supplier.getNoAcceptEmailTypeId() != null) {
+                        for (String emailTypeId : supplier.getNoAcceptEmailTypeId()) {
+                            EmailTypeDocument emailType = emailTypeRepository.findById(emailTypeId).orElse(null);
+                            if (emailType != null) {
+                                emailTypeNames.add(emailType.getEmailTypeName());
+                            }
+                        }
+                    }
+                    map.put("no_accept_email_type_name", emailTypeNames);
+
                     
                     return map;
                 })
@@ -1723,10 +1729,11 @@ public class SupplierServiceImpl implements SupplierService {
                 String[] emails = data[9].split(";");
                 supplier.setEmails(Arrays.asList(emails));
                 // 设置接受的邮件类型ID列表
-                List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
-                        .map(EmailTypeDocument::getEmailTypeId)
-                        .collect(Collectors.toList());
-                supplier.setAcceptEmailTypeId(emailTypeIds);
+                // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
+                //         .map(EmailTypeDocument::getEmailTypeId)
+                //         .collect(Collectors.toList());
+                // 默认不接受的邮件类型为空
+                supplier.setNoAcceptEmailTypeId(new ArrayList<>());
 
                 // 设置用户相关字段
                 String userId = ThreadLocalUtil.getUserId();

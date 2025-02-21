@@ -11,4 +11,11 @@ public interface FileService {
      * @return Result
      */
     Result filterUser(Map<String, Object> params);
+
+    /**
+     * 筛选管理员
+     * @param params
+     * @return Result
+     */
+    Result filterAdmin(Map<String, Object> params);
 }

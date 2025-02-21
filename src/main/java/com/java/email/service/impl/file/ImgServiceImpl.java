@@ -178,6 +178,11 @@ public class ImgServiceImpl implements ImgService {
 
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
+                // 验证创建人是否是自己或下属
+                if(!subordinateValidation.isSubordinateOrSelf(imgDoc.getCreatorId(), assignId)){
+                    return new Result(ResultCode.R_NoAuth);
+                }
+                // 验证要分配的用户是否是自己下属
                 if (!belongUserIds.contains(UserConstData.COMPANY_USER_ID)) {
                     for (UserDocument userDoc : userDocs.values()) {
                         if (!userDoc.getBelongUserId().equals(assignId) && !userDoc.getUserId().equals(assignId)) {
@@ -765,30 +770,9 @@ public class ImgServiceImpl implements ImgService {
             return new Result(ResultCode.R_UserNotFound);
         }
 
-        // 角色3需要检查创建者和所属用户
+        // 角色3需要检查创建者是否是自己或下属
         if (userRole == 3) {
-            String creatorId = imgDoc.getCreatorId();
-            List<String> belongUserIds = imgDoc.getBelongUserId();
-
-            // 检查是否为创建者
-            boolean isCreator = currentUserId.equals(creatorId);
-
-            // 检查创建者和所属用户是否都包含下属
-            // 检查创建者是否为下属
-            UserDocument creator = userRepository.findById(creatorId).orElse(null);
-            boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
-            // 检查所属用户是否包含下属
-            boolean hasBelongUserSubordinate = false;
-            if (belongUserIds != null && !belongUserIds.isEmpty()) {
-                hasBelongUserSubordinate = belongUserIds.stream()
-                        .map(id -> userRepository.findById(id).orElse(null))
-                        .filter(user -> user != null)
-                        .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
-            }
-            boolean hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
-
-            // 如果既不是创建人，也不是下属，则无权删除
-            if (!isCreator && !hasSubordinates) {
+            if(!subordinateValidation.isSubordinateOrSelf(imgDoc.getCreatorId(), currentUserId)){
                 return new Result(ResultCode.R_NoAuth);
             }
         }

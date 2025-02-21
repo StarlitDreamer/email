@@ -8,6 +8,8 @@ import com.java.email.constant.UserConstData;
 import com.java.email.service.file.FileService;
 import com.java.email.utils.LogUtil;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -16,6 +18,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHits;
+
 import com.java.email.esdao.repository.user.UserRepository;
 import com.java.email.model.entity.user.UserDocument;
 
@@ -24,6 +33,9 @@ public class FileServiceImpl implements FileService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ElasticsearchOperations elasticsearchOperations;
 
     private static final LogUtil logUtil = LogUtil.getLogger(FileServiceImpl.class);
 
@@ -136,5 +148,108 @@ public class FileServiceImpl implements FileService {
         } else {
             return new Result(ResultCode.R_NoAuth);
         }
+    }
+
+    @Override
+    public Result filterAdmin(Map<String, Object> params) {
+        // 获取当前用户角色
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (userRole != null && (userRole == 2 || userRole == 3)) {
+            // 参数校验
+            if (params == null) {
+                return new Result(ResultCode.R_ParamError);
+            }
+            String userName = (String) params.get("user_name");
+            String userAccount = (String) params.get("user_account");
+            String userEmail = (String) params.get("user_email");
+            Integer pageNum = params.get("page_num") != null ? (Integer) params.get("page_num") : 1;
+            Integer pageSize = params.get("page_size") != null ? (Integer) params.get("page_size") : 30;
+
+            // 校验分页参数
+            if (pageNum < 1 || pageSize < 1) {
+                return new Result(ResultCode.R_PageError);
+            }
+
+            // 处理搜索参数,如果为null则设为空字符串
+            userName = userName != null ? userName : "";
+            userAccount = userAccount != null ? userAccount : "";
+            userEmail = userEmail != null ? userEmail : "";
+            // 构建查询条件
+            BoolQuery.Builder mainQuery = new BoolQuery.Builder();
+
+            // 添加角色条件
+            mainQuery.must(m -> m
+                    .term(t -> t
+                            .field("user_role")
+                            .value(3)
+                    )
+            );
+
+            // 添加搜索条件
+            if (!userName.isEmpty()) {
+                String finalUserName = userName;
+                mainQuery.must(m -> m
+                        .match(t -> t
+                                .field("user_name")
+                                .query(finalUserName)
+                        )
+                );
+            }
+            if (!userAccount.isEmpty()) {
+                String finalUserAccount = userAccount;
+                mainQuery.must(m -> m
+                        .term(t -> t
+                                .field("user_account")
+                                .value(finalUserAccount)
+                        )
+                );
+            }
+            if (!userEmail.isEmpty()) {
+                String finalUserEmail = userEmail;
+                mainQuery.must(m -> m
+                        .term(t -> t
+                                .field("user_email")
+                                .value(finalUserEmail)
+                        )
+                );
+            }
+
+            // 构建分页
+            Pageable pageable = PageRequest.of(pageNum - 1, pageSize);
+
+            // 构建查询
+            NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q.bool(mainQuery.build()))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
+                    .withPageable(pageable)
+                    .build();
+
+            SearchHits<UserDocument> searchHits = elasticsearchOperations.search(
+                        searchQuery,
+                        UserDocument.class
+            );
+
+            // 处理结果
+            List<Map<String, Object>> content = searchHits.stream()
+                    .map(hit -> {
+                        UserDocument doc = hit.getContent();
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("id", doc.getUserId());
+                        item.put("name", doc.getUserName());
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            return new Result(
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            searchHits.getTotalHits(),
+                            pageNum,
+                            pageSize,
+                            content
+                    )
+            );
+        }
+        return new Result(ResultCode.R_NoAuth);
     }
 }

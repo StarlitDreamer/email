@@ -40,11 +40,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
@@ -184,6 +180,11 @@ public class AttachmentServiceImpl implements AttachmentService {
 
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
+                // 验证创建人是否是自己或下属,不是不能分配
+                if(!subordinateValidation.isSubordinateOrSelf(attachmentDoc.getCreatorId(), assignId)){
+                    return new Result(ResultCode.R_NoAuth);
+                }
+                // 验证要分配的用户是否是自己下属
                 if (!belongUserIds.contains(UserConstData.COMPANY_USER_ID)) {
                     for (UserDocument userDoc : userDocs.values()) {
                         if (!userDoc.getBelongUserId().equals(assignId) && !userDoc.getUserId().equals(assignId)) {
@@ -296,7 +297,7 @@ public class AttachmentServiceImpl implements AttachmentService {
             String creatorName = (String) request.get("creator_name");
             Integer status = request.get("status") != null ? (Integer) request.get("status") : 0;
             Integer pageNum = request.get("page_num") != null ? (Integer) request.get("page_num") : 1;
-            Integer pageSize = request.get("page_size") != null ? (Integer) request.get("page_size") : 50;
+            Integer pageSize = request.get("page_size") != null ? (Integer) request.get("page_size") : 30;
 
             // 校验分页参数
             if (pageNum < 1 || pageSize < 1) {
@@ -780,30 +781,9 @@ public class AttachmentServiceImpl implements AttachmentService {
         }
 
 
-        // 角色3需要检查创建者和所属用户
+        // 角色3需要检查创建者是否是自己或下属
         if (userRole == 3) {
-            String creatorId = attachmentDoc.getCreatorId();
-            List<String> belongUserIds = attachmentDoc.getBelongUserId();
-
-            // 检查是否为创建者
-            boolean isCreator = currentUserId.equals(creatorId);
-
-            // 检查创建者和所属用户是否都包含下属
-            // 检查创建者是否为下属
-            UserDocument creator = userRepository.findById(creatorId).orElse(null);
-            boolean creatorIsSubordinate = creator != null && currentUserId.equals(creator.getBelongUserId());
-            // 检查所属用户是否包含下属
-            boolean hasBelongUserSubordinate = false;
-            if (belongUserIds != null && !belongUserIds.isEmpty()) {
-                hasBelongUserSubordinate = belongUserIds.stream()
-                        .map(id -> userRepository.findById(id).orElse(null))
-                        .filter(user -> user != null)
-                        .anyMatch(user -> currentUserId.equals(user.getBelongUserId()));
-            }
-            boolean hasSubordinates = creatorIsSubordinate && hasBelongUserSubordinate;
-
-            // 如果既不是创建人，也不是下属，则无权删除
-            if (!isCreator && !hasSubordinates) {
+            if(!subordinateValidation.isSubordinateOrSelf(attachmentDoc.getCreatorId(), currentUserId)){
                 return new Result(ResultCode.R_NoAuth);
             }
         }
