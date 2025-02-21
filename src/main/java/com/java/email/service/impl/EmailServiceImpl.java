@@ -24,13 +24,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
+import com.java.email.constant.TypeConstData;
 @Service
 @Slf4j
 public class EmailServiceImpl implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
 
+    
     @Autowired
     private ElasticsearchClient elasticsearchClient;
 
@@ -227,10 +228,16 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public Result<?> deleteEmailType(EmailTypeDeleteRequest request) {
         try {
+
             // 检查参数
             if (request.getEmail_type_id() == null || request.getEmail_type_id().trim().isEmpty()) {
                 return Result.error("邮件类型ID不能为空");
             }
+
+            // // 生日类型不准删除
+             if (request.getEmail_type_id().equals(TypeConstData.BIRTH_TYPE_ID)) {
+                 return Result.error("生日类型不能删除");
+             }
 
             // 先检查文档是否存在
             log.info("Checking email type with ID: {}", request.getEmail_type_id());

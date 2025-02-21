@@ -12,18 +12,18 @@ spring:
    mvc:
      pathmatch:
        matching-strategy: ant_path_matcher
-  #  profiles:
-  #   active: prod
+   profiles:
+     active: prod
    data:
        redis:
            host: 112.35.176.43
            port: 9500
            database: 0
+elasticsearch:
+ host: 112.35.176.43
+ port: 9201
+ scheme: http
 server:
    tomcat:
      max-swallow-size: -1
 
-elasticsearch:
-  host: 112.35.176.43
-  port: 9201
-  scheme: http
