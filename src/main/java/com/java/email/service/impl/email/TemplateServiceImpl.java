@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.springframework.util.StringUtils;
 
@@ -142,8 +143,14 @@ public class TemplateServiceImpl implements TemplateService {
                     return new Result(ResultCode.R_TemplateNotFound);
                 }
                 if (userRole == 3) {
-                    // 小管理员只能修改自己的模板和下属的模板
-                    if(!subordinateValidation.isSubordinateOrSelf(existingDoc.getCreatorId(), userId)){
+                    // 验证模板当前所属用户是否包含自己或下属
+                    Set<String> subordinateIds = subordinateValidation.getAllSubordinateIds(userId);
+                    if (subordinateIds == null) {
+                        logUtil.error("获取下属列表失败");
+                        return new Result(ResultCode.R_Error);
+                    }
+                    if(!subordinateIds.contains(existingDoc.getBelongUserId()) && !existingDoc.getBelongUserId().contains(userId)){
+                        logUtil.error("无权修改非本人或下属的模板");
                         return new Result(ResultCode.R_NoAuth);
                     }
                 }
@@ -216,8 +223,14 @@ public class TemplateServiceImpl implements TemplateService {
             }
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
-                // 验证创建人是否是自己或下属，不是不能分配
-                if(!subordinateValidation.isSubordinateOrSelf(templateDoc.getCreatorId(), currentUserId)){
+                // 验证模板当前所属用户是否包含自己或下属
+                Set<String> subordinateIds = subordinateValidation.getAllSubordinateIds(currentUserId);
+                if (subordinateIds == null) {
+                    logUtil.error("获取下属列表失败");
+                    return new Result(ResultCode.R_Error);
+                }
+                if(!subordinateIds.contains(templateDoc.getBelongUserId()) && !templateDoc.getBelongUserId().contains(currentUserId)){
+                    logUtil.error("无权分配非本人或下属的模板");
                     return new Result(ResultCode.R_NoAuth);
                 }
                 if (!belongUserIds.contains(UserConstData.COMPANY_USER_ID)) {

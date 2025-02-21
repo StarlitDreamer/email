@@ -15,6 +15,7 @@ import com.java.email.model.entity.dictionary.CountryDocument;
 import com.java.email.model.entity.dictionary.EmailTypeDocument;
 import com.java.email.model.entity.receiver.CustomerAssignDocument;
 import com.java.email.model.entity.receiver.CustomerDocument;
+import com.java.email.model.entity.receiver.SupplierDocument;
 import com.java.email.model.entity.user.UserDocument;
 import com.java.email.service.receiver.CustomerService;
 import com.java.email.utils.LogUtil;
@@ -46,6 +47,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -132,20 +134,56 @@ public class CustomerServiceImpl implements CustomerService {
             logUtil.error("性别必须为男或女");
             return new Result(ResultCode.R_ParamError);
         }
-        if (customerDocument.getEmails() == null || customerDocument.getEmails().isEmpty()) {
-            logUtil.error("邮箱不能为空");
-            return new Result(ResultCode.R_ParamError);
-        }
-        for (String email : customerDocument.getEmails()) {
-            if (email == null || email.trim().isEmpty()) {
+        if (customerDocument.getEmails() != null) {
+            if (customerDocument.getEmails().isEmpty()) {
                 logUtil.error("邮箱不能为空");
                 return new Result(ResultCode.R_ParamError);
             }
-            if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
-                logUtil.error("邮箱格式错误: " + email);
-                return new Result(ResultCode.R_ParamError);
+            
+            // 检查数组内部是否有重复
+            for (String email : customerDocument.getEmails()) {
+                if (email == null || email.trim().isEmpty()) {
+                    logUtil.error("邮箱不能为空");
+                    return new Result(ResultCode.R_ParamError);
+                }
+                if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+                    logUtil.error("邮箱格式错误: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
+                // 检查数组内是否有重复
+                if (customerDocument.getEmails().stream()
+                        .filter(e -> e.equals(email))
+                        .count() > 1) {
+                    logUtil.error("邮箱不能重复: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
+                
+                // 检查数据库中是否已存在该邮箱
+                NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q
+                        .bool(b -> b
+                            .must(m -> m
+                                .term(t -> t
+                                    .field("emails")
+                                    .value(email)
+                                )
+                            )
+                        )
+                    )
+                    .build();
+                
+                SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(
+                    searchQuery,
+                    CustomerDocument.class
+                );
+                
+                if (searchHits.getTotalHits() > 0) {
+                    logUtil.error("邮箱已存在: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
             }
         }
+        
         if (customerDocument.getCustomerLevel() == null || customerDocument.getCustomerLevel() < ReceiverConstData.CUSTOMER_LEVEL_LOW || customerDocument.getCustomerLevel() > ReceiverConstData.CUSTOMER_LEVEL_HIGH) {
             logUtil.error("客户等级必须在1-3之间");
             return new Result(ResultCode.R_ParamError);
@@ -191,7 +229,7 @@ public class CustomerServiceImpl implements CustomerService {
         try {
             // Save the customer document
             String customerId = UUID.randomUUID().toString();
-            customerDocument.setCustomerId(customerId);
+            customerDocument.setCustomerId("customer_" + customerId);
             // 普通用户默认已分配
             if(userRole == 4){
                 customerDocument.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
@@ -245,6 +283,14 @@ public class CustomerServiceImpl implements CustomerService {
         if(userId == null || userRole == null){
             return new Result(ResultCode.R_UserNotFound);
         }
+        // 权限校验
+        if(userRole == 3){
+            // 验证客户当前所属用户是否包含自己或下属
+            if (!subordinateValidation.isSubordinateOrSelf(existingCustomer.getBelongUserId(), userId)) {
+                logUtil.error("无权修改非本人或下属所属的客户");
+                return new Result(ResultCode.R_NoAuth);
+            }
+        }
         if (userRole == 4) {
             if (!userId.equals(existingCustomer.getBelongUserId())) {
                 logUtil.error("无权修改非本人所属的客户");
@@ -296,6 +342,37 @@ public class CustomerServiceImpl implements CustomerService {
                 }
                 if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
                     logUtil.error("邮箱格式错误: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
+                // 检查数组内是否有重复
+                if (customerDocument.getEmails().stream()
+                        .filter(e -> e.equals(email))
+                        .count() > 1) {
+                    logUtil.error("邮箱不能重复: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
+                
+                // 检查数据库中是否已存在该邮箱
+                NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q
+                        .bool(b -> b
+                            .must(m -> m
+                                .term(t -> t
+                                    .field("emails")
+                                    .value(email)
+                                )
+                            )
+                        )
+                    )
+                    .build();
+                
+                SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(
+                    searchQuery,
+                    CustomerDocument.class
+                );
+                
+                if (searchHits.getTotalHits() > 0) {
+                    logUtil.error("邮箱已存在: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
             }
@@ -357,7 +434,6 @@ public class CustomerServiceImpl implements CustomerService {
             return new Result(ResultCode.R_Error);
         }
     }
-
     
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -383,18 +459,23 @@ public class CustomerServiceImpl implements CustomerService {
 
         // 如果是小管理（角色为3），需要验证权限
         if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
-            // 检查是否为创建人
-            boolean isCreator = userId.equals(existingCustomer.getCreatorId());
-            
-            // 检查创建人和所属用户是否都是下属
-            ValidationResult creatorValidation = subordinateValidation.isSubordinate(userId, existingCustomer.getCreatorId());
-            ValidationResult belongValidation = subordinateValidation.isSubordinate(userId, existingCustomer.getBelongUserId());
-            boolean hasSubordinate = belongValidation.isValid() && creatorValidation.isValid();
-            
-            // 如果既不是创建人，也不是下属，则无权删除
-            if (!isCreator && !hasSubordinate) {
+            // 检查创建人是否为下属或自己
+            if(!subordinateValidation.isSubordinateOrSelf(existingCustomer.getCreatorId(), userId)){
+                logUtil.error("无权删除非本人或下属创建的客户");
                 return new Result(ResultCode.R_NoAuth);
             }
+            // // 检查是否为创建人
+            // boolean isCreator = userId.equals(existingCustomer.getCreatorId());
+            
+            // // 检查创建人和所属用户是否都是下属
+            // ValidationResult creatorValidation = subordinateValidation.isSubordinate(userId, existingCustomer.getCreatorId());
+            // ValidationResult belongValidation = subordinateValidation.isSubordinate(userId, existingCustomer.getBelongUserId());
+            // boolean hasSubordinate = belongValidation.isValid() && creatorValidation.isValid();
+            
+            // // 如果既不是创建人，也不是下属，则无权删除
+            // if (!isCreator && !hasSubordinate) {
+            //     return new Result(ResultCode.R_NoAuth);
+            // }
         }
         // 如果是普通用户（角色为4），需要验证权限
         if (userRole.equals(UserConstData.ROLE_USER)) {
@@ -497,7 +578,7 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 // 客户等级条件
-                if (request.getCustomerLevel() != null) {
+                if (request.getCustomerLevel() != null && (request.getCustomerLevel() >= ReceiverConstData.CUSTOMER_LEVEL_LOW && request.getCustomerLevel() <= ReceiverConstData.CUSTOMER_LEVEL_HIGH)) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("customer_level")
@@ -507,7 +588,7 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 // 客户状态条件
-                if (request.getStatus() != null) {
+                if (request.getStatus() != null && (request.getStatus() == MagicMathConstData.CUSTOMER_STATUS_ASSIGNED || request.getStatus() == MagicMathConstData.CUSTOMER_STATUS_UNASSIGNED)) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("status")
@@ -517,7 +598,7 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 // 性别条件
-                if (request.getSex() != null) {
+                if (request.getSex() != null && (request.getSex().equals("男") || request.getSex().equals("女"))) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("sex")
@@ -580,7 +661,7 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 // 贸易类型条件
-                if (request.getTradeType() != null) {
+                if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("trade_type")
@@ -1294,13 +1375,14 @@ public class CustomerServiceImpl implements CustomerService {
             // 权限检查
             if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
                 if (!customerDocument.getBelongUserId().equals(UserConstData.COMPANY_USER_ID)) {
-                // 小管理员只能分配给自己的下属和自己
-                boolean targetValidation = subordinateValidation.isSubordinateOrSelf(
-                    customerDocument.getBelongUserId(), 
-                    currentUserId
-                    );
-                    if (!targetValidation) {
+                    // 小管理员只能分配给自己的下属和自己
+                    if (!subordinateValidation.isSubordinateOrSelf(customerDocument.getBelongUserId(), currentUserId)) {
                         logUtil.error("无权分配给非下属用户");
+                        return new Result(ResultCode.R_NoAuth);
+                    }
+                    // 检查所属用户是否为下属或自己
+                    if(!subordinateValidation.isSubordinateOrSelf(existingCustomer.getBelongUserId(), currentUserId)){
+                        logUtil.error("无权分配非本人或下属创建的客户");
                         return new Result(ResultCode.R_NoAuth);
                     }
                 }
@@ -1479,13 +1561,9 @@ public class CustomerServiceImpl implements CustomerService {
             if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
                 if(!belongUserId.equals(UserConstData.COMPANY_USER_ID)){
                     // 小管理员只能分配给自己或下属
-                    boolean targetValidation = subordinateValidation.isSubordinateOrSelf(
-                        belongUserId, 
-                        currentUserId
-                );
-                if (!targetValidation) {
-                    logUtil.error("无权分配给非下属用户");
-                    return new Result(ResultCode.R_NoAuth);
+                    if(!subordinateValidation.isSubordinateOrSelf(belongUserId, currentUserId)){
+                        logUtil.error("无权分配给非下属用户");
+                        return new Result(ResultCode.R_NoAuth);
                     }
                 }
             } else if (!userRole.equals(UserConstData.ROLE_ADMIN_LARGE)) {
@@ -1499,12 +1577,21 @@ public class CustomerServiceImpl implements CustomerService {
             String currentTime = LocalDateTime.now().format(formatter);
 
             // 批量更新客户
+            long count = 0;
             for (String customerId : customerIds) {
                 // 检查客户是否存在
                 CustomerDocument existingCustomer = customerRepository.findById(customerId).orElse(null);
                 if (existingCustomer == null) {
                     logUtil.error("客户不存在: " + customerId);
                     continue;
+                }
+
+                // 小管理检查所属用户是否为下属或自己
+                if(userRole.equals(UserConstData.ROLE_ADMIN_SMALL)){
+                    if(!subordinateValidation.isSubordinateOrSelf(existingCustomer.getBelongUserId(), currentUserId)){
+                        logUtil.error("无权分配非本人或下属的客户");
+                        continue;
+                    }
                 }
 
                 // 更新客户信息
@@ -1536,9 +1623,10 @@ public class CustomerServiceImpl implements CustomerService {
                     existingAssignment.getAssignProcess().add(0, process);
                 }
                 customerAssignRepository.save(existingAssignment);
+                count++;
             }
 
-            return new Result(ResultCode.R_Ok);
+            return new Result(ResultCode.R_Ok, count);
         } catch (Exception e) {
             logUtil.error("Error assigning customers: " + e.getMessage());
             return new Result(ResultCode.R_Error);
@@ -1636,8 +1724,55 @@ public class CustomerServiceImpl implements CustomerService {
                 
                 // 处理邮箱列表
                 String[] emails = data[9].split(";");
-                customer.setEmails(Arrays.asList(emails));
-                
+                // 检查数组内是否有重复
+                List<String> emailList = new ArrayList<>();
+                for (String email : emails) {
+                    if (email == null || email.trim().isEmpty()) {
+                        logUtil.error("邮箱不能为空");
+                        continue;
+                    }
+                    if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+                        logUtil.error("邮箱格式错误: " + email);
+                        continue;
+                    }
+                    // 检查数组内是否有重复
+                    if (Arrays.stream(emails)
+                            .filter(e -> e.equals(email))
+                            .count() > 1) {
+                        logUtil.error("邮箱不能重复: " + email);
+                        continue;
+                    }
+                    
+                    // 检查数据库中是否已存在该邮箱
+                    NativeQuery searchQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                            .bool(b -> b
+                                .must(m -> m
+                                    .term(t -> t
+                                        .field("emails")
+                                        .value(email)
+                                    )
+                                )
+                            )
+                        )
+                        .build();
+                    
+                    SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(
+                        searchQuery,
+                        CustomerDocument.class
+                    );
+                    
+                    if (searchHits.getTotalHits() > 0) {
+                        logUtil.error("邮箱已存在: " + email);
+                        continue;
+                    }
+                    emailList.add(email);
+                }
+                if (emailList.isEmpty()) {
+                    logUtil.error("邮箱验证全部重复");
+                    continue;
+                }
+                customer.setEmails(emailList);                
                 // 设置接受的邮件类型ID列表
                 // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
                 //         .map(EmailTypeDocument::getEmailTypeId)
@@ -1650,12 +1785,17 @@ public class CustomerServiceImpl implements CustomerService {
                 customer.setBelongUserId(userId);
                 customer.setCreatorId(userId);
 
-                // 设置状态为已分配(2)
-                customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
+                // 设置状态,大小管理默认未分配，普通用户默认已分配
+                Integer userRole = ThreadLocalUtil.getUserRole();
+                if (userRole == 4) {
+                    customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
+                } else {
+                    customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_UNASSIGNED);
+                }
 
                 // 生成客户ID
                 String customerId = UUID.randomUUID().toString();
-                customer.setCustomerId(customerId);
+                customer.setCustomerId("customer_" + customerId);
 
                 // 设置创建和更新时间
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -1680,6 +1820,7 @@ public class CustomerServiceImpl implements CustomerService {
         }
     }
 
+    
     private List<Map<String, Object>> convertToResponseFormat(List<CustomerDocument> customers) {
         if (customers == null || customers.isEmpty()) {
             return new ArrayList<>();

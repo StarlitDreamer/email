@@ -15,7 +15,7 @@ public class SupplierFilterRequest {
     private String sex;
     private String birth;
     private String email;
-    private List<String> acceptEmailTypeId;
+    private List<String> noAcceptEmailTypeId;
     private String belongUserName;
     private String creatorName;
     private Integer status;

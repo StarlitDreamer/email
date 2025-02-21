@@ -178,8 +178,14 @@ public class ImgServiceImpl implements ImgService {
 
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
-                // 验证创建人是否是自己或下属
-                if(!subordinateValidation.isSubordinateOrSelf(imgDoc.getCreatorId(), assignId)){
+                // 验证图片当前所属用户是否包含自己或下属
+                Set<String> subordinateIds = subordinateValidation.getAllSubordinateIds(assignId);
+                if (subordinateIds == null) {
+                    logUtil.error("获取下属列表失败");
+                    return new Result(ResultCode.R_Error);
+                }
+                if(!subordinateIds.contains(imgDoc.getBelongUserId()) && !imgDoc.getBelongUserId().contains(assignId)){
+                    logUtil.error("无权分配非本人或下属的图片");
                     return new Result(ResultCode.R_NoAuth);
                 }
                 // 验证要分配的用户是否是自己下属

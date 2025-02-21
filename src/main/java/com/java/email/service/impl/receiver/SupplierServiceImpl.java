@@ -11,6 +11,7 @@ import com.java.email.esdao.repository.receiver.SupplierRepository;
 import com.java.email.model.entity.dictionary.CommodityDocument;
 import com.java.email.model.entity.dictionary.CountryDocument;
 import com.java.email.model.entity.dictionary.EmailTypeDocument;
+import com.java.email.model.entity.receiver.CustomerDocument;
 import com.java.email.model.entity.receiver.SupplierAssignDocument;
 import com.java.email.model.entity.receiver.SupplierDocument;
 import com.java.email.service.receiver.SupplierService;
@@ -151,6 +152,8 @@ public class SupplierServiceImpl implements SupplierService {
                 logUtil.error("邮箱不能为空");
                 return new Result(ResultCode.R_ParamError);
             }
+            
+            // 检查数组内部是否有重复
             for (String email : supplierDocument.getEmails()) {
                 if (email == null || email.trim().isEmpty()) {
                     logUtil.error("邮箱不能为空");
@@ -160,8 +163,40 @@ public class SupplierServiceImpl implements SupplierService {
                     logUtil.error("邮箱格式错误: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
+                // 检查数组内是否有重复
+                if (supplierDocument.getEmails().stream()
+                        .filter(e -> e.equals(email))
+                        .count() > 1) {
+                    logUtil.error("邮箱不能重复: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
+                
+                // 检查数据库中是否已存在该邮箱
+                NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q
+                        .bool(b -> b
+                            .must(m -> m
+                                .term(t -> t
+                                    .field("emails")
+                                    .value(email)
+                                )
+                            )
+                        )
+                    )
+                    .build();
+                
+                SearchHits<SupplierDocument> searchHits = elasticsearchOperations.search(
+                    searchQuery,
+                    SupplierDocument.class
+                );
+                
+                if (searchHits.getTotalHits() > 0) {
+                    logUtil.error("邮箱已存在: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
             }
         }
+        
         if (supplierDocument.getSupplierLevel() != null) {
             if (supplierDocument.getSupplierLevel() < ReceiverConstData.SUPPLIER_LEVEL_LOW   || supplierDocument.getSupplierLevel() > ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
                 logUtil.error("供应商等级必须在1-3之间");
@@ -215,7 +250,7 @@ public class SupplierServiceImpl implements SupplierService {
         try {
             // Save the supplier document
             String supplierId = UUID.randomUUID().toString();
-            supplierDocument.setSupplierId(supplierId);
+            supplierDocument.setSupplierId("supplier_" + supplierId);
             // 普通用户默认已分配
             if(userRole == 4){
                 supplierDocument.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
@@ -269,6 +304,14 @@ public class SupplierServiceImpl implements SupplierService {
         if(userId == null || userRole == null){
             return new Result(ResultCode.R_UserNotFound);
         }
+        // 权限校验
+        if(userRole == 3){
+            // 验证供应商当前所属用户是否包含自己或下属
+            if (!subordinateValidation.isSubordinateOrSelf(existingSupplier.getBelongUserId(), userId)) {
+                logUtil.error("无权修改非本人或下属所属的供应商");
+                return new Result(ResultCode.R_NoAuth);
+            }
+        }
         if (userRole == 4) {
             if (!userId.equals(existingSupplier.getBelongUserId())) {
                 logUtil.error("无权修改非本人所属的供应商");
@@ -321,6 +364,37 @@ public class SupplierServiceImpl implements SupplierService {
                 }
                 if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
                     logUtil.error("邮箱格式错误: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
+                // 检查数组内是否有重复
+                if (supplierDocument.getEmails().stream()
+                        .filter(e -> e.equals(email))
+                        .count() > 1) {
+                    logUtil.error("邮箱不能重复: " + email);
+                    return new Result(ResultCode.R_ParamError);
+                }
+                
+                // 检查数据库中是否已存在该邮箱
+                NativeQuery searchQuery = NativeQuery.builder()
+                    .withQuery(q -> q
+                        .bool(b -> b
+                            .must(m -> m
+                                .term(t -> t
+                                    .field("emails")
+                                    .value(email)
+                                )
+                            )
+                        )
+                    )
+                    .build();
+                
+                SearchHits<SupplierDocument> searchHits = elasticsearchOperations.search(
+                    searchQuery,
+                    SupplierDocument.class
+                );
+                
+                if (searchHits.getTotalHits() > 0) {
+                    logUtil.error("邮箱已存在: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
             }
@@ -410,18 +484,23 @@ public class SupplierServiceImpl implements SupplierService {
 
         // 如果是主管（角色为3），需要验证权限
         if (userRole == 3) {
-            // 检查是否为创建人
-            boolean isCreator = userId.equals(existingSupplier.getCreatorId());
-            
-            // 检查创建人和所属用户是否都是下属
-            ValidationResult creatorValidation = subordinateValidation.isSubordinate(userId, existingSupplier.getCreatorId());
-            ValidationResult belongValidation = subordinateValidation.isSubordinate(userId, existingSupplier.getBelongUserId());
-            boolean hasSubordinate = belongValidation.isValid() && creatorValidation.isValid();
-            
-            // 如果既不是创建人，也不是下属，则无权删除
-            if (!isCreator && !hasSubordinate) {
+            // 检查创建人是否为下属或自己
+            if(!subordinateValidation.isSubordinateOrSelf(existingSupplier.getCreatorId(), userId)){
+                logUtil.error("无权删除非本人或下属创建的供应商");
                 return new Result(ResultCode.R_NoAuth);
             }
+            // // 检查是否为创建人
+            // boolean isCreator = userId.equals(existingSupplier.getCreatorId());
+            
+            // // 检查创建人和所属用户是否都是下属
+            // ValidationResult creatorValidation = subordinateValidation.isSubordinate(userId, existingSupplier.getCreatorId());
+            // ValidationResult belongValidation = subordinateValidation.isSubordinate(userId, existingSupplier.getBelongUserId());
+            // boolean hasSubordinate = belongValidation.isValid() && creatorValidation.isValid();
+            
+            // // 如果既不是创建人，也不是下属，则无权删除
+            // if (!isCreator && !hasSubordinate) {
+            //     return new Result(ResultCode.R_NoAuth);
+            // }
         }
         // 如果是普通用户（角色为4），需要验证权限
         if (userRole == 4) {
@@ -526,7 +605,7 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 供应商等级条件
-                if (request.getSupplierLevel() != null) {
+                if (request.getSupplierLevel() != null && (request.getSupplierLevel() >= ReceiverConstData.SUPPLIER_LEVEL_LOW && request.getSupplierLevel() <= ReceiverConstData.SUPPLIER_LEVEL_HIGH)) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("supplier_level")
@@ -536,7 +615,7 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 供应商状态条件
-                if (request.getStatus() != null) {
+                if (request.getStatus() != null && (request.getStatus() == MagicMathConstData.SUPPLIER_STATUS_ASSIGNED || request.getStatus() == MagicMathConstData.SUPPLIER_STATUS_UNASSIGNED)) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("status")
@@ -546,7 +625,7 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 性别条件
-                if (request.getSex() != null) {
+                if (request.getSex() != null && (request.getSex().equals("男") || request.getSex().equals("女"))) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("sex")
@@ -585,12 +664,12 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 邮件类型条件
-                if (request.getAcceptEmailTypeId() != null && !request.getAcceptEmailTypeId().isEmpty()) {
+                if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
-                    for (String emailTypeId : request.getAcceptEmailTypeId()) {
+                    for (String emailTypeId : request.getNoAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("accept_email_type_id")
+                                        .field("no_accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -609,7 +688,7 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 贸易类型条件
-                if (request.getTradeType() != null) {
+                if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
                             .term(t -> t
                                     .field("trade_type")
@@ -637,7 +716,7 @@ public class SupplierServiceImpl implements SupplierService {
 
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -818,12 +897,12 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 邮件类型条件
-                if (request.getAcceptEmailTypeId() != null && !request.getAcceptEmailTypeId().isEmpty()) {
+                if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
-                    for (String emailTypeId : request.getAcceptEmailTypeId()) {
+                    for (String emailTypeId : request.getNoAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("accept_email_type_id")
+                                        .field("no_accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1074,12 +1153,12 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 邮件类型条件
-                if (request.getAcceptEmailTypeId() != null && !request.getAcceptEmailTypeId().isEmpty()) {
+                if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
-                    for (String emailTypeId : request.getAcceptEmailTypeId()) {
+                    for (String emailTypeId : request.getNoAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("accept_email_type_id")
+                                        .field("no_accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1240,12 +1319,12 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 邮件类型条件
-                if (request.getAcceptEmailTypeId() != null && !request.getAcceptEmailTypeId().isEmpty()) {
+                if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
-                    for (String emailTypeId : request.getAcceptEmailTypeId()) {
+                    for (String emailTypeId : request.getNoAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("accept_email_type_id")
+                                        .field("no_accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1330,13 +1409,14 @@ public class SupplierServiceImpl implements SupplierService {
 
             // 权限检查
             if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
-                // 小管理员只能分配给自己的下属，且只能分配自己或下属的供应商
-                boolean targetValidation = subordinateValidation.isSubordinateOrSelf(
-                    supplierDocument.getBelongUserId(), 
-                    currentUserId
-                );
-                if (!targetValidation) {
+                // 小管理员只能分配给自己的下属
+                if (!subordinateValidation.isSubordinateOrSelf(supplierDocument.getBelongUserId(), currentUserId)) {
                     logUtil.error("无权分配给非下属用户");
+                    return new Result(ResultCode.R_NoAuth);
+                }
+                // 检查所属用户是否为下属或自己
+                if(!subordinateValidation.isSubordinateOrSelf(existingSupplier.getBelongUserId(), currentUserId)){
+                    logUtil.error("无权分配非本人或下属创建的供应商");
                     return new Result(ResultCode.R_NoAuth);
                 }
             } else if (!userRole.equals(UserConstData.ROLE_ADMIN_LARGE)) {
@@ -1511,12 +1591,8 @@ public class SupplierServiceImpl implements SupplierService {
             if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
                 if(!belongUserId.equals(UserConstData.COMPANY_USER_ID)){
                     // 小管理员只能分配给自己或下属
-                    boolean targetValidation = subordinateValidation.isSubordinateOrSelf(
-                        belongUserId, 
-                        currentUserId
-                );
-                if (!targetValidation) {
-                    logUtil.error("无权分配给非下属用户");
+                    if(!subordinateValidation.isSubordinateOrSelf(belongUserId, currentUserId)){
+                        logUtil.error("无权分配给非下属用户");
                         return new Result(ResultCode.R_NoAuth);
                     }
                 }
@@ -1531,12 +1607,20 @@ public class SupplierServiceImpl implements SupplierService {
             String currentTime = LocalDateTime.now().format(formatter);
 
             // 批量更新供应商
+            long count = 0;
             for (String supplierId : supplierIds) {
                 // 检查供应商是否存在
                 SupplierDocument existingSupplier = supplierRepository.findById(supplierId).orElse(null);
                 if (existingSupplier == null) {
                     logUtil.error("供应商不存在: " + supplierId);
                     continue;
+                }
+                // 小管理检查所属用户是否为下属或自己
+                if(userRole.equals(UserConstData.ROLE_ADMIN_SMALL)){
+                    if(!subordinateValidation.isSubordinateOrSelf(existingSupplier.getBelongUserId(), currentUserId)){
+                        logUtil.error("无权分配非本人或下属的供应商");
+                        continue;
+                    }
                 }
 
                 // 更新供应商信息
@@ -1568,8 +1652,9 @@ public class SupplierServiceImpl implements SupplierService {
                     existingAssignment.getAssignProcess().add(0, process);
                 }
                 supplierAssignRepository.save(existingAssignment);
+                count++;
             }
-            return new Result(ResultCode.R_Ok);
+            return new Result(ResultCode.R_Ok, count);
         } catch (Exception e) {
             logUtil.error("Error assigning suppliers: " + e.getMessage());
             return new Result(ResultCode.R_Error);
@@ -1727,7 +1812,56 @@ public class SupplierServiceImpl implements SupplierService {
                 
                 // 处理邮箱列表
                 String[] emails = data[9].split(";");
-                supplier.setEmails(Arrays.asList(emails));
+                // 检查数组内是否有重复
+                List<String> emailList = new ArrayList<>();
+                for (String email : emails) {
+                    if (email == null || email.trim().isEmpty()) {
+                        logUtil.error("邮箱不能为空");
+                        continue;
+                    }
+                    if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+                        logUtil.error("邮箱格式错误: " + email);
+                        continue;
+                    }
+                    // 检查数组内是否有重复
+                    if (Arrays.stream(emails)
+                            .filter(e -> e.equals(email))
+                            .count() > 1) {
+                        logUtil.error("邮箱不能重复: " + email);
+                        continue;
+                    }
+                    
+                    // 检查数据库中是否已存在该邮箱
+                    NativeQuery searchQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                            .bool(b -> b
+                                .must(m -> m
+                                    .term(t -> t
+                                        .field("emails")
+                                        .value(email)
+                                    )
+                                )
+                            )
+                        )
+                        .build();
+                    
+                    SearchHits<SupplierDocument> searchHits = elasticsearchOperations.search(
+                        searchQuery,
+                        SupplierDocument.class
+                    );
+                    
+                    if (searchHits.getTotalHits() > 0) {
+                        logUtil.error("邮箱已存在: " + email);
+                        continue;
+                    }
+                    emailList.add(email);
+                }
+                if (emailList.isEmpty()) {
+                    logUtil.error("邮箱验证全部重复");
+                    continue;
+                }
+                supplier.setEmails(emailList);
+
                 // 设置接受的邮件类型ID列表
                 // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
                 //         .map(EmailTypeDocument::getEmailTypeId)
@@ -1740,12 +1874,17 @@ public class SupplierServiceImpl implements SupplierService {
                 supplier.setBelongUserId(userId);
                 supplier.setCreatorId(userId);
 
-                // 设置状态为已分配(2)
-                supplier.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
+                // 设置状态,大小管理默认未分配，普通用户默认已分配
+                Integer userRole = ThreadLocalUtil.getUserRole();
+                if (userRole == 4) {
+                    supplier.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
+                } else {
+                    supplier.setStatus(MagicMathConstData.SUPPLIER_STATUS_UNASSIGNED);
+                }
 
                 // 生成供应商ID
                 String supplierId = UUID.randomUUID().toString();
-                supplier.setSupplierId(supplierId);
+                supplier.setSupplierId("supplier_" + supplierId);
 
                 // 设置创建和更新时间
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");

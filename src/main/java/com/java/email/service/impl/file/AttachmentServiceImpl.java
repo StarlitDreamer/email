@@ -180,8 +180,14 @@ public class AttachmentServiceImpl implements AttachmentService {
 
             // 如果是小管理员(role=3)，检查用户是否属于自己管理
             if (userRole == 3) {
-                // 验证创建人是否是自己或下属,不是不能分配
-                if(!subordinateValidation.isSubordinateOrSelf(attachmentDoc.getCreatorId(), assignId)){
+                // 验证附件当前所属用户是否包含自己或下属
+                Set<String> subordinateIds = subordinateValidation.getAllSubordinateIds(assignId);
+                if (subordinateIds == null) {
+                    logUtil.error("获取下属列表失败");
+                    return new Result(ResultCode.R_Error);
+                }
+                if(!subordinateIds.contains(attachmentDoc.getBelongUserId()) && !attachmentDoc.getBelongUserId().contains(assignId)){
+                    logUtil.error("无权分配非本人或下属的附件");
                     return new Result(ResultCode.R_NoAuth);
                 }
                 // 验证要分配的用户是否是自己下属
