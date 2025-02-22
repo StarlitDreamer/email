@@ -127,7 +127,8 @@ public class UserAssignServiceImpl implements UserAssignService {
                 try {
                     userService.getDuplicateFieldMessage(csvUser.getUserAccount(), csvUser.getUserEmail());
                 }catch (IOException e){
-                    throw new IOException("导入失败，这个用户"+csvUser.getUserAccount() + e.getMessage());
+                    // 不合法就跳过，导入其他用户
+                    continue;
                 }
 
                 User user = new User();
@@ -236,4 +237,6 @@ public class UserAssignServiceImpl implements UserAssignService {
 
         return new AssignUserDetailsVo(totalItems, pageNum, pageSize, pageData);
     }
+
+
 }

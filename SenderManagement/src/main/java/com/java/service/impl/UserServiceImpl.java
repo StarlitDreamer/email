@@ -265,6 +265,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void updateUserinfo(UpdateUserDto user) throws IOException {
+        // 公司不允许被修改
+        GetResponse<User> checkUserResponse = esClient.get(g -> g
+            .index(INDEX_NAME)
+            .id(user.getUser_id()), User.class);
+        User checkUser = checkUserResponse.source();
+        if (checkUser == null) {
+            throw new IOException("用户不存在");
+        }
+        Integer checkUserRole = checkUser.getUserRole();
+        if (checkUserRole == null || checkUserRole == 1 ) {
+            throw new IOException("公司不允许被修改");
+        }
+        // 检查用户账号和邮箱是否重复
+        if (user.getUser_account() != null || user.getUser_email() != null) {
+            String duplicateFieldMessage = getDuplicateFieldMessage(user.getUser_account(), user.getUser_email());
+            if (duplicateFieldMessage != null) {
+                throw new IOException(duplicateFieldMessage);
+            }
+        }
+        
         //修改用户信息
         Map<String, String> map = Stream.of(
                         new AbstractMap.SimpleEntry<>("user_name", user.getUser_name()),
@@ -349,7 +369,8 @@ public class UserServiceImpl implements UserService {
         ;
         List<String> mergedList = null;
         if (authsByRole == null && user_auth_id != null) {//添加
-            mergedList = Stream.concat(user_auth_id.stream(), userAuthId.stream()).distinct().collect(Collectors.toList());
+//            mergedList = Stream.concat(user_auth_id.stream(), userAuthId.stream()).distinct().collect(Collectors.toList());
+            mergedList = user_auth_id;
         }
         if (authsByRole != null && user_auth_id == null) {//覆盖
             mergedList = authsByRole;
@@ -376,35 +397,6 @@ public class UserServiceImpl implements UserService {
         if(!redisDelete){
             throw new IOException("更新用户信息，删除token失败");
         }
-        // 下发新token，获取用户信息
-//        GetResponse<User> userResponse = esClient.get(g -> g
-//                .index(INDEX_NAME)
-//                .id(user_id), User.class);
-//        User userDoc = userResponse.source();
-//        if (userDoc == null) {
-//            throw new IOException("用户不存在");
-//        }
-//        String userId = userDoc.getUserId();
-//        if (userId == null) {
-//            throw new IOException("用户信息有误");
-//        }
-//        String userName = userDoc.getUserName();
-//        if (userName == null) {
-//            throw new IOException("用户姓名信息有误");
-//        }
-//        Integer userRole = userDoc.getUserRole();
-//        if (userRole == null || userRole != 1 && userRole != 2 && userRole != 3 && userRole != 4) {
-//            throw new IOException("用户角色信息有误");
-//        }
-//        Map<String, Object> userMap = new HashMap<>();
-//        userMap.put("id", userId);
-//        userMap.put("name", userName);
-//        userMap.put("role", userRole); // Use the userRole variable declared earlier
-//        String token = JwtUtil.genToken(userMap);
-//        boolean redisSet = redisService.set(RedisConstData.USER_LOGIN_TOKEN + userId, token, MagicMathConstData.REDIS_VERIFY_TOKEN_TIMEOUT, TimeUnit.HOURS);
-//        if (!redisSet) {
-//            throw new IOException("redis存入token失败");
-//        }
     }
 
     // 删除用户的方法
@@ -555,39 +547,43 @@ public class UserServiceImpl implements UserService {
         return userDocument;
     }
 
-public String getDuplicateFieldMessage(String userAccount, String userEmail) throws IOException {
+    public String getDuplicateFieldMessage(String userAccount, String userEmail) throws IOException {
+        String checkUserAccount = userAccount == null ? "" : userAccount;
+        String checkUserEmail = userEmail == null ? "" : userEmail;
     // 检查账号是否重复
     SearchResponse<User> accountResponse = esClient.search(s -> s
-                    .index(INDEX_NAME)
-                    .query(q -> q
-                            .term(t -> t
-                                    .field("user_account")
-                                    .value(v -> v.stringValue(userAccount))
-                            )
-                    )
-                    .size(0),
-            User.class
+                        .index(INDEX_NAME)
+                        .query(q -> q
+                                .term(t -> t
+                                        .field("user_account")
+                                        .value(v -> v.stringValue(checkUserAccount))
+                                )
+                        )
+                        .size(0),
+                User.class
     );
 
     // 检查邮箱是否重复
     SearchResponse<User> emailResponse = esClient.search(s -> s
-                    .index(INDEX_NAME)
-                    .query(q -> q
-                            .term(t -> t
-                                    .field("user_email")
-                                    .value(v -> v.stringValue(userEmail))
-                            )
-                    )
-                    .size(0),
+                .index(INDEX_NAME)
+                .query(q -> q
+                        .term(t -> t
+                                .field("user_email")
+                                .value(v -> v.stringValue(checkUserEmail))
+                        )
+                )
+                .size(0),
             User.class
     );
 
     if (accountResponse.hits().total().value() > 0 && emailResponse.hits().total().value() > 0) {
-       throw new IOException("用户账号和邮箱已存在");
+        throw new IOException("用户账号和邮箱已存在");
     } else if (accountResponse.hits().total().value() > 0) {
         throw new IOException("用户账号已存在");
-    } else {
+    } else if (emailResponse.hits().total().value() > 0) {
         throw new IOException("用户邮箱已存在");
+    } else {
+        return null;
     }
 }
     public static String setTimestamps() {
