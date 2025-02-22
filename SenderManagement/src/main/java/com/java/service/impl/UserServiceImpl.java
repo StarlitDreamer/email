@@ -369,17 +369,14 @@ public class UserServiceImpl implements UserService {
         List<String> userAuthId = Objects.requireNonNull(getUserById(user_id).source()).getUserAuthId();
         ;
         List<String> mergedList = null;
-        if (authsByRole == null && user_auth_id != null) {//添加
-//            mergedList = Stream.concat(user_auth_id.stream(), userAuthId.stream()).distinct().collect(Collectors.toList());
+        if (authsByRole == null) {//添加
             mergedList = user_auth_id;
-        }
-        if (authsByRole != null && user_auth_id == null) {//覆盖
-            mergedList = authsByRole;
-        }
-        if (authsByRole != null && user_auth_id != null) {//覆盖
-            mergedList = Stream.concat(authsByRole.stream(), user_auth_id.stream())
-                    .distinct()
-                    .collect(Collectors.toList());
+        }else {
+//            mergedList = Stream.concat(authsByRole.stream(), user_auth_id.stream())
+//                    .distinct()
+//                    .collect(Collectors.toList());
+//            mergedList = Stream.concat(user_auth_id.stream(), userAuthId.stream()).distinct().collect(Collectors.toList());
+            mergedList=authsByRole;
         }
         Map<String, Object> updateData = new HashMap<>();
         updateData.put("user_auth_id", mergedList);
