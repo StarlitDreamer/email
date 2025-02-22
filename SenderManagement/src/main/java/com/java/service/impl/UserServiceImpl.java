@@ -415,8 +415,10 @@ public class UserServiceImpl implements UserService {
                             .update(u -> u
                                     .index(INDEX_NAME)
                                     .id(id)
-                                    .action(a -> a.doc(Map.of("belong_user_id", currentUserId)))
-                                    .action(a -> a.doc(Map.of("updated_at", getTimestampWithTimezone())))
+                                    .action(a -> a.doc(Map.of(
+                                        "belong_user_id", currentUserId,
+                                        "updated_at", getTimestampWithTimezone()
+                                    )))
                             )
                     );
                 }

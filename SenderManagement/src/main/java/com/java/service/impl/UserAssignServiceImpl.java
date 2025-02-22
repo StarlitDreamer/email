@@ -61,6 +61,9 @@ public class UserAssignServiceImpl implements UserAssignService {
         if (user == null) {
             throw new IOException("当前操作用户不存在");
         }
+        if (user.getUserRole() == 1 || user.getUserRole() == 2) {
+            throw new IOException("当前操作用户是公司或大管理员，不可分配");
+        }
         if(assignee.getUserRole() == user.getUserRole() || assignee.getUserRole() == 1){
             throw new IOException("同级不可被分配，公司不可被分配");
         }
