@@ -31,7 +31,7 @@ public class SenderManageController {
 
     @PostMapping("/createUser")
 //    @PreAuthorize("hasAuthority('AUTH_9')")
-    public Result createUser(@RequestBody @Validated CreateUserDto user) throws IOException {
+    public Result createUser(@RequestBody @Validated CreateUserDto user) {
 //        String currentUserId = ThreadLocalUtil.getUserId();//通过treadLocal获取当前操作者的用户id
         try {
 //            if (!userService.hasAuth(currentUserId, Auth.USER_MANAGE.auth_id())) {

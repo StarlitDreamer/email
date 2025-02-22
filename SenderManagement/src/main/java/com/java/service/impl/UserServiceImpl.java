@@ -55,6 +55,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public String createUser(CreateUserDto user) throws IOException {
+        getDuplicateFieldMessage(user.getUser_account(), user.getUser_email());
         Integer userRole = ThreadLocalUtil.getUserRole();
         String currentUserId = ThreadLocalUtil.getUserId();
         if (userRole == null) {
@@ -82,18 +83,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public FilterUserVo filterUser(String user_name, String user_account, String user_email, String belong_user_name, Integer status, Integer page_num, Integer page_size) throws IOException {
         try {
+
             //提供筛选条件筛选用户，小管理只能筛选出下属用户
             String current_id = ThreadLocalUtil.getUserId();
             Integer currentUserRole = ThreadLocalUtil.getUserRole();
+
             BoolQuery.Builder boolQuery = new BoolQuery.Builder();
-            // 根据角色添加查询条件
-            if (currentUserRole == 3) {
-                boolQuery.must(m -> m.term(t -> t.field("belong_user_id").value(current_id)));
-            } else if (currentUserRole == 4) {
-                GetResponse<User> response = getUserById(current_id);
-                String belongUserId = response.source().getBelongUserId();
-                boolQuery.must(m -> m.term(t -> t.field("belong_user_id").value(belongUserId)));
-            }
             Map<String, Object> filters = new HashMap<>();
             if (user_name != null && !user_name.isEmpty()) {
                 filters.put("user_name", user_name);
@@ -167,10 +162,19 @@ public class UserServiceImpl implements UserService {
                     }
                 }
             });
+            // 根据角色添加查询条件
+            if (currentUserRole == 3) {
+                boolQuery.must(m -> m.term(t -> t.field("belong_user_id").value(current_id)));
+            } else if (currentUserRole == 4) {
+                GetResponse<User> response = getUserById(current_id);
+                String belongUserId = response.source().getBelongUserId();
+                boolQuery.must(m -> m.term(t -> t.field("belong_user_id").value(belongUserId)));
+            }
             SearchResponse<User> searchResponse;
             if (filters.isEmpty()) {
                 searchResponse = esClient.search(s -> s
                         .index(INDEX_NAME)
+                        .query(q -> q.bool(boolQuery.build()))
                         .from((page_num - 1) * page_size)
                         .size(page_size)
                         .sort(sort -> sort  // 添加排序
@@ -215,7 +219,7 @@ public class UserServiceImpl implements UserService {
                         }
                     });
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    throw new RuntimeException("查询失败");
                 }
 
             }
@@ -245,9 +249,7 @@ public class UserServiceImpl implements UserService {
             return new FilterUserVo((int) totalHits, page_num, page_size, userVoList);
 
         } catch (Exception e) {
-            e.printStackTrace();
             throw new IOException("查询失败");
-
         }
     }
 
@@ -315,7 +317,6 @@ public class UserServiceImpl implements UserService {
             throw new IOException("公司和大管理员不允许被修改");
         }
 
-        String currentUserId = ThreadLocalUtil.getUserId();
         Integer currentUserRole = ThreadLocalUtil.getUserRole();
         // 角色修改权限检查
         if (user_role != null && currentUserRole != 2) {
@@ -554,6 +555,41 @@ public class UserServiceImpl implements UserService {
         return userDocument;
     }
 
+public String getDuplicateFieldMessage(String userAccount, String userEmail) throws IOException {
+    // 检查账号是否重复
+    SearchResponse<User> accountResponse = esClient.search(s -> s
+                    .index(INDEX_NAME)
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("user_account")
+                                    .value(v -> v.stringValue(userAccount))
+                            )
+                    )
+                    .size(0),
+            User.class
+    );
+
+    // 检查邮箱是否重复
+    SearchResponse<User> emailResponse = esClient.search(s -> s
+                    .index(INDEX_NAME)
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("user_email")
+                                    .value(v -> v.stringValue(userEmail))
+                            )
+                    )
+                    .size(0),
+            User.class
+    );
+
+    if (accountResponse.hits().total().value() > 0 && emailResponse.hits().total().value() > 0) {
+       throw new IOException("用户账号和邮箱已存在");
+    } else if (accountResponse.hits().total().value() > 0) {
+        throw new IOException("用户账号已存在");
+    } else {
+        throw new IOException("用户邮箱已存在");
+    }
+}
     public static String setTimestamps() {
         LocalDateTime currentTime = LocalDateTime.now();
         return currentTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));

@@ -41,8 +41,8 @@ public enum Auth implements IAuth{
     }
 
     private static void initRoleAuthMap() {
-        roleAuthMap.put(2, Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"));
-        roleAuthMap.put(3, Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"));
+        roleAuthMap.put(2, Arrays.asList("3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16"));
+        roleAuthMap.put(3, Arrays.asList("3", "4", "5", "6", "7", "8", "9", "10", "11"));
         roleAuthMap.put(4, Arrays.asList("1", "2", "3", "4", "5", "7", "8", "10", "11"));
     }
 

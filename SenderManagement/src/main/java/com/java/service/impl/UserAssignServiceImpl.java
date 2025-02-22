@@ -124,6 +124,12 @@ public class UserAssignServiceImpl implements UserAssignService {
 
 
             for (CsvUserDto csvUser : csvUserDtoList) {
+                try {
+                    userService.getDuplicateFieldMessage(csvUser.getUserAccount(), csvUser.getUserEmail());
+                }catch (IOException e){
+                    throw new IOException("导入失败，这个用户"+csvUser.getUserAccount() + e.getMessage());
+                }
+
                 User user = new User();
                 String userId = IdUtil.randomUUID();
                 user.setUserId(userId);
