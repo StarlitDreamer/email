@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,5 +59,46 @@ public class EmailDetailService {
 
         // 打印日志，确认任务执行
         System.out.println("Email report generated. Bounce Count: " + bounceCount + ", Delivered Count: " + deliveredCount);
+    }
+
+    /**
+     * 统计指定 emailTaskId 下 errorCode 为 200 的 emailId 数量
+     *
+     * @param emailTaskId 邮件任务ID
+     * @return 成功数量
+     */
+    public long countSuccessEmailIds(String emailTaskId) {
+        return countEmailIdsByErrorCode(emailTaskId, 200);
+    }
+
+    /**
+     * 统计指定 emailTaskId 下 errorCode 为 500 的 emailId 数量
+     *
+     * @param emailTaskId 邮件任务ID
+     * @return 失败数量
+     */
+    public long countFailedEmailIds(String emailTaskId) {
+        return countEmailIdsByErrorCode(emailTaskId, 500);
+    }
+
+    /**
+     * 根据 emailTaskId 和 errorCode 统计 emailId 数量
+     *
+     * @param emailTaskId 邮件任务ID
+     * @param errorCode   错误码
+     * @return 数量
+     */
+    private long countEmailIdsByErrorCode(String emailTaskId, Integer errorCode) {
+        // 查询符合条件的 EmailDetail 列表
+        List<EmailDetail> emailDetails = emailDetailRepository.findByEmailTaskIdAndErrorCode(emailTaskId, errorCode);
+
+        // 使用 Set 去重 emailId
+        Set<String> emailIdSet = new HashSet<>();
+        for (EmailDetail emailDetail : emailDetails) {
+            emailIdSet.add(emailDetail.getEmailId());
+        }
+
+        // 返回去重后的数量
+        return emailIdSet.size();
     }
 }

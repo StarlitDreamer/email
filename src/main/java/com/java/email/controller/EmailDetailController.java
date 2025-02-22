@@ -5,6 +5,7 @@ import com.java.email.service.EmailDetailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -32,5 +33,27 @@ public class EmailDetailController {
     @GetMapping("/delivered-count")
     public long getDeliveredCount() {
         return emailDetailService.getDeliveredCount();
+    }
+
+    /**
+     * 统计指定 emailTaskId 下 errorCode 为 200 的 emailId 数量
+     *
+     * @param emailTaskId 邮件任务ID
+     * @return 成功数量
+     */
+    @GetMapping("/countSuccess")
+    public long countSuccessEmailIds(@RequestParam String emailTaskId) {
+        return emailDetailService.countSuccessEmailIds(emailTaskId);
+    }
+
+    /**
+     * 统计指定 emailTaskId 下 errorCode 为 500 的 emailId 数量
+     *
+     * @param emailTaskId 邮件任务ID
+     * @return 失败数量
+     */
+    @GetMapping("/countFailed")
+    public long countFailedEmailIds(@RequestParam String emailTaskId) {
+        return emailDetailService.countFailedEmailIds(emailTaskId);
     }
 }
