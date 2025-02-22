@@ -355,27 +355,20 @@ public class UserServiceImpl implements UserService {
         List<String> authsByRole = null;
         if (user_role != null) {
             authsByRole = Auth.getAuthsByRole(user_role);
-            if (user_auth_id == null || user_auth_id.isEmpty()) {
-                if (user_role.equals(3)) {
-                    user_auth_id = authsByRole;
-                    esClient.update(u -> u
-                            .index(INDEX_NAME)
-                            .id(user_id)
-                            //.doc(Map.of("belong_user_id", currentUserId))
-                            .doc(Map.of("user_role", user_role)), User.class);
-                }
+            if (user_role.equals(3)) {
+                user_auth_id = authsByRole;
+                esClient.update(u -> u
+                        .index(INDEX_NAME)
+                        .id(user_id)
+                        //.doc(Map.of("belong_user_id", currentUserId))
+                        .doc(Map.of("user_role", user_role)), User.class);
             }
         }
-        List<String> userAuthId = Objects.requireNonNull(getUserById(user_id).source()).getUserAuthId();
-        ;
+
         List<String> mergedList = null;
         if (authsByRole == null) {//添加
             mergedList = user_auth_id;
         }else {
-//            mergedList = Stream.concat(authsByRole.stream(), user_auth_id.stream())
-//                    .distinct()
-//                    .collect(Collectors.toList());
-//            mergedList = Stream.concat(user_auth_id.stream(), userAuthId.stream()).distinct().collect(Collectors.toList());
             mergedList=authsByRole;
         }
         Map<String, Object> updateData = new HashMap<>();
