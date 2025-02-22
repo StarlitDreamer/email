@@ -390,8 +390,54 @@ public class UserServiceImpl implements UserService {
                 .index(INDEX_NAME)
                 .id(user_id)
                 .doc(updateData), User.class);
+        // 新增：处理小管理降级为普通用户的情况
+        if (user_role != null && checkUserRole == 3 && user_role == 4) {
+            String currentUserId = ThreadLocalUtil.getUserId(); // 获取当前大管理ID
+            // 查询所有属于该小管理的普通用户
+            SearchResponse<User> searchResponse = esClient.search(s -> s
+                            .index(INDEX_NAME)
+                            .query(q -> q.bool(b -> b
+                                    .must(m -> m.term(t -> t.field("belong_user_id").value(user_id)))
+                                    .must(m -> m.term(t -> t.field("user_role").value(4)))
+                            )), User.class);
 
+            // 提取需要更新的用户ID
+            List<String> updateUserId = searchResponse.hits().hits().stream()
+                    .map(hit -> hit.source().getUserId())
+                    .toList();
 
+            // 批量更新belong_user_id
+            if (!updateUserId.isEmpty()) {
+                BulkRequest.Builder bulkBuilder = new BulkRequest.Builder();
+                for (String id : updateUserId) {
+                    bulkBuilder.operations(op -> op
+                            .update(u -> u
+                                    .index(INDEX_NAME)
+                                    .id(id)
+                                    .action(a -> a.doc(Map.of("belong_user_id", currentUserId)))
+                                    .action(a -> a.doc(Map.of("updated_at", getTimestampWithTimezone())))
+                            )
+                    );
+                }
+                BulkResponse bulkResponse = esClient.bulk(bulkBuilder.build());
+                if (bulkResponse.errors()) {
+                    throw new IOException("下属用户归属更新失败");
+                }
+            }
+        }
+        //普通用户变成小管理  其所属用户变成大管理
+        if (user_role != null && checkUserRole == 4 && user_role == 3) {
+            GetResponse<User> response = esClient.get(g -> g
+                    .index(INDEX_NAME)
+                    .id(user_id), User.class);
+            User user = response.source();
+            user.setBelongUserId("2");
+            user.setUpdatedAt(getTimestampWithTimezone());
+            esClient.update(u -> u
+                    .index(INDEX_NAME)
+                    .id(user_id)
+                    .doc(user), User.class);
+        }
         // 更新权限后，删除token。
         boolean redisDelete = redisService.delete(RedisConstData.USER_LOGIN_TOKEN + user_id);
         if(!redisDelete){
