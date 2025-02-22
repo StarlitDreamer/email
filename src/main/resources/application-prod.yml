@@ -1,8 +1,8 @@
-spring:
-    elasticsearch:
-        uris: http://112.35.176.43:9201
-    data:
-         redis:
-             host: 112.35.176.43
-             port: 9500
-             database: 0
+#spring:
+#    elasticsearch:
+#        uris: http://112.35.176.43:9201
+#    data:
+#         redis:
+#             host: 112.35.176.43
+#             port: 9500
+#             database: 0

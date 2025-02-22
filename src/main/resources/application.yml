@@ -16,12 +16,12 @@ spring:
      active: prod
    data:
        redis:
-           host: 112.35.176.43
-           port: 9500
+           host: email-redis
+           port: 6379
            database: 0
 elasticsearch:
- host: 112.35.176.43
- port: 9201
+ host: es
+ port: 9200
  scheme: http
 server:
    tomcat:
