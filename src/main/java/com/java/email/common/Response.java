@@ -1,6 +1,6 @@
 package com.java.email.common;
 
-import com.java.email.Dto.ResponseData;
+import com.java.email.dto.ResponseData;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

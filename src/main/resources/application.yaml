@@ -8,5 +8,7 @@ spring:
 
   data:
     redis:
-      host: http://112.35.176.43
+#      host: localhost
+#      port: 6379
+      host: 112.35.176.43
       port: 9500

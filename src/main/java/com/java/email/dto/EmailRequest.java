@@ -1,4 +1,4 @@
-package com.java.email.Dto;
+package com.java.email.dto;
 
 import lombok.Data;
 

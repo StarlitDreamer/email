@@ -1,8 +1,5 @@
 package com.java.email.controller;
 
-import com.java.email.Dto.RequestData;
-import com.java.email.Dto.ResponseData;
-import com.java.email.common.Response;
 import com.java.email.common.Result;
 import com.java.email.entity.Email;
 import com.java.email.service.EmailService;

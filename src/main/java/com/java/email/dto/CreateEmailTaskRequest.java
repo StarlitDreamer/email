@@ -1,4 +1,4 @@
-package com.java.email.Dto;
+package com.java.email.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.java.email.entity.Attachment;
