@@ -46,5 +46,4 @@ public class EmailReportService {
         // 保存更新后的EmailReport实体
         return emailReportRepository.save(emailReport);
     }
-
 }

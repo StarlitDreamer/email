@@ -3,9 +3,10 @@ server:
 
 spring:
   elasticsearch:
-    uris: http://localhost:9200
+    uris: http://112.35.176.43:9201
+#    uris: http://localhost:9200
 
-#  data:
-#    redis:
-#      host: localhost
-#      port: 9200
+  data:
+    redis:
+      host: http://112.35.176.43
+      port: 9500

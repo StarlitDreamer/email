@@ -21,4 +21,16 @@ public class EmailDetailController {
     public Result<List<String>> getEmailTaskIdsForErrorCode500() {
         return Result.success(emailDetailService.getEmailTaskIdsForErrorCode500());
     }
+
+    // 获取退信数量接口
+    @GetMapping("/bounce-count")
+    public long getBounceCount() {
+        return emailDetailService.getBounceCount();
+    }
+
+    // 获取送达数量接口
+    @GetMapping("/delivered-count")
+    public long getDeliveredCount() {
+        return emailDetailService.getDeliveredCount();
+    }
 }
