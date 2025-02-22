@@ -235,7 +235,8 @@ public class UserServiceImpl implements UserService {
                             belongUserName,
                             user.getUserAccount(),
                             user.getUserEmail(),
-                            user.getStatus()
+                            user.getStatus(),
+                            user.getUserRole()
                     );
                     userVoList.add(userVo);
                 }

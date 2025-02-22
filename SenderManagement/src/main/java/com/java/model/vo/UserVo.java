@@ -14,4 +14,5 @@ public class UserVo {
     private String userAccount;
     private String userEmail;
     private Integer status;
+    private Integer userRole;
 }
