@@ -124,6 +124,9 @@ public class UserAssignServiceImpl implements UserAssignService {
 
 
             for (CsvUserDto csvUser : csvUserDtoList) {
+                if(csvUser.getUserRole().equals("1")||csvUser.getUserRole().equals("2")){
+                    continue;
+                }
                 try {
                     userService.getDuplicateFieldMessage(csvUser.getUserAccount(), csvUser.getUserEmail());
                 }catch (IOException e){
