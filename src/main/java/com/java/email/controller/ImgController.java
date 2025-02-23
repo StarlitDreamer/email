@@ -37,7 +37,7 @@ public class ImgController {
      * @param status       图片状态
      * @param imgName      图片名称
      * @param imgSize      图片大小
-     * @param page         页码
+     * @param pageNumber         页码
      * @param size         每页大小
      * @return 符合条件的图片分页结果
      */
@@ -48,13 +48,13 @@ public class ImgController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String imgName,
             @RequestParam(required = false) Long imgSize,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int pageNumber,
             @RequestParam(defaultValue = "10") int size,
             @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
             @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
 
         return imgService.findImgsByCriteria(
-                currentUserId, currentUserRole, belongUserId, creatorId, status, imgName, imgSize, page, size);
+                currentUserId, currentUserRole, belongUserId, creatorId, status, imgName, imgSize, pageNumber-1, size);
     }
 
 //    @GetMapping("/search")

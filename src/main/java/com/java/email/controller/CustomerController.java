@@ -21,7 +21,7 @@ public class CustomerController {
      * @param customerName  客户名称
      * @param status        分配状态
      * @param tradeType     贸易类型
-     * @param page          页码
+     * @param pageNumber          页码
      * @param size          每页大小
      * @return 符合条件的客户分页结果
      */
@@ -32,7 +32,7 @@ public class CustomerController {
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int pageNumber,
             @RequestParam(defaultValue = "10") int size,
             @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
             @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
@@ -40,7 +40,7 @@ public class CustomerController {
         // 调用服务层方法，传递当前用户ID和角色
         return customerService.findCustomersByCriteria(
                 belongUserId, customerLevel, customerName, status, tradeType,
-                page, size, currentUserId, currentUserRole);
+                pageNumber-1, size, currentUserId, currentUserRole);
     }
 //    @GetMapping("/search")
 //    public Result<Page<Customer>> findCustomersByCriteria(
@@ -64,7 +64,7 @@ public class CustomerController {
      * @param customerName  客户名称
      * @param status        分配状态
      * @param tradeType     贸易类型
-     * @param page          页码
+     * @param pageNumber          页码
      * @param size          每页大小
      * @return 符合条件的客户分页结果
      */
@@ -75,7 +75,7 @@ public class CustomerController {
             @RequestParam(required = false) String customerName,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int pageNumber,
             @RequestParam(defaultValue = "10") int size,
             @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
             @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
@@ -83,7 +83,7 @@ public class CustomerController {
         // 调用服务层方法，传递当前用户ID和角色
         return customerService.findCustomersByCriteriaRedis(
                 belongUserId, customerLevel, customerName, status, tradeType,
-                page, size, currentUserId, currentUserRole);
+                pageNumber-1, size, currentUserId, currentUserRole);
     }
 //    @GetMapping("/search-redis")
 //    public Result<String> findCustomersByCriteriaRedis(

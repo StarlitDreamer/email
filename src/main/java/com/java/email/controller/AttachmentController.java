@@ -39,7 +39,7 @@ public class AttachmentController {
      * @param creatorId     创建人ID
      * @param status        附件状态
      * @param attachmentName 附件名称
-     * @param page          当前页码
+     * @param pageNumber          当前页码
      * @param size          每页大小
      * @return 符合条件的附件列表（分页）
      */
@@ -49,13 +49,13 @@ public class AttachmentController {
             @RequestParam(required = false) String creatorId,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String attachmentName,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int pageNumber,
             @RequestParam(defaultValue = "10") int size,
             @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
             @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
 
         return attachmentService.findAttachmentsByCriteria(
-                currentUserId, currentUserRole, belongUserId, creatorId, status, attachmentName, page, size);
+                currentUserId, currentUserRole, belongUserId, creatorId, status, attachmentName, pageNumber-1, size);
     }
 //    @GetMapping("/search")
 //    public Result<Page<Attachment>> findAttachmentsByCriteria(

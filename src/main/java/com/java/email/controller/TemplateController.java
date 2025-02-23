@@ -36,7 +36,7 @@ public class TemplateController {
      * @param status       模板状态
      * @param templateName 模板名称
      * @param templateType 模板类型
-     * @param page         页码
+     * @param pageNumber         页码
      * @param size         每页大小
      * @return 符合条件的模板分页结果
      */
@@ -48,13 +48,13 @@ public class TemplateController {
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) String templateName,
             @RequestParam(required = false) Integer templateType,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int pageNumber,
             @RequestParam(defaultValue = "10") int size,
             @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
             @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
 
         return templateService.findTemplatesByCriteria(
-                currentUserId, currentUserRole, belongUserId, creator, creatorId, status, templateName, templateType, page, size);
+                currentUserId, currentUserRole, belongUserId, creator, creatorId, status, templateName, templateType, pageNumber-1, size);
     }
 //    @GetMapping("/search")
 //    public Result<Page<Template>> findTemplatesByCriteria(

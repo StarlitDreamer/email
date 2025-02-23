@@ -21,8 +21,8 @@ public class SupplierController {
      * @param supplierName  供应商名称
      * @param status        分配状态
      * @param tradeType     贸易类型
-     * @param page          页码
-     * @param size          每页大小
+     * @param pageNumber          页码
+     * @param pageSize          每页大小
      * @return 符合条件的供应商分页结果
      */
     @GetMapping("/search")
@@ -32,15 +32,15 @@ public class SupplierController {
             @RequestParam(required = false) String supplierName,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "0") int pageNumber,
+            @RequestParam(defaultValue = "10") int pageSize,
             @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
             @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
 
         // 调用服务层方法，传递当前用户ID和角色
         return supplierService.findSuppliersByCriteria(
                 ownerUserId, supplierLevel, supplierName, status, tradeType,
-                page, size, currentUserId, currentUserRole);
+                pageNumber-1, pageSize, currentUserId, currentUserRole);
     }
 //    @GetMapping("/search")
 //    public Result<Page<Supplier>> findSuppliersByCriteria(
@@ -63,7 +63,7 @@ public class SupplierController {
      * @param supplierName  供应商名称
      * @param status        分配状态
      * @param tradeType     贸易类型
-     * @param page          页码
+     * @param pageNumber          页码
      * @param size          每页大小
      * @return 符合条件的供应商分页结果
      */
@@ -74,14 +74,14 @@ public class SupplierController {
             @RequestParam(required = false) String supplierName,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int pageNumber,
             @RequestParam(defaultValue = "10") int size,
             @RequestHeader("currentUserId") String currentUserId,
             @RequestHeader("currentUserRole") int currentUserRole) {
 
         return supplierService.findSuppliersByCriteriaRedis(
                 ownerUserId, supplierLevel, supplierName, status, tradeType,
-                page, size, currentUserId, currentUserRole);
+                pageNumber, size, currentUserId, currentUserRole);
     }
 //    @GetMapping("/search-redis")
 //    public Result<String> findSuppliersByCriteriaRedis(
