@@ -1,60 +1,119 @@
-//package com.java.email.controller;
-//
+package com.java.email.controller;
+
 //import com.java.email.Dto.CreateCycleEmailTaskRequest;
 //import com.java.email.Dto.CreateFestivalEmailTaskRequest;
-//import com.java.email.common.Result;
-//import com.java.email.entity.EmailTask;
+import com.java.email.common.Result;
+import com.java.email.dto.EmailTaskRequest;
+import com.java.email.entity.EmailTask;
 //import com.java.email.Dto.CreateEmailTaskRequest;
 //import com.java.email.Dto.UpdateBirthdayEmailTaskRequest;
+import com.java.email.repository.EmailTaskRepository;
 //import com.java.email.service.EmailTaskService;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.web.bind.annotation.*;
+import com.java.email.service.EmailTaskService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/email-tasks")
+public class EmailTaskController {
+
+    @Autowired
+    private EmailTaskService emailTaskService;
+
+    @Autowired
+    private EmailTaskRepository emailTaskRepository;
+
+//    @PostMapping()
+//    public String createEmailTask(@RequestBody EmailTaskRequest request) {
+//        // Generate UUID for email_task_id
+//        String emailTaskId = UUID.randomUUID().toString();
 //
-//import java.util.List;
+//        // Create EmailTask object
+//        EmailTask emailTask = new EmailTask();
+//        emailTask.setEmailTaskId(emailTaskId);
+//        emailTask.setSubject(request.getSubject());
+//        emailTask.setEmailTypeId(request.getEmailTypeId());
+//        emailTask.setTemplateId(request.getTemplateId());
+//        emailTask.setEmailContent(request.getEmailContent());
+//        emailTask.setReceiverId(request.getReceiverId());
+//        emailTask.setReceiverSupplierId(request.getReceiverSupplierId());
+//        emailTask.setReceiverKey(request.getReceiverKey());
+//        emailTask.setReceiverSupplierKey(request.getReceiverSupplierKey());
+//        emailTask.setCancelReceiverId(request.getCancelReceiverId());
+//        emailTask.setAttachment(request.getAttachment());
+//        emailTask.setTaskType(request.getTaskType());
 //
-//@RestController
-//@RequestMapping("/email-tasks")
-//public class EmailTaskController {
+//        // Set other fields if needed
+//        emailTask.setCreatedAt(System.currentTimeMillis() / 1000); // Current timestamp in seconds
 //
-//    @Autowired
-//    private EmailTaskService emailTaskService;
+//        // Save to Elasticsearch
+//        emailTaskRepository.save(emailTask);
 //
-//    /**
-//     * 根据邮件任务 ID 修改任务操作状态
-//     *
-//     * @param emailTaskId   邮件任务 ID
-//     * @param operateStatus 新的任务操作状态
-//     * @return 操作结果
-//     */
-////    @PutMapping("/update-status")
-////    public Result updateOperateStatus(
-////            @RequestParam String emailTaskId,  // 邮件任务ID
-////            @RequestParam int operateStatus,   // 操作状态
-////            @RequestHeader("currentUserId") String currentUserId) { // 从请求头中获取当前用户ID
-////        try {
-////            // 调用服务层方法，传入当前用户ID进行权限校验
-////            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus, currentUserId);
-////            return Result.success(updatedTask);
-////        } catch (IllegalArgumentException e) {
-////            return Result.error(e.getMessage());
-////        } catch (Exception e) {
-////            return Result.error("更新任务操作状态失败");
-////        }
-////    }
-////    @PutMapping("/operate-status")
-////    public Result updateOperateStatus(
-////            @RequestParam String emailTaskId,  // 改为 @RequestParam
-////            @RequestParam int operateStatus) {
-////        try {
-////            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus);
-////            return Result.success(updatedTask);
-////        } catch (IllegalArgumentException e) {
-////            return Result.error(e.getMessage());
-////        } catch (Exception e) {
-////            return Result.error("更新任务操作状态失败");
-////        }
-////    }
-//
+//        return "Email task created with ID: " + emailTaskId;
+//    }
+
+    /**
+     * 创建普通邮件任务
+     */
+    @PostMapping("create")
+    public String createEmailTask(@RequestBody EmailTask request) {
+        return emailTaskService.createEmailTask(request);
+    }
+
+    /**
+     * 创建普通邮件任务
+     */
+    @PostMapping("createCycle")
+    public String createCycleEmailTask(@RequestBody EmailTask request) {
+        return emailTaskService.createCycleEmailTask(request);
+    }
+
+    /**
+     * 创建节日邮件任务
+     */
+    @PostMapping("createFestival")
+    public String createFestivalEmailTask(@RequestBody EmailTask request) {
+        return emailTaskService.createFestivalEmailTask(request);
+    }
+    /**
+     * 根据邮件任务 ID 修改任务操作状态
+     *
+     * @param emailTaskId   邮件任务 ID
+     * @param operateStatus 新的任务操作状态
+     * @return 操作结果
+     */
+//    @PutMapping("/update-status")
+//    public Result updateOperateStatus(
+//            @RequestParam String emailTaskId,  // 邮件任务ID
+//            @RequestParam int operateStatus,   // 操作状态
+//            @RequestHeader("currentUserId") String currentUserId) { // 从请求头中获取当前用户ID
+//        try {
+//            // 调用服务层方法，传入当前用户ID进行权限校验
+//            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus, currentUserId);
+//            return Result.success(updatedTask);
+//        } catch (IllegalArgumentException e) {
+//            return Result.error(e.getMessage());
+//        } catch (Exception e) {
+//            return Result.error("更新任务操作状态失败");
+//        }
+//    }
+//    @PutMapping("/operate-status")
+//    public Result updateOperateStatus(
+//            @RequestParam String emailTaskId,  // 改为 @RequestParam
+//            @RequestParam int operateStatus) {
+//        try {
+//            EmailTask updatedTask = emailTaskService.updateOperateStatus(emailTaskId, operateStatus);
+//            return Result.success(updatedTask);
+//        } catch (IllegalArgumentException e) {
+//            return Result.error(e.getMessage());
+//        } catch (Exception e) {
+//            return Result.error("更新任务操作状态失败");
+//        }
+//    }
+
 //    /**
 //     * 更新邮件任务的操作状态
 //     *
@@ -161,5 +220,5 @@
 //    public Result<EmailTask> createFestivalEmailTask(@RequestBody CreateFestivalEmailTaskRequest request) {
 //        return Result.success(emailTaskService.createFestivalEmailTask(request));
 //    }
-//}
-//
+}
+

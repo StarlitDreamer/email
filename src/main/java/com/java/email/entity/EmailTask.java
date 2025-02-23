@@ -104,6 +104,22 @@ public class EmailTask {
     @Field(name = "template_id", type = FieldType.Keyword)
     private String templateId;            // 模板ID，不分词
 
+    @JsonProperty("receiver_supplier_id")
+    @Field(name = "receiver_supplier_id", type = FieldType.Keyword)
+    private List<String> receiverSupplierId;   //
+
+    @JsonProperty("receiver_key")
+    @Field(name = "receiver_key", type = FieldType.Keyword)
+    private String receiverKey;           //
+
+    @JsonProperty("receiver_supplier_key")
+    @Field(name = "receiver_supplier_key", type = FieldType.Keyword)
+    private String receiverSupplierKey;   //
+
+    @JsonProperty("cancel_receiver_id")
+    @Field(name = "cancel_receiver_id", type = FieldType.Keyword)
+    private String cancelReceiverId;  //
+
 //    @JsonProperty("interval_date")
 //    @Field(name = "interval_date", type = FieldType.Long)
 //    private Long intervalDate;            // 循环邮件的间隔时间，秒级时间戳
