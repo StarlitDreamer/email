@@ -48,9 +48,9 @@ public class UserDocument {
     @Field(name = "status", type = FieldType.Integer)
     private Integer status;
 
-    @Field(name = "created_at", type = FieldType.Date)
-    private String createdAt;
+    @Field(name = "created_at", type = FieldType.Long)
+    private Long createdAt;
 
-    @Field(name = "updated_at", type = FieldType.Date)
-    private String updatedAt;
+    @Field(name = "updated_at", type = FieldType.Long)
+    private Long updatedAt;
 } 
