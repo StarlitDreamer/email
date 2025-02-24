@@ -32,7 +32,7 @@ public class SupplierController {
             @RequestParam(required = false) String supplierName,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "0") int pageNumber,
+            @RequestParam(defaultValue = "1") int pageNumber,
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
             @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色

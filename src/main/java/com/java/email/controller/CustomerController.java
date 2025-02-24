@@ -42,19 +42,6 @@ public class CustomerController {
                 belongUserId, customerLevel, customerName, status, tradeType,
                 pageNumber-1, size, currentUserId, currentUserRole);
     }
-//    @GetMapping("/search")
-//    public Result<Page<Customer>> findCustomersByCriteria(
-//            @RequestParam(required = false) String belongUserId,
-//            @RequestParam(required = false) Integer customerLevel,
-//            @RequestParam(required = false) String customerName,
-//            @RequestParam(required = false) Integer status,
-//            @RequestParam(required = false) Integer tradeType,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size) {
-//
-//        return customerService.findCustomersByCriteria(
-//                belongUserId, customerLevel, customerName, status, tradeType, page, size);
-//    }
 
     /**
      * 根据条件筛选客户并存入redis中，返回redisKey
@@ -85,17 +72,4 @@ public class CustomerController {
                 belongUserId, customerLevel, customerName, status, tradeType,
                 pageNumber-1, size, currentUserId, currentUserRole);
     }
-//    @GetMapping("/search-redis")
-//    public Result<String> findCustomersByCriteriaRedis(
-//            @RequestParam(required = false) String belongUserId,
-//            @RequestParam(required = false) Integer customerLevel,
-//            @RequestParam(required = false) String customerName,
-//            @RequestParam(required = false) Integer status,
-//            @RequestParam(required = false) Integer tradeType,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size) {
-//
-//        return customerService.findCustomersByCriteriaRedis(
-//                belongUserId, customerLevel, customerName, status, tradeType, page, size);
-//    }
 }

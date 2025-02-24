@@ -54,15 +54,4 @@ public class Img {
     @JsonProperty("updated_at")
     @Field(name = "updated_at", type = FieldType.Long)
     private Long updatedAt;    // 更新日期
-
-//    private List<String> belongUserId;  // 所属用户ID列表  ownerUserIds
-//    private long createdAt;    // 创建日期
-//    private String creatorId;           // 创建人ID
-//    @Id
-//    private String imgId;               // 图片ID
-//    private String imgName;             // 图片名称
-//    private long imgSize;               // 图片大小，单位为字节
-//    private String imgUrl;              // 图片URL
-//    private int status;           // 分配状态 1:未分配 2:已分配
-//    private long updatedAt;    // 更新日期
 }

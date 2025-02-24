@@ -10,6 +10,7 @@ import com.java.email.entity.Receiver;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
 //import com.java.email.Dto.CreateEmailTaskRequest;
+import jakarta.annotation.Resource;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,19 +29,21 @@ public class EmailTaskService {
     @Autowired
     private EmailRepository emailRepository;
 
-    @Autowired
-    private RedisTemplate<String, String> redisTemplate;
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 创建普通邮件发送任务
      */
     public String createEmailTask(EmailTask request) {
         // Generate UUID for email_task_id
-        String emailTaskId = UUID.randomUUID().toString();
+//        String emailTaskId = UUID.randomUUID().toString();
+        String emailTaskId = "199324";
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(emailTaskId);
+        emailTask.setSenderId(request.getSenderId());
         emailTask.setSubject(request.getSubject());
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
@@ -77,7 +80,9 @@ public class EmailTaskService {
 
         // Save email_task_id to Redis
 //        redisTemplate.opsForValue().set("email_task_id:" + emailTaskId, emailTaskId);
-        redisTemplate.opsForValue().set(emailTaskId, "youjian");
+      String v = "1011";
+      String name = "TIMER_TASK9001";
+        redisTemplate.opsForZSet().add(name, v, System.currentTimeMillis() / 1000);
 
         return "Email task created with ID: " + emailTaskId;
     }

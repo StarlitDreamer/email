@@ -6,6 +6,7 @@ import org.springframework.data.elasticsearch.repository.ElasticsearchRepository
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Set;
 
 public interface TemplateRepository extends ElasticsearchRepository<Template, String> {
     // 根据模板 ID 查找模板
