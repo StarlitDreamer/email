@@ -1,12 +1,10 @@
 package com.java.email.service;
 
-import cn.hutool.core.util.IdUtil;
+
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch.core.CountResponse;
-import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.java.email.common.Result;
@@ -23,9 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.elasticsearch.client.elc.QueryBuilders;
-import org.springframework.data.elasticsearch.client.erhlc.NativeSearchQueryBuilder;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -34,8 +29,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 public class CustomerService {
@@ -278,7 +271,7 @@ public class CustomerService {
 //        }
 //    }
 
-public FilterCustomersResponse FilterFindCustomers(String currentUserId,int currentUserRole,FilterCustomersDto filterCustomersDto) throws IOException {
+public FilterCustomersResponse FilterFindCustomers(String currentUserId, int currentUserRole, FilterCustomersDto filterCustomersDto) throws IOException {
         int num=Integer.parseInt(filterCustomersDto.getPage_num());
     int size= Integer.parseInt(filterCustomersDto.getPage_size());
     String commodityName = filterCustomersDto.commodity_name;
@@ -438,7 +431,7 @@ public FilterCustomersResponse FilterFindCustomers(String currentUserId,int curr
         }
         return new FilterCustomersResponse(receiverList,receiverList.size(),num,size);
     }
-public SearchAllCustomersResponse findCustomers(String currentUserId,int currentUserRole,SearchAllCustomersDto searchAllCustomersDto) throws IOException {
+public SearchAllCustomersResponse findCustomers(String currentUserId, int currentUserRole, SearchAllCustomersDto searchAllCustomersDto) throws IOException {
     CountResponse countResponse = esClient.count(c -> c
             .index(INDEX_NAME)  // 索引名称
     );
