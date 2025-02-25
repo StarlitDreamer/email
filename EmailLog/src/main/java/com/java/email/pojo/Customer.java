@@ -33,7 +33,7 @@ public class Customer implements Serializable {
      * 商品id
      */
     @JsonProperty("commodity_id")
-    private String[] commodityid;
+    private String commodityid;
     /**
      * 联系人
      */
@@ -57,7 +57,7 @@ public class Customer implements Serializable {
     /**
      * 客户国家
      */
-    @JsonProperty("customer_countryid")
+    @JsonProperty("customer_country_id")
     private String customerCountryid;
     /**
      * 客户id，使用uuid
@@ -96,6 +96,9 @@ public class Customer implements Serializable {
      */
     @JsonProperty("updated_at")
     private String updatedAt;
+
+    @JsonProperty("no_accept_email_type_id")
+    private String noAcceptEmailTypeId;
 
     // 定义索引映射
     public static TypeMapping createMapping() {

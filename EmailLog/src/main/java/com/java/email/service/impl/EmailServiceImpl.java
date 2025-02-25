@@ -252,6 +252,12 @@ public class EmailServiceImpl implements EmailService {
 
                 s.query(q -> q.bool(b -> {
 
+                    // 处理邮件状态查询
+                            // 发送失败的邮件
+                            b.must(m -> m.term(t -> t.field("error_code").value(500)));
+
+
+
 
                     // 添加收件人邮箱过滤（仅当recipientEmails不为null且不为空时）
                     if (recipientEmails != null && !recipientEmails.isEmpty()) {

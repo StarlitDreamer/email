@@ -8,7 +8,7 @@ public class RsendDetails {
     /**
      * 接受者邮箱
      */
-    @JsonProperty("accepter_eamil")
+    @JsonProperty("accepter_email")
     private String accepterEmail;
     /**
      * 重发邮件的id

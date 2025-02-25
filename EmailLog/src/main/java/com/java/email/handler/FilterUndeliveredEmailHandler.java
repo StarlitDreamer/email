@@ -53,7 +53,7 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         QueryStringDecoder decoder = new QueryStringDecoder(request.uri());
 
-        if (request.method() == HttpMethod.GET && "/emailManage/filterEmail".equals(decoder.path())) {
+        if (request.method() == HttpMethod.GET && "/emailDetails/undelivered-emails".equals(decoder.path())) {
             try {
 
                 List<String> managedUserEmails=null;

@@ -2,6 +2,9 @@ package com.java.email.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchPhraseQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermsQuery;
@@ -27,7 +30,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     private final ElasticsearchClient esClient;
     private static final String CUSTOMER_INDEX = "customer";
     private static final String SUPPLIER_INDEX = "supplier";
-    private static final String RESEND_EMAIL = "resend_details ";
+    private static final String RESEND_EMAIL = "resend_details";
     private static final String USER_INDEX = "user";
 
     @Autowired
@@ -48,35 +51,61 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             // 并行查询Customer和Supplier索引
             CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
                 try {
-                    Query query = TermQuery.of(t -> t
+                    // 构建查询
+                    Query query = MatchPhraseQuery.of(m -> m
                             .field("emails")
-                            .value(email)
+                            .query(email)
                     )._toQuery();
 
-                    return esClient.search(s -> s
-                                    .index(CUSTOMER_INDEX)
-                                    .query(query)
-                                    .size(1),
-                            Customer.class
+                    // 打印查询语句
+                    log.info("Customer search query: email={}, query={}", email, query);
+
+                    // 执行查询
+                    SearchResponse<Customer> response = esClient.search(s -> s
+                            .index(CUSTOMER_INDEX)
+                            .query(query)
+                            .size(1),
+                        Customer.class
                     );
+
+                    // 打印查询结果
+                    if (response != null) {
+                        log.info("Customer search response: total={}, hits={}", 
+                            response.hits().total().value(),
+                            response.hits().hits().size()
+                        );
+                        
+                        if (response.hits().total().value() > 0) {
+                            Customer customer = response.hits().hits().get(0).source();
+                            log.info("Found customer: {}", customer);
+                        } else {
+                            log.info("No customer found for email: {}", email);
+                        }
+                    } else {
+                        log.warn("Customer search response is null");
+                    }
+
+                    return response;
                 } catch (Exception e) {
-                    log.error("Customer search error: {}", e.getMessage(), e);
+                    log.error("Customer search error: email={}, error={}", email, e.getMessage(), e);
+                    // 打印完整堆栈信息
+                    log.error("Full stack trace:", e);
                     return null;
                 }
             });
 
             CompletableFuture<SearchResponse<Supplier>> supplierFuture = CompletableFuture.supplyAsync(() -> {
                 try {
-                    Query query = TermQuery.of(t -> t
-                            .field("emails")
-                            .value(email)
+                    Query query = MatchPhraseQuery.of(m -> m
+                        .field("emails")
+                        .query(email)
                     )._toQuery();
 
                     return esClient.search(s -> s
-                                    .index(SUPPLIER_INDEX)
-                                    .query(query)
-                                    .size(1),
-                            Supplier.class
+                            .index(SUPPLIER_INDEX)
+                            .query(query)
+                            .size(1),
+                        Supplier.class
                     );
                 } catch (Exception e) {
                     log.error("Supplier search error: {}", e.getMessage(), e);
@@ -132,9 +161,10 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     BoolQuery.Builder customerBoolQuery = new BoolQuery.Builder()
-                            .must(TermQuery.of(t -> t
+                            .must(MatchQuery.of(m -> m
                                     .field("emails")
-                                    .value(email)
+                                    .query(email)
+                                    .operator(Operator.And)
                             )._toQuery());
 
                     if (level != null && !level.isEmpty()) {
@@ -159,9 +189,10 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             CompletableFuture<SearchResponse<Supplier>> supplierFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     BoolQuery.Builder supplierBoolQuery = new BoolQuery.Builder()
-                            .must(TermQuery.of(t -> t
+                            .must(MatchQuery.of(m -> m
                                     .field("emails")
-                                    .value(email)
+                                    .query(email)
+                                    .operator(Operator.And)
                             )._toQuery());
 
                     if (level != null && !level.isEmpty()) {
