@@ -7,14 +7,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.stereotype.Service;
-import org.springframework.data.redis.core.RedisTemplate;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class SupplierService {
@@ -23,6 +22,28 @@ public class SupplierService {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    /**
+     * 根据 supplierId 数组查询对应的 emails，并去除重复的 emails。
+     *
+     * @param supplierIds 供应商 ID 数组
+     * @return 去重后的 emails 列表
+     */
+    public List<String> getUniqueEmailsBySupplierIds(List<String> supplierIds) {
+        List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(supplierIds);
+
+        // 使用 HashSet 去重
+        Set<String> uniqueEmails = new HashSet<>();
+
+        for (Supplier supplier : suppliers) {
+            uniqueEmails.addAll(supplier.getEmails());
+        }
+
+        return uniqueEmails.stream().collect(Collectors.toList());
+    }
+
+
+
 
     /**
      * 根据条件筛选供应商
@@ -95,38 +116,6 @@ public class SupplierService {
             return Result.error("查询供应商失败: " + e.getMessage());
         }
     }
-//    public Result<Page<Supplier>> findSuppliersByCriteria(String ownerUserId, Integer supplierLevel,
-//                                                          String supplierName, Integer status, Integer tradeType,
-//                                                          int page, int size) {
-//        try {
-//            Page<Supplier> suppliers;
-//
-//            // 创建分页对象
-//            Pageable pageable = PageRequest.of(page, size);
-//
-//            // 动态构建查询条件
-//            if (ownerUserId != null) {
-//                suppliers = supplierRepository.findByBelongUserid(ownerUserId, pageable);
-//            } else if (supplierLevel != null) {
-//                suppliers = supplierRepository.findBySupplierLevel(supplierLevel, pageable);
-//            } else if (supplierName != null) {
-//                suppliers = supplierRepository.findBySupplierName(supplierName, pageable);
-//            } else if (status != null) {
-//                suppliers = supplierRepository.findByStatus(status, pageable);
-//            } else if (tradeType != null) {
-//                suppliers = supplierRepository.findByTradeType(tradeType, pageable);
-//            } else {
-//                // 如果没有条件，返回所有供应商（分页）
-//                suppliers = supplierRepository.findAll(pageable);
-//            }
-//
-//            // 返回成功结果
-//            return Result.success(suppliers);
-//        } catch (Exception e) {
-//            // 返回错误结果
-//            return Result.error("查询供应商失败: " + e.getMessage());
-//        }
-//    }
 
     /**
      * 根据条件筛选供应商，存入redis返回rediskey
@@ -208,47 +197,7 @@ public class SupplierService {
             return Result.error("查询供应商失败: " + e.getMessage());
         }
     }
-//    public Result<String> findSuppliersByCriteriaRedis(String ownerUserId, Integer supplierLevel,
-//                                                       String supplierName, Integer status, Integer tradeType,
-//                                                       int page, int size) {
-//        try {
-//            Page<Supplier> suppliers;
-//
-//            // 创建分页对象
-//            Pageable pageable = PageRequest.of(page, size);
-//
-//            // 动态构建查询条件
-//            if (ownerUserId != null) {
-//                suppliers = supplierRepository.findByBelongUserid(ownerUserId, pageable);
-//            } else if (supplierLevel != null) {
-//                suppliers = supplierRepository.findBySupplierLevel(supplierLevel, pageable);
-//            } else if (supplierName != null) {
-//                suppliers = supplierRepository.findBySupplierName(supplierName, pageable);
-//            } else if (status != null) {
-//                suppliers = supplierRepository.findByStatus(status, pageable);
-//            } else if (tradeType != null) {
-//                suppliers = supplierRepository.findByTradeType(tradeType, pageable);
-//            } else {
-//                // 如果没有条件，返回所有供应商（分页）
-//                suppliers = supplierRepository.findAll(pageable);
-//            }
-//
-//            // 生成唯一的 Redis Key
-//            String redisKey = "supplier:search:" + UUID.randomUUID().toString();
-//
-//            // 设置 Redis 的 Value 序列化器为 JSON 格式
-//            redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-//
-//            // 将查询结果的内容（List<Supplier>）存入 Redis，设置过期时间为 10 分钟
-//            redisTemplate.opsForValue().set(redisKey, suppliers.getContent());
-//
-//            // 返回 Redis Key
-//            return Result.success(redisKey);
-//        } catch (Exception e) {
-//            // 返回错误结果
-//            return Result.error("查询供应商失败: " + e.getMessage());
-//        }
-//    }
+
 
     public List<Supplier> getSuppliersFromRedis(String redisKey) {
         // 从 Redis 中读取数据
@@ -261,43 +210,4 @@ public class SupplierService {
             throw new RuntimeException("Redis 中的数据格式不正确");
         }
     }
-//    public Result<String> findSuppliersByCriteriaRedis(String ownerUserId, Integer supplierLevel,
-//                                                       String supplierName, Integer status, Integer tradeType,
-//                                                       int page, int size) {
-//        try {
-//            Page<Supplier> suppliers;
-//
-//            // 创建分页对象
-//            Pageable pageable = PageRequest.of(page, size);
-//
-//            // 动态构建查询条件
-//            if (ownerUserId != null) {
-//                suppliers = supplierRepository.findByBelongUserid(ownerUserId, pageable);
-//            } else if (supplierLevel != null) {
-//                suppliers = supplierRepository.findBySupplierLevel(supplierLevel, pageable);
-//            } else if (supplierName != null) {
-//                suppliers = supplierRepository.findBySupplierName(supplierName, pageable);
-//            } else if (status != null) {
-//                suppliers = supplierRepository.findByStatus(status, pageable);
-//            } else if (tradeType != null) {
-//                suppliers = supplierRepository.findByTradeType(tradeType, pageable);
-//            } else {
-//                // 如果没有条件，返回所有供应商（分页）
-//                suppliers = supplierRepository.findAll(pageable);
-//            }
-//
-//            // 生成唯一的 Redis Key
-//            String redisKey = "supplier:search:" + UUID.randomUUID().toString();
-//
-//            // 将查询结果存入 Redis，设置过期时间为 10 分钟
-//            ValueOperations<String, Page<Supplier>> valueOps = redisTemplate.opsForValue();
-//            valueOps.set(redisKey, suppliers, 10, TimeUnit.MINUTES);
-//
-//            // 返回 Redis Key
-//            return Result.success(redisKey);
-//        } catch (Exception e) {
-//            // 返回错误结果
-//            return Result.error("查询供应商失败: " + e.getMessage());
-//        }
-//    }
 }

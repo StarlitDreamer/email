@@ -30,7 +30,7 @@ public class Customer {
 
     @JsonProperty("customer_level")
     @Field(name = "customer_level", type = FieldType.Integer)
-    private int customerLevel;                 // 客户等级 1:初级 2:中级 3:高级
+    private Integer customerLevel;                 // 客户等级 1:初级 2:中级 3:高级
 
     @JsonProperty("customer_country_id")
     @Field(name = "customer_country_id", type = FieldType.Keyword)
@@ -41,7 +41,7 @@ public class Customer {
     private String belongUserId;               // 所属用户ID
 
     @JsonProperty("birth")
-    @Field(name = "birth", type = FieldType.Keyword)
+    @Field(name = "birth", type = FieldType.Date)
     private String birth;                      // 出生日期
 
     @JsonProperty("commodity_id")
@@ -66,11 +66,11 @@ public class Customer {
 
     @JsonProperty("status")
     @Field(name = "status", type = FieldType.Integer)
-    private int status;             // 分配状态 1:未分配 2:已分配
+    private Integer status;             // 分配状态 1:未分配 2:已分配
 
     @JsonProperty("trade_type")
     @Field(name = "trade_type", type = FieldType.Integer)
-    private int tradeType;               // 贸易类型 1:工厂 2:贸易商
+    private Integer tradeType;               // 贸易类型 1:工厂 2:贸易商
 
     @JsonProperty("created_at")
     @Field(name = "created_at", type = FieldType.Date)
@@ -84,26 +84,10 @@ public class Customer {
     @Field(name = "updated_at", type = FieldType.Date)
     private String updatedAt;           // 更新日期
 
-    @JsonProperty("accepted_email_type_ids")
-    @Field(name = "accepted_email_type_ids", type = FieldType.Keyword)
-    private List<String> acceptedEmailTypeId;  // 接受的邮件类型ID列表
-
-//    private List<String> acceptedEmailTypeId;  // 接受的邮件类型ID列表，默认接受所有类型 acceptedEmailTypeIds
-//    private String belongUserId;                // 所属用户ID  ownerUserId
-//    private String birth;                      // 出生日期
-//    private List<String> commodityId;         // 商品ID列表  commodityIds
-//    private String contactPerson;              // 联系人
-//    private String contactWay;                 // 联系方式
-//    private long createdAt;           // 创建日期
-//    private String creatorId;                  // 创建人ID
-//    private String customerCountryId;          // 客户国家ID
-//    @Id
-//    private String customerId;                 // 客户ID
-//    private int customerLevel;       // 客户等级 1:初级 2:中级 3:高级
-//    private String customerName;               // 客户名称
-//    private List<String> emails;               // 邮箱列表
-//    private String sex;                        // 性别
-//    private int status;             // 分配状态 1:未分配 2:已分配
-//    private int tradeType;               // 贸易类型 1:工厂 2:贸易商
-//    private long updatedAt;           // 更新日期
+    /**
+     * 不接受的邮件类型id，当退订某种类型时，就从这里删除对应的类型id
+     */
+    @JsonProperty("no_accept_email_type_id")
+    @Field(name = "no_accept_email_type_id", type = FieldType.Keyword)
+    private List<String> noAcceptEmailTypeId;
 }

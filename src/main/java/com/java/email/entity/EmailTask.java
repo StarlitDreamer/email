@@ -1,9 +1,9 @@
 package com.java.email.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
@@ -23,8 +23,8 @@ public class EmailTask {
     @Field(name = "email_id", type = FieldType.Keyword)
     private String emailId;               // 邮件ID，使用UUID，不分词
 
-    @JsonProperty("email_task_id")
     @Id
+    @JsonProperty("email_task_id")
     @Field(name = "email_task_id", type = FieldType.Keyword)
     private String emailTaskId;           // 邮件任务ID，使用UUID，不分词
 

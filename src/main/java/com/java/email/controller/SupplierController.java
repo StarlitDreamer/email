@@ -7,11 +7,26 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/suppliers")
 public class SupplierController {
     @Autowired
     private SupplierService supplierService;
+
+
+    /**
+     * 根据 supplierId 数组查询对应的 emails，并去除重复的 emails。
+     *
+     * @param supplierIds 供应商 ID 数组
+     * @return 去重后的 emails 列表
+     */
+    @PostMapping("/emails")
+    public List<String> getUniqueEmails(@RequestBody List<String> supplierIds) {
+        return supplierService.getUniqueEmailsBySupplierIds(supplierIds);
+    }
+
 
     /**
      * 根据条件筛选供应商
@@ -42,18 +57,7 @@ public class SupplierController {
                 ownerUserId, supplierLevel, supplierName, status, tradeType,
                 pageNumber-1, pageSize, currentUserId, currentUserRole);
     }
-//    @GetMapping("/search")
-//    public Result<Page<Supplier>> findSuppliersByCriteria(
-//            @RequestParam(required = false) String ownerUserId,
-//            @RequestParam(required = false) Integer supplierLevel,
-//            @RequestParam(required = false) String supplierName,
-//            @RequestParam(required = false) Integer status,
-//            @RequestParam(required = false) Integer tradeType,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size) {
-//        return supplierService.findSuppliersByCriteria(
-//                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
-//    }
+
 
     /**
      * 根据条件筛选供应商,并存入redis返回rediskey
@@ -83,17 +87,4 @@ public class SupplierController {
                 ownerUserId, supplierLevel, supplierName, status, tradeType,
                 pageNumber, size, currentUserId, currentUserRole);
     }
-//    @GetMapping("/search-redis")
-//    public Result<String> findSuppliersByCriteriaRedis(
-//            @RequestParam(required = false) String ownerUserId,
-//            @RequestParam(required = false) Integer supplierLevel,
-//            @RequestParam(required = false) String supplierName,
-//            @RequestParam(required = false) Integer status,
-//            @RequestParam(required = false) Integer tradeType,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size) {
-//
-//        return supplierService.findSuppliersByCriteriaRedis(
-//                ownerUserId, supplierLevel, supplierName, status, tradeType, page, size);
-//    }
 }

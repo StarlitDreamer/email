@@ -1,9 +1,9 @@
 package com.java.email.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
@@ -30,7 +30,7 @@ public class Supplier {
 
     @JsonProperty("supplier_level")
     @Field(name = "supplier_level", type = FieldType.Integer)
-    private int supplierLevel;             // 供应商等级 1:初级 2:中级 3:高级
+    private Integer supplierLevel;             // 供应商等级 1:初级 2:中级 3:高级
 
     @JsonProperty("supplier_country_id")
     @Field(name = "supplier_country_id", type = FieldType.Keyword)
@@ -38,10 +38,10 @@ public class Supplier {
 
     @JsonProperty("belong_user_id")
     @Field(name = "belong_user_id", type = FieldType.Keyword)
-    private List<String> belongUserid;     // 所属用户ID列表 ownerUserIds
+    private String belongUserid;     // 所属用户ID
 
     @JsonProperty("birth")
-    @Field(name = "birth", type = FieldType.Keyword)
+    @Field(name = "birth", type = FieldType.Date)
     private String birth;                  // 出生日期
 
     @JsonProperty("commodity_id")
@@ -56,8 +56,8 @@ public class Supplier {
     @Field(name = "contact_way", type = FieldType.Text)
     private String contactWay;             // 联系方式
 
-    @JsonProperty("email")
-    @Field(name = "email", type = FieldType.Keyword)
+    @JsonProperty("emails")
+    @Field(name = "emails", type = FieldType.Keyword)
     private List<String> emails;           // 邮箱列表
 
     @JsonProperty("sex")
@@ -66,7 +66,7 @@ public class Supplier {
 
     @JsonProperty("status")
     @Field(name = "status", type = FieldType.Integer)
-    private int status;                    // 分配状态 1:未分配 2:已分配
+    private Integer status;                    // 分配状态 1:未分配 2:已分配
 
     @JsonProperty("created_at")
     @Field(name = "created_at", type = FieldType.Date)
@@ -83,24 +83,12 @@ public class Supplier {
 
     @JsonProperty("trade_type")
     @Field(name = "trade_type", type = FieldType.Integer)
-    private String tradeType;                // 更新日期
+    private Integer tradeType;                // 贸易类型
 
-//    private List<String> acceptEmailTypeId;  // 接受的邮件类型ID列表，默认接受所有类型acceptedEmailTypeIds
-//    private String belongUserid;                // 所属用户ID ownerUserId
-//    private String birth;                      // 出生日期
-//    private List<String> commodityId;         // 商品ID列表  commodityIds
-//    private String contactPerson;              // 联系人
-//    private String contactWay;                 // 联系方式
-//    private long createdAt;                    // 创建日期
-//    private String creatorId;                  // 创建人ID
-//    private List<String> emails;               // 邮箱列表
-//    private String sex;                        // 性别
-//    private int status;             // 分配状态 1:未分配 2:已分配
-//    private String supplierCountryId;          // 供应商国家ID
-//    @Id
-//    private String supplierId;                 // 供应商ID
-//    private int supplierLevel;       // 供应商等级 1:初级 2:中级 3:高级
-//    private String supplierName;               // 供应商名称
-//    private int tradeType;               // 贸易类型 1:工厂 2:贸易商
-//    private long updatedAt;                    // 更新日期
+    /**
+     * 不接受的邮件类型id，当退订某种类型时，就从这里删除对应的类型id
+     */
+    @JsonProperty("no_accept_email_type_id")
+    @Field(name = "no_accept_email_type_id", type = FieldType.Keyword)
+    private List<String> noAcceptEmailTypeId;
 }

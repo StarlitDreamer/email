@@ -9,6 +9,40 @@ import java.util.List;
 
 public interface SupplierRepository extends ElasticsearchRepository<Supplier, String> {
 
+    // 根据 supplierId 查找供应商
+    List<Supplier> findBySupplierIdIn(List<String> supplierIds);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // 根据供应商 ID 查找供应商
     Supplier findBySupplierId(String supplierId);
 
