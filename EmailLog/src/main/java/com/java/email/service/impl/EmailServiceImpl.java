@@ -237,5 +237,81 @@ public class EmailServiceImpl implements EmailService {
         return response.found() ? response.source() : null;
     }
 
+    @Override
+    public EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException {
+        try {
+            // 先获取符合条件的收件人邮箱
+            Set<String> recipientEmails = params != null ?
+                    emailRecipientService.findMatchingRecipientEmails(params) : null;
+
+
+            SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
+                s.index(INDEX_NAME);
+                s.from((page - 1) * size);
+                s.size(size);
+
+                s.query(q -> q.bool(b -> {
+
+
+                    // 添加收件人邮箱过滤（仅当recipientEmails不为null且不为空时）
+                    if (recipientEmails != null && !recipientEmails.isEmpty()) {
+                        b.must(m -> m.terms(t -> t
+                                .field("receiver_id")
+                                .terms(tt -> tt.value(recipientEmails.stream()
+                                        .map(FieldValue::of)
+                                        .collect(Collectors.toList())))
+                        ));
+                    }
+
+
+                    Set<String> resendEmailId=params!=null?emailRecipientService.findResendDetails(params):null;
+                    if(resendEmailId!=null&&!resendEmailId.isEmpty()){
+                        b.must(m -> m.terms(t -> t
+                                .field("email_id")
+                                .terms(tt -> tt.value(resendEmailId.stream()
+                                        .map(FieldValue::of)
+                                        .collect(Collectors.toList())))
+                        ));
+                    }
+
+
+                    // 根据用户角色添加权限过滤
+                    addRoleBasedFilter(b, userRole, userEmail, finalManagedUserEmails);
+
+                    // 处理其他查询参数
+                    if (params != null && !params.isEmpty()) {
+                        addOtherQueryParams(b, params, userRole, userEmail, finalManagedUserEmails);
+                    } else b.must(m -> m.matchAll(ma -> ma));
+
+                    return b;
+                }));
+
+                // 添加默认排序
+                s.sort(sort -> sort
+                        .field(f -> f
+                                .field("start_date")
+                                .order(SortOrder.Desc)
+                        )
+                );
+
+                return s;
+            }, UndeliveredEmail.class);
+            assert response.hits().total() != null;
+            long totalHits = response.hits().total().value();
+            EmailVo emailVo = new EmailVo();
+            emailVo.setEmailList(response.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList()));
+            emailVo.setTotal(totalHits);
+
+            return emailVo;
+        } catch (Exception e) {
+            log.error("Error while searching emails: params={}, userRole={}, userEmail={}",
+                    params, userRole, userEmail, e);
+            throw e;
+        }
+    }
+
 
 }

@@ -7,7 +7,9 @@ import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.TermsQuery;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.json.JsonData;
 import com.java.email.pojo.Customer;
+import com.java.email.pojo.RsendDetails;
 import com.java.email.pojo.Supplier;
 import com.java.email.service.EmailRecipientService;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     private final ElasticsearchClient esClient;
     private static final String CUSTOMER_INDEX = "customer";
     private static final String SUPPLIER_INDEX = "supplier";
+    private static final String RESEND_EMAIL = "resend_details ";
     private static final String USER_INDEX = "user";
 
     @Autowired
@@ -34,6 +37,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
 
     /**
      * 根据邮箱获取用户详细信息
+     *
      * @param email 邮箱
      * @return Map包含用户类型和用户信息
      */
@@ -45,15 +49,15 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     Query query = TermQuery.of(t -> t
-                        .field("emails")
-                        .value(email)
+                            .field("emails")
+                            .value(email)
                     )._toQuery();
 
                     return esClient.search(s -> s
-                        .index(CUSTOMER_INDEX)
-                        .query(query)
-                        .size(1),
-                        Customer.class
+                                    .index(CUSTOMER_INDEX)
+                                    .query(query)
+                                    .size(1),
+                            Customer.class
                     );
                 } catch (Exception e) {
                     log.error("Customer search error: {}", e.getMessage(), e);
@@ -64,15 +68,15 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             CompletableFuture<SearchResponse<Supplier>> supplierFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     Query query = TermQuery.of(t -> t
-                        .field("emails")
-                        .value(email)
+                            .field("emails")
+                            .value(email)
                     )._toQuery();
 
                     return esClient.search(s -> s
-                        .index(SUPPLIER_INDEX)
-                        .query(query)
-                        .size(1),
-                        Supplier.class
+                                    .index(SUPPLIER_INDEX)
+                                    .query(query)
+                                    .size(1),
+                            Supplier.class
                     );
                 } catch (Exception e) {
                     log.error("Supplier search error: {}", e.getMessage(), e);
@@ -121,30 +125,31 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     }
 
     @Override
-    public Map<String, String> getRecipientDetail(String email, String level) {
+    public Map<String, String> getRecipientDetail(String email, Map<String, String> params) {
         try {
+            String level = params.get("level") != null ? params.get("level") : null;
             // 并行查询Customer和Supplier索引
             CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     BoolQuery.Builder customerBoolQuery = new BoolQuery.Builder()
-                        .must(TermQuery.of(t -> t
-                            .field("emails")
-                            .value(email)
-                        )._toQuery());
+                            .must(TermQuery.of(t -> t
+                                    .field("emails")
+                                    .value(email)
+                            )._toQuery());
 
-                        if (level != null && !level.isEmpty()) {
-                            customerBoolQuery.must(TermQuery.of(t -> t
+                    if (level != null && !level.isEmpty()) {
+                        customerBoolQuery.must(TermQuery.of(t -> t
                                 .field("customer_level")
                                 .value(Long.parseLong(level))
-                            )._toQuery());
-                        }
+                        )._toQuery());
+                    }
 
-                        return esClient.search(s -> s
-                            .index(CUSTOMER_INDEX)
-                            .query(customerBoolQuery.build()._toQuery())
-                            .size(1),
+                    return esClient.search(s -> s
+                                    .index(CUSTOMER_INDEX)
+                                    .query(customerBoolQuery.build()._toQuery())
+                                    .size(1),
                             Customer.class
-                        );
+                    );
                 } catch (Exception e) {
                     log.error("Customer search error: {}", e.getMessage(), e);
                     return null;
@@ -154,24 +159,24 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             CompletableFuture<SearchResponse<Supplier>> supplierFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     BoolQuery.Builder supplierBoolQuery = new BoolQuery.Builder()
-                        .must(TermQuery.of(t -> t
-                            .field("emails")
-                            .value(email)
-                        )._toQuery());
+                            .must(TermQuery.of(t -> t
+                                    .field("emails")
+                                    .value(email)
+                            )._toQuery());
 
-                        if (level != null && !level.isEmpty()) {
-                            supplierBoolQuery.must(TermQuery.of(t -> t
+                    if (level != null && !level.isEmpty()) {
+                        supplierBoolQuery.must(TermQuery.of(t -> t
                                 .field("supplier_level")
                                 .value(level)
-                            )._toQuery());
-                        }
+                        )._toQuery());
+                    }
 
-                        return esClient.search(s -> s
-                            .index(SUPPLIER_INDEX)
-                            .query(supplierBoolQuery.build()._toQuery())
-                            .size(1),
+                    return esClient.search(s -> s
+                                    .index(SUPPLIER_INDEX)
+                                    .query(supplierBoolQuery.build()._toQuery())
+                                    .size(1),
                             Supplier.class
-                        );
+                    );
                 } catch (Exception e) {
                     log.error("Supplier search error: {}", e.getMessage(), e);
                     return null;
@@ -213,8 +218,8 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             return null;
 
         } catch (Exception e) {
-            log.error("获取收件人详细信息失败: email={}, level={}, error={}", 
-                email, level, e.getMessage(), e);
+            log.error("获取收件人详细信息失败: email={}, level={}, error={}",
+                    email, 0, e.getMessage(), e);
             return null;
         }
     }
@@ -228,8 +233,8 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
         Set<String> emails = new HashSet<>();
         try {
             // 如果没有查询条件，返回null表示不需要邮箱过滤
-            if (params == null || params.isEmpty() || 
-                (!params.containsKey("receiver_level") && !params.containsKey("receiver_birth"))) {
+            if (params == null || params.isEmpty() ||
+                    (!params.containsKey("receiver_level") && !params.containsKey("receiver_birth"))) {
                 return null;
             }
 
@@ -237,33 +242,33 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     return esClient.search(s -> s
-                        .index(CUSTOMER_INDEX)
-                        .query(q -> q
-                            .bool(b -> {
-                                // 处理等级查询
-                                if (params.containsKey("receiver_level")) {
-                                    b.must(m -> m
-                                        .term(t -> t
-                                            .field("customer_level")
-                                            .value(params.get("receiver_level"))
-                                        )
-                                    );
-                                }
-                                
-                                // 处理生日查询
-                                if (params.containsKey("receiver_birth")) {
-                                    b.must(m -> m
-                                        .term(t -> t
-                                            .field("birth")
-                                            .value(params.get("receiver_birth"))
-                                        )
-                                    );
-                                }
-                                return b;
-                            })
-                        )
-                        .size(1000),
-                        Customer.class
+                                    .index(CUSTOMER_INDEX)
+                                    .query(q -> q
+                                            .bool(b -> {
+                                                // 处理等级查询
+                                                if (params.containsKey("receiver_level")) {
+                                                    b.must(m -> m
+                                                            .term(t -> t
+                                                                    .field("customer_level")
+                                                                    .value(params.get("receiver_level"))
+                                                            )
+                                                    );
+                                                }
+
+                                                // 处理生日查询
+                                                if (params.containsKey("receiver_birth")) {
+                                                    b.must(m -> m
+                                                            .term(t -> t
+                                                                    .field("birth")
+                                                                    .value(params.get("receiver_birth"))
+                                                            )
+                                                    );
+                                                }
+                                                return b;
+                                            })
+                                    )
+                                    .size(1000),
+                            Customer.class
                     );
                 } catch (Exception e) {
                     log.error("Customer search error: {}", e.getMessage(), e);
@@ -274,33 +279,33 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             CompletableFuture<SearchResponse<Supplier>> supplierFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     return esClient.search(s -> s
-                        .index(SUPPLIER_INDEX)
-                        .query(q -> q
-                            .bool(b -> {
-                                // 处理等级查询
-                                if (params.containsKey("receiver_level")) {
-                                    b.must(m -> m
-                                        .term(t -> t
-                                            .field("supplier_level")
-                                            .value(params.get("receiver_level"))
-                                        )
-                                    );
-                                }
+                                    .index(SUPPLIER_INDEX)
+                                    .query(q -> q
+                                            .bool(b -> {
+                                                // 处理等级查询
+                                                if (params.containsKey("receiver_level")) {
+                                                    b.must(m -> m
+                                                            .term(t -> t
+                                                                    .field("supplier_level")
+                                                                    .value(params.get("receiver_level"))
+                                                            )
+                                                    );
+                                                }
 
-                                // 处理生日查询
-                                if (params.containsKey("receiver_birth")) {
-                                    b.must(m -> m
-                                        .term(t -> t
-                                            .field("birth")
-                                            .value(params.get("receiver_birth"))
-                                        )
-                                    );
-                                }
-                                return b;
-                            })
-                        )
-                        .size(1000),
-                        Supplier.class
+                                                // 处理生日查询
+                                                if (params.containsKey("receiver_birth")) {
+                                                    b.must(m -> m
+                                                            .term(t -> t
+                                                                    .field("birth")
+                                                                    .value(params.get("receiver_birth"))
+                                                            )
+                                                    );
+                                                }
+                                                return b;
+                                            })
+                                    )
+                                    .size(1000),
+                            Supplier.class
                     );
                 } catch (Exception e) {
                     log.error("Supplier search error: {}", e.getMessage(), e);
@@ -336,11 +341,136 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             return emails;
 
         } catch (Exception e) {
-            log.error("Error finding matching recipient emails: params={}, error={}", 
-                params, e.getMessage(), e);
+            log.error("Error finding matching recipient emails: params={}, error={}",
+                    params, e.getMessage(), e);
             return null;  // 发生错误时返回null，表示不进行邮箱过滤
         }
     }
 
+    @Override
+    public Set<String> findResendDetails(Map<String, String> params) {
 
+        Set<String> emails = new HashSet<>();
+        try {
+            // 如果没有查询条件，返回null表示不需要邮箱过滤
+            if (params == null || params.isEmpty() ||
+                    (!params.containsKey("resend_status") && !params.containsKey("resend_start_date") && !params.containsKey("resend_end_date"))) {
+                return null;
+            }
+
+            // 并行查询resend_details 索引
+            CompletableFuture<SearchResponse<RsendDetails>> customerFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return esClient.search(s -> s
+                                    .index(RESEND_EMAIL)
+                                    .query(q -> q
+                                            .bool(b -> {
+                                                // 处理等级查询
+                                                if (params.containsKey("resend_status")) {
+                                                    b.must(m -> m
+                                                            .term(t -> t
+                                                                    .field("status")
+                                                                    .value(params.get("resend_status"))
+                                                            )
+                                                    );
+                                                }
+
+                                                // 处理重发时间
+                                                if (params.containsKey("resend_start_date")) {
+                                                    b.must(m -> m
+                                                            .range(t -> t
+                                                                    .field("end_time")
+                                                                    .gte(JsonData.of(Long.parseLong(params.get("resend_start_date"))))
+                                                            )
+                                                    );
+                                                }
+
+                                                if (params.containsKey("resend_end_date")) {
+                                                    b.must(m -> m
+                                                            .range(t -> t
+                                                                    .field("start_time")
+                                                                    .lte(JsonData.of(Long.parseLong(params.get("resend_end_date"))))
+                                                            )
+                                                    );
+                                                }
+                                                return b;
+                                            })
+                                    )
+                                    .size(1000),
+                            RsendDetails.class
+                    );
+                } catch (Exception e) {
+                    log.error("Customer search error: {}", e.getMessage(), e);
+                    return null;
+                }
+            });
+
+
+            // 等待所有查询完成
+            CompletableFuture.allOf(customerFuture).join();
+
+            // 处理Customer结果
+            SearchResponse<RsendDetails> customerResponse = customerFuture.get();
+            if (customerResponse != null) {
+                for (Hit<RsendDetails> hit : customerResponse.hits().hits()) {
+                    RsendDetails rsendDetails = hit.source();
+                    if (rsendDetails != null && rsendDetails.getEmailResendId() != null) {
+                        emails.add(rsendDetails.getEmailResendId());
+                    }
+                }
+            }
+
+
+            return emails;
+
+        } catch (Exception e) {
+            log.error("Error finding matching recipient emails: params={}, error={}",
+                    params, e.getMessage(), e);
+            return null;  // 发生错误时返回null，表示不进行邮箱过滤
+        }
+    }
+
+    @Override
+    public RsendDetails getResendDetails(String emailId) {
+        try {
+
+            CompletableFuture<SearchResponse<RsendDetails>> customerFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    Query query = TermQuery.of(t -> t
+                            .field("email_resend_id")
+                            .value(emailId)
+                    )._toQuery();
+
+                    return esClient.search(s -> s
+                                    .index(RESEND_EMAIL)
+                                    .query(query)
+                                    .size(1),
+                            RsendDetails.class
+                    );
+                } catch (Exception e) {
+                    log.error("Customer search error: {}", e.getMessage(), e);
+                    return null;
+                }
+            });
+
+
+            CompletableFuture.allOf(customerFuture).join();
+
+            // 处理Customer结果
+            SearchResponse<RsendDetails> customerResponse = customerFuture.get();
+            if (customerResponse != null && customerResponse.hits().total().value() > 0) {
+                return customerResponse.hits().hits().get(0).source();
+            }
+
+
+            log.info("未找到收件人信息: email={}", emailId);
+            return null;
+
+        } catch (Exception e) {
+            log.error("获取收件人详细信息失败: email={}, error={}", emailId, e.getMessage(), e);
+            return null;
+        }
+
+
+    }
 }

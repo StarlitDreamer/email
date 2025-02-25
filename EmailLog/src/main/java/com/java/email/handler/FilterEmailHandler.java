@@ -151,7 +151,7 @@ public class FilterEmailHandler extends SimpleChannelInboundHandler<FullHttpRequ
                     BeanUtils.copyProperties(email, filterEmailVo);
                         Map<String, String> receiverInfo=null;
                     if(params.containsKey("receiver_level")){
-                         receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId(),params.get("receiver_level"));
+                         receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId(),params);
                     }else {
                         receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId());
                     }

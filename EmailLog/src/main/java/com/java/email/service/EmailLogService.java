@@ -56,4 +56,8 @@ public class EmailLogService {
     public String findByEmailTypeName(String emailTypeId) throws IOException {
         return emailTypeService.findByEmailTypeName(emailTypeId);
     }
+
+    public EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException {
+        return emailService.findByDynamicQueryUndeliveredEmail(params, page, size, userRole, userEmail, finalManagedUserEmails);
+    }
 }
