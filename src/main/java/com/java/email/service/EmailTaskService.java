@@ -4,6 +4,7 @@ import com.java.email.model.request.CreateCycleEmailTaskRequest;
 import com.java.email.model.request.CreateEmailTaskRequest;
 import com.java.email.model.entity.Email;
 import com.java.email.model.entity.EmailTask;
+import com.java.email.model.request.UpdateBirthEmailTask;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
 import jakarta.annotation.Resource;
@@ -156,6 +157,28 @@ public class EmailTaskService {
         redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
 
         return "Email task created with ID: " + emailTaskId;
+    }
+
+    /**
+     * 改变生日任务状态
+     */
+    public String updateBirthEmailTask(UpdateBirthEmailTask request) {
+        EmailTask emailTask = new EmailTask();
+        emailTask.setEmailTaskId("birth");
+        emailTask.setSubject(request.getSubject());
+        emailTask.setTemplateId(request.getTemplateId());
+        emailTask.setAttachment(request.getAttachment());
+
+        long currentTime = System.currentTimeMillis() / 1000;
+
+        Email email = new Email();
+        email.setEmailTaskId("birth"); // Set email_task_id
+        email.setCreatedAt(currentTime);  // Set created_at
+        email.setUpdateAt(currentTime);   // Set update_at
+        email.setEmailStatus(Integer.valueOf(request.getEmailStatus()));          // Set email_status to 1 (开始状态)
+
+        emailTaskRepository.save(emailTask);
+        return "Email task updated";
     }
 
     /**

@@ -1,14 +1,12 @@
 package com.java.email.controller;
 
+import com.java.email.model.entity.EmailTask;
 import com.java.email.model.request.CreateCycleEmailTaskRequest;
 import com.java.email.model.request.CreateEmailTaskRequest;
-import com.java.email.model.entity.EmailTask;
+import com.java.email.model.request.UpdateBirthEmailTask;
 import com.java.email.service.EmailTaskService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/email-tasks")
@@ -40,5 +38,13 @@ public class EmailTaskController {
     @PostMapping("createFestival")
     public String createFestivalEmailTask(@RequestBody EmailTask request) {
         return emailTaskService.createFestivalEmailTask(request);
+    }
+
+    /**
+     * 改变生日任务状态
+     */
+    @PutMapping("updateBirth")
+    public String updateBirthEmailTask(@RequestBody UpdateBirthEmailTask request) {
+        return emailTaskService.updateBirthEmailTask(request);
     }
 }

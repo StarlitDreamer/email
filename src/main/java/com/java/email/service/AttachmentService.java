@@ -10,9 +10,6 @@ public class AttachmentService {
     @Autowired
     private AttachmentRepository attachmentRepository;
 
-    @Autowired
-    private UserService userService;
-
     /**
      * 根据附件 ID 查找附件
      *
