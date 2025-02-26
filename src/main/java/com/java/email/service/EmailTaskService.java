@@ -1,9 +1,9 @@
 package com.java.email.service;
 
-import com.java.email.dto.CreateCycleEmailTaskRequest;
-import com.java.email.dto.CreateEmailTaskRequest;
-import com.java.email.entity.Email;
-import com.java.email.entity.EmailTask;
+import com.java.email.model.request.CreateCycleEmailTaskRequest;
+import com.java.email.model.request.CreateEmailTaskRequest;
+import com.java.email.model.entity.Email;
+import com.java.email.model.entity.EmailTask;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
 import jakarta.annotation.Resource;

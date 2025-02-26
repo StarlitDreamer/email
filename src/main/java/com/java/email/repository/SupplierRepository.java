@@ -1,6 +1,6 @@
 package com.java.email.repository;
 
-import com.java.email.entity.Supplier;
+import com.java.email.model.entity.Supplier;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;

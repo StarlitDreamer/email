@@ -1,6 +1,6 @@
 package com.java.email.repository;
 
-import com.java.email.entity.EmailTask;
+import com.java.email.model.entity.EmailTask;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Repository;
 

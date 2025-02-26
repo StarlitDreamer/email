@@ -1,6 +1,6 @@
 package com.java.email.service;
 
-import com.java.email.entity.ResendDetails;
+import com.java.email.model.entity.ResendDetails;
 import com.java.email.repository.ResendDetailsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;

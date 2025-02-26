@@ -1,7 +1,7 @@
 package com.java.email.controller;
 
 import com.java.email.common.Result;
-import com.java.email.entity.Supplier;
+import com.java.email.model.entity.Supplier;
 import com.java.email.service.SupplierService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;

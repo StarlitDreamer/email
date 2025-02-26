@@ -1,6 +1,6 @@
 package com.java.email.repository;
 
-import com.java.email.entity.EmailDetail;
+import com.java.email.model.entity.EmailDetail;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import java.util.List;
 

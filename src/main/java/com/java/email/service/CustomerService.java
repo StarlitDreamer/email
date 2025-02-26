@@ -2,7 +2,7 @@ package com.java.email.service;
 
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import com.java.email.entity.Customer;
+import com.java.email.model.entity.Customer;
 import com.java.email.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;

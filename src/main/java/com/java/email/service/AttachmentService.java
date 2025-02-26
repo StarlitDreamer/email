@@ -1,6 +1,6 @@
 package com.java.email.service;
 
-import com.java.email.entity.Attachment;
+import com.java.email.model.entity.Attachment;
 import com.java.email.repository.AttachmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

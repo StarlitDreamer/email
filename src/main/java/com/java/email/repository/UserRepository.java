@@ -1,6 +1,6 @@
 package com.java.email.repository;
 
-import com.java.email.entity.User;
+import com.java.email.model.entity.User;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Repository;
 

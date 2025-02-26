@@ -1,6 +1,6 @@
 package com.java.email.controller;
 
-import com.java.email.entity.EmailReport;
+import com.java.email.model.entity.EmailReport;
 import com.java.email.service.EmailReportService;
 import com.java.email.common.Result;
 import org.springframework.beans.factory.annotation.Autowired;

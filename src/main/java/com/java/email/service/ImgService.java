@@ -1,7 +1,7 @@
 package com.java.email.service;
 
 import com.java.email.common.Result;
-import com.java.email.entity.Img;
+import com.java.email.model.entity.Img;
 import com.java.email.repository.ImgRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;

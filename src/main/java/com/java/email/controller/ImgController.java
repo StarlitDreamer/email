@@ -1,19 +1,13 @@
 package com.java.email.controller;
 
 import com.java.email.common.Result;
-import com.java.email.entity.Img;
+import com.java.email.model.entity.Img;
 import com.java.email.repository.ImgRepository;
 import com.java.email.service.ImgService;
 import com.java.email.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @RestController
@@ -56,18 +50,4 @@ public class ImgController {
         return imgService.findImgsByCriteria(
                 currentUserId, currentUserRole, belongUserId, creatorId, status, imgName, imgSize, pageNumber-1, size);
     }
-
-//    @GetMapping("/search")
-//    public Result<Page<Img>> findImgsByCriteria(
-//            @RequestParam(required = false) List<String> belongUserId,
-//            @RequestParam(required = false) String creatorId,
-//            @RequestParam(required = false) Integer status,
-//            @RequestParam(required = false) String imgName,
-//            @RequestParam(required = false) Long imgSize,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size) {
-//
-//        return imgService.findImgsByCriteria(
-//                belongUserId, creatorId, status, imgName, imgSize, page, size);
-//    }
 }

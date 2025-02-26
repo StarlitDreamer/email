@@ -1,9 +1,7 @@
 package com.java.email;
 
-import com.java.email.entity.User;
 import com.java.email.repository.UserRepository;
 import com.java.email.service.UserService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

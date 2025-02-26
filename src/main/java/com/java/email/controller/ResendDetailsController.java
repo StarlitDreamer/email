@@ -1,6 +1,6 @@
 package com.java.email.controller;
 
-import com.java.email.entity.ResendDetails;
+import com.java.email.model.entity.ResendDetails;
 import com.java.email.service.ResendDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

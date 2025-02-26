@@ -1,6 +1,6 @@
 package com.java.email.repository;
 
-import com.java.email.entity.Img;
+import com.java.email.model.entity.Img;
 import org.springframework.data.domain.Page;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.data.domain.Pageable;

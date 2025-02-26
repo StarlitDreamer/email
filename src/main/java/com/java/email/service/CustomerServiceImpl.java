@@ -7,11 +7,11 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch.core.CountResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
-import com.java.email.dto.FilterCustomerResponse;
-import com.java.email.dto.FilterCustomersDto;
-import com.java.email.dto.SearchAllCustomersDto;
-import com.java.email.dto.SearchAllCustomersResponse;
-import com.java.email.entity.*;
+import com.java.email.model.dto.FilterCustomerDto;
+import com.java.email.model.dto.SearchAllCustomerDto;
+import com.java.email.model.entity.*;
+import com.java.email.model.response.FilterCustomerResponse;
+import com.java.email.model.response.SearchAllCustomerResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -44,18 +44,18 @@ public class CustomerServiceImpl {
     }
 
     // 根据当前用户ID、角色和过滤条件，查询客户列表
-    public FilterCustomerResponse FilterFindCustomers(String currentUserId, int currentUserRole, FilterCustomersDto filterCustomersDto) throws IOException {
+    public FilterCustomerResponse FilterFindCustomers(String currentUserId, int currentUserRole, FilterCustomerDto filterCustomerDto) throws IOException {
 
         // 获取分页参数
-        int num = filterCustomersDto.getPage_num();
-        int size = filterCustomersDto.getPage_size();
+        int num = filterCustomerDto.getPage_num();
+        int size = filterCustomerDto.getPage_size();
 
         // 获取过滤条件的具体值
-        String commodityName = filterCustomersDto.commodity_name;
-        List<String> areaId = filterCustomersDto.area_id;
-        List<String> customerCountryId = filterCustomersDto.customer_country_id;
-        Integer tradeType = filterCustomersDto.trade_type;
-        Integer customerLevel = filterCustomersDto.customer_level;
+        String commodityName = filterCustomerDto.commodity_name;
+        List<String> areaId = filterCustomerDto.area_id;
+        List<String> customerCountryId = filterCustomerDto.customer_country_id;
+        Integer tradeType = filterCustomerDto.trade_type;
+        Integer customerLevel = filterCustomerDto.customer_level;
 
         // 创建一个布尔查询构建器，用于构建复杂查询条件
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
@@ -130,15 +130,6 @@ public class CustomerServiceImpl {
             filters.put("customer_country_id", areaCountryIds);  // List<String> 类型
         }
 
-//// 如果提供了客户所在国家ID，则加入过滤条件
-//        if (customerCountryId != null && !customerCountryId.isEmpty()) {
-//            // 将客户所在国家ID合并到filters中
-//            List<String> countryIds = new ArrayList<>(areaCountryIds);
-//            countryIds.addAll(customerCountryId);  // 合并areaCountryIds和customerCountryId
-//            filters.put("customer_country_id", countryIds);  // 将合并后的countryIds作为筛选条件放入filters
-//        }
-
-
         // 如果提供了交易类型，则加入过滤条件
         if (tradeType != null) {
             filters.put("trade_type", tradeType);
@@ -202,139 +193,17 @@ public class CustomerServiceImpl {
         return new FilterCustomerResponse(receiverList, receiverList.size(), num, size);
     }
 
-//    public FilterCustomersResponse FilterFindSupplier(String currentUserId, int currentUserRole, FilterSuppliersDto filterSuppliersDto) throws IOException {
-//        int num=filterSuppliersDto.getPage_num();
-//        int size=filterSuppliersDto.getPage_size();
-//        String commodityName = filterSuppliersDto.commodity_name;
-//        List<String> areaId = filterSuppliersDto.area_id;
-//        List<String> supplierCountryId = filterSuppliersDto.supplier_country_id;
-//        Integer tradeType = filterSuppliersDto.trade_type;
-//        Integer supplierLevel = filterSuppliersDto.supplier_level;
-//
-//        BoolQuery.Builder boolQuery = new BoolQuery.Builder();
-//        Map<String, Object> filters = new HashMap<>();
-//
-//
-//        if (currentUserRole == 4) {
-//            belongUserIds.add(currentUserId);
-//            belongUserIds.add("1");
-//            filters.put("belongUserId", belongUserIds);
-//        }
-//
-//        if (commodityName != null && !commodityName.isEmpty()) {
-//            SearchResponse<Commodity> searchResponse = esClient.search(s -> s
-//                    .index("commodity")
-//                    .query(q -> q.bool(b -> b
-////                            .must(m -> m.term(t -> t.field("commodity_name").value(commodityName)))
-//                                    .must(m -> m.match(t -> t.field("commodity_name").query(commodityName)))
-//                    )), Commodity.class);
-//            List<String> CustomerIds = searchResponse.hits().hits().stream()
-//                    .map(hit -> hit.source().getCommodityId())
-//                    .toList();
-//            filters.put("commodity_id", CustomerIds);
-//        }
-//
-//        List<String> areaCountryIds = null;
-//
-//        if (areaId != null && !areaId.isEmpty()) {
-//            List<FieldValue> fieldValues = areaId.stream()
-//                    .map(FieldValue::of)
-//                    .collect(Collectors.toList());
-//
-//            // 查询area索引，获取与areaId匹配的area_country
-//            SearchResponse<Area> areaSearchResponse = esClient.search(s -> s
-//                    .index("area")  // 查询的索引为 "area"
-//                    .query(q -> q.bool(b -> b
-//                            // 使用terms查询area_id字段，查询提供的areaId
-//                            .must(m -> m.terms(t -> t.field("area_id").terms(v -> v.value(fieldValues))))
-//                    )), Area.class);
-//
-//            // 提取area_country，进行flatten操作以获得所有国家ID
-//            areaCountryIds = areaSearchResponse.hits().hits().stream()
-//                    .flatMap(hit -> hit.source().getAreaCountry().stream())  // 展开areaCountry中的List<String>
-//                    .filter(Objects::nonNull)  // 排除空值
-//                    .distinct()  // 去重
-//                    .collect(Collectors.toList());  // 转换为List<String>
-//
-//
-//            // 将area_country作为过滤条件
-//            if (!areaCountryIds.isEmpty()) {
-//                filters.put("supplier_country_id", areaCountryIds);  // 将area_country作为筛选条件放入filters
-//            }
-//        }
-//
-//        // 如果提供了 customerCountryId，则合并并去重
-//        if (supplierCountryId != null && !supplierCountryId.isEmpty()) {
-//            // 合并并去重
-//            Set<String> mergedCountryIds = new HashSet<>(areaCountryIds);
-//            mergedCountryIds.addAll(supplierCountryId);
-//
-//            // 将最终的 mergedCountryIds 作为过滤条件加入 filters
-//            filters.put("supplier_country_id", new ArrayList<>(mergedCountryIds));  // ArrayList<String> 类型
-//        } else {
-//            // 如果没有提供 customerCountryId，则直接使用 areaCountryIds 作为过滤条件
-//            filters.put("supplier_country_id", areaCountryIds);  // List<String> 类型
-//        }
-//
-//        if (tradeType != null) {
-//            filters.put("trade_type", tradeType);
-//        }
-//        if (supplierLevel != null) {
-//            filters.put("supplier_level", supplierLevel);
-//        }
-//
-//        filters.forEach((key, value) -> {
-//            if (value instanceof List<?> listValue && !listValue.isEmpty()) {
-//                List<FieldValue> fieldValues = listValue.stream()
-//                        .map(v -> FieldValue.of(v.toString()))
-//                        .toList();
-//                boolQuery.should(q -> q.terms(t -> t.field(key).terms(v -> v.value(fieldValues))));
-//            }
-//            if (value instanceof String stringValue && !stringValue.isEmpty()) {
-//                boolQuery.should(q -> q.match(m -> m.field(key).query(stringValue)));
-//            }
-//            if (value instanceof Integer intValue) {
-//                boolQuery.must(m -> m.term(t -> t.field(key).value(FieldValue.of(intValue))));
-//            }
-//
-//        });
-//
-//        SearchResponse<Supplier> searchResponse;
-//        if (filters.isEmpty()) {
-//            searchResponse = esClient.search(s -> s
-//                    .index("supplier")
-//                    .query(q -> q.bool(boolQuery.build()))
-//                    .from((num - 1) * size)
-//                    .size(size), Supplier.class);
-//        } else {
-//            searchResponse = esClient.search(s -> s
-//                    .index("supplier")
-//                    .query(q -> q.bool(boolQuery.build()))
-//                    .from((num - 1) * size)
-//                    .size(size), Supplier.class);
-//        }
-//
-//        List<Receiver> receiverList = new ArrayList<>();
-//        for (Hit<Supplier> CustomerHit : searchResponse.hits().hits()) {
-//            Supplier receiver = CustomerHit.source();
-//            if (receiver == null) {
-//                continue;
-//            }
-//            receiverList.add(new Receiver(receiver.getSupplierId(), receiver.getSupplierName()));
-//        }
-//        return new FilterCustomersResponse(receiverList, receiverList.size(), num, size);
-//    }
-
-    public SearchAllCustomersResponse findCustomers(String currentUserId, int currentUserRole, SearchAllCustomersDto searchAllCustomersDto) throws IOException {
+    public SearchAllCustomerResponse findFindAllCustomer(String currentUserId, int currentUserRole, SearchAllCustomerDto searchAllCustomerDto) throws IOException {
         CountResponse countResponse = esClient.count(c -> c
                 .index(INDEX_NAME)  // 索引名称
         );
         int totalCount = (int) countResponse.count();
-        String commodityName = searchAllCustomersDto.commodity_name;
-        List<String> areaId = searchAllCustomersDto.area_id;
-        List<String> countryId = searchAllCustomersDto.customer_country_id;
-        Integer tradeType = searchAllCustomersDto.trade_type;
-        Integer receiverLevel = searchAllCustomersDto.customer_level;
+        String commodityName = searchAllCustomerDto.commodity_name;
+        List<String> areaId = searchAllCustomerDto.area_id;
+        List<String> customerCountryId = searchAllCustomerDto.customer_country_id;
+        Integer tradeType = searchAllCustomerDto.trade_type;
+        Integer customerLevel = searchAllCustomerDto.customer_level;
+
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         Map<String, Object> filters = new HashMap<>();
 
@@ -344,7 +213,7 @@ public class CustomerServiceImpl {
         if (currentUserRole == 4) {
             belongUserIds.add(currentUserId);
             belongUserIds.add("1");
-            filters.put("belongUserId", belongUserIds);
+            filters.put("belong_user_id", belongUserIds);
         }
         if (commodityName != null && !commodityName.isEmpty()) {
             SearchResponse<Commodity> searchResponse = esClient.search(s -> s
@@ -357,17 +226,54 @@ public class CustomerServiceImpl {
                     .toList();
             filters.put("commodity_id", CustomerIds);
         }
+
+        List<String> areaCountryIds = null;
+
         if (areaId != null && !areaId.isEmpty()) {
-            filters.put("area_id", areaId);
+            List<FieldValue> fieldValues = areaId.stream()
+                    .map(FieldValue::of)
+                    .collect(Collectors.toList());
+
+            // 查询area索引，获取与areaId匹配的area_country
+            SearchResponse<Area> areaSearchResponse = esClient.search(s -> s
+                    .index("area")  // 查询的索引为 "area"
+                    .query(q -> q.bool(b -> b
+                            // 使用terms查询area_id字段，查询提供的areaId
+                            .must(m -> m.terms(t -> t.field("area_id").terms(v -> v.value(fieldValues))))
+                    )), Area.class);
+
+            // 提取area_country，进行flatten操作以获得所有国家ID
+            areaCountryIds = areaSearchResponse.hits().hits().stream()
+                    .flatMap(hit -> hit.source().getAreaCountry().stream())  // 展开areaCountry中的List<String>
+                    .filter(Objects::nonNull)  // 排除空值
+                    .distinct()  // 去重
+                    .collect(Collectors.toList());  // 转换为List<String>
+
+
+            // 将area_country作为过滤条件
+            if (!areaCountryIds.isEmpty()) {
+                filters.put("customer_country_id", areaCountryIds);  // 将area_country作为筛选条件放入filters
+            }
         }
-        if (countryId != null && !countryId.isEmpty()) {
-            filters.put("country_id", countryId);
+
+        // 如果提供了 customerCountryId，则合并并去重
+        if (customerCountryId != null && !customerCountryId.isEmpty()) {
+            // 合并并去重
+            Set<String> mergedCountryIds = new HashSet<>(areaCountryIds);
+            mergedCountryIds.addAll(customerCountryId);
+
+            // 将最终的 mergedCountryIds 作为过滤条件加入 filters
+            filters.put("customer_country_id", new ArrayList<>(mergedCountryIds));  // ArrayList<String> 类型
+        } else {
+            // 如果没有提供 customerCountryId，则直接使用 areaCountryIds 作为过滤条件
+            filters.put("customer_country_id", areaCountryIds);  // List<String> 类型
         }
+
         if (tradeType != null) {
             filters.put("trade_type", tradeType);
         }
-        if (receiverLevel != null) {
-            filters.put("receiver_level", receiverLevel);
+        if (customerLevel != null) {
+            filters.put("customer_level", customerLevel);
         }
         filters.forEach((key, value) -> {
             if (value instanceof List<?> listValue && !listValue.isEmpty()) {
@@ -408,97 +314,8 @@ public class CustomerServiceImpl {
         }
         String receiver_key = "receiver_list:" + IdUtil.fastUUID();
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
-        operations.set(receiver_key, receiverList, 10, TimeUnit.MINUTES);
-        return new SearchAllCustomersResponse(receiverList.size(), receiver_key);
-    }
-
-    public SearchAllCustomersResponse FindSupplier(String currentUserId, int currentUserRole, SearchAllCustomersDto searchAllCustomersDto) throws IOException {
-        CountResponse countResponse = esClient.count(c -> c
-                .index("supplier")  // 索引名称
-        );
-        int totalCount = (int) countResponse.count();
-        String commodityName = searchAllCustomersDto.commodity_name;
-        List<String> areaId = searchAllCustomersDto.area_id;
-        List<String> countryId = searchAllCustomersDto.customer_country_id;
-        Integer tradeType = searchAllCustomersDto.trade_type;
-        Integer receiverLevel = searchAllCustomersDto.customer_level;
-        BoolQuery.Builder boolQuery = new BoolQuery.Builder();
-        Map<String, Object> filters = new HashMap<>();
-
-        // 用于存储属于用户的ID列表
-        final List<String> belongUserIds = new ArrayList<>();
-
-        if (currentUserRole == 4) {
-            belongUserIds.add(currentUserId);
-            belongUserIds.add("1");
-            filters.put("belongUserId", belongUserIds);
-        }
-        if (commodityName != null && !commodityName.isEmpty()) {
-            SearchResponse<Commodity> searchResponse = esClient.search(s -> s
-                    .index("commodity")
-                    .query(q -> q.bool(b -> b
-                            .must(m -> m.term(t -> t.field("commodity_name").value(commodityName)))
-                    )), Commodity.class);
-            List<String> CustomerIds = searchResponse.hits().hits().stream()
-                    .map(hit -> hit.source().getCommodityId())
-                    .toList();
-            filters.put("commodity_id", CustomerIds);
-        }
-        if (areaId != null && !areaId.isEmpty()) {
-            filters.put("area_id", areaId);
-        }
-        if (countryId != null && !countryId.isEmpty()) {
-            filters.put("country_id", countryId);
-        }
-        if (tradeType != null) {
-            filters.put("trade_type", tradeType);
-        }
-        if (receiverLevel != null) {
-            filters.put("receiver_level", receiverLevel);
-        }
-
-        filters.forEach((key, value) -> {
-            if (value instanceof List<?> listValue && !listValue.isEmpty()) {
-                List<FieldValue> fieldValues = listValue.stream()
-                        .map(v -> FieldValue.of(v.toString()))
-                        .toList();
-                boolQuery.should(q -> q.terms(t -> t.field(key).terms(v -> v.value(fieldValues))));
-            }
-            if (value instanceof String stringValue && !stringValue.isEmpty()) {
-                boolQuery.should(q -> q.match(m -> m.field(key).query(stringValue)));
-            }
-            if (value instanceof Integer intValue) {
-                boolQuery.must(m -> m.term(t -> t.field(key).value(FieldValue.of(intValue))));
-            }
-
-        });
-        SearchResponse<Supplier> searchResponse;
-        if (filters.isEmpty()) {
-            searchResponse = esClient.search(s -> s
-                    .index("supplier")
-                    .query(q -> q.bool(boolQuery.build()))
-                    .from(0)
-                    .size(totalCount), Supplier.class);
-        } else {
-            searchResponse = esClient.search(s -> s
-                    .index("supplier")
-                    .query(q -> q.bool(boolQuery.build()))
-                    .from(0)
-                    .size(totalCount), Supplier.class);
-        }
-
-        List<ReceiverSupplier> receiverList = new ArrayList<>();
-        for (Hit<Supplier> CustomerHit : searchResponse.hits().hits()) {
-            Supplier receiver = CustomerHit.source();
-            if (receiver == null) {
-                continue;
-            }
-            receiverList.add(new ReceiverSupplier(receiver.getSupplierId(), receiver.getSupplierName()));
-        }
-        String supplier_key = "supplier_list:" + IdUtil.fastUUID();
-        ValueOperations<String, Object> operations = redisTemplate.opsForValue();
-        operations.set(supplier_key, receiverList, 10, TimeUnit.MINUTES);
-        return new SearchAllCustomersResponse(receiverList.size(), supplier_key);
+        operations.set(receiver_key, receiverList, 1, TimeUnit.DAYS);
+        return new SearchAllCustomerResponse(receiverList.size(), receiver_key);
     }
 }
 
