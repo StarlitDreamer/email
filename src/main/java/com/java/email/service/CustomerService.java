@@ -1,68 +1,55 @@
-//package com.java.email.service;
-//
-//
-//import cn.hutool.core.util.IdUtil;
-//import co.elastic.clients.elasticsearch.ElasticsearchClient;
-//import co.elastic.clients.elasticsearch._types.FieldValue;
-//import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
-//import co.elastic.clients.elasticsearch.core.CountResponse;
-//import co.elastic.clients.elasticsearch.core.SearchResponse;
-//import co.elastic.clients.elasticsearch.core.search.Hit;
-//import com.java.email.dto.FilterCustomersDto;
-//import com.java.email.dto.FilterCustomersResponse;
-//import com.java.email.dto.SearchAllCustomersDto;
-//import com.java.email.dto.SearchAllCustomersResponse;
-//import com.java.email.entity.Commodity;
-//import com.java.email.entity.Customer;
-//import com.java.email.entity.Receiver;
-//import com.java.email.entity.Supplier;
-//import com.java.email.repository.CustomerRepository;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.data.redis.core.RedisTemplate;
-//import org.springframework.data.redis.core.ValueOperations;
-//import org.springframework.stereotype.Service;
-//
-//import java.io.IOException;
-//import java.util.*;
-//import java.util.concurrent.TimeUnit;
-//import java.util.stream.Collectors;
-//
-//@Service
-//public class CustomerService {
-//    @Autowired
-//    private CustomerRepository customerRepository;
-//
-//    @Autowired
-//    private RedisTemplate<String, Object> redisTemplate;
-//    private final ElasticsearchClient esClient;
-//    private final String INDEX_NAME = "customer";
-//    private final List<String> belongUserIds = new ArrayList<>();
-//
-//    public CustomerService(ElasticsearchClient esClient) {
-//        this.esClient = esClient;
-//    }
-//
-//    /**
-//     * 根据 customerId 数组查询对应的 emails，并去除重复的 emails。
-//     *
-//     * @param customerIds 客户 ID 数组
-//     * @return 去重后的 emails 列表
-//     */
-//    public List<String> getUniqueEmailsByCustomerIds(List<String> customerIds) {
-//        List<Customer> customers = customerRepository.findByCustomerIdIn(customerIds);
-//
-//        // 使用 HashSet 来去除重复的 emails
-//        Set<String> uniqueEmails = new HashSet<>();
-//
-//        for (Customer customer : customers) {
-//            uniqueEmails.addAll(customer.getEmails());
-//        }
-//
-//        return uniqueEmails.stream().collect(Collectors.toList());
-//    }
-//
-//
-//
+package com.java.email.service;
+
+
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import com.java.email.entity.Customer;
+import com.java.email.repository.CustomerRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+public class CustomerService {
+    @Autowired
+    private CustomerRepository customerRepository;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+    private final ElasticsearchClient esClient;
+    private final String INDEX_NAME = "customer";
+    private final List<String> belongUserIds = new ArrayList<>();
+
+    public CustomerService(ElasticsearchClient esClient) {
+        this.esClient = esClient;
+    }
+
+    /**
+     * 根据 customerId 数组查询对应的 emails，并去除重复的 emails。
+     *
+     * @param customerIds 客户 ID 数组
+     * @return 去重后的 emails 列表
+     */
+    public List<String> getUniqueEmailsByCustomerIds(List<String> customerIds) {
+        List<Customer> customers = customerRepository.findByCustomerIdIn(customerIds);
+
+        // 使用 HashSet 来去除重复的 emails
+        Set<String> uniqueEmails = new HashSet<>();
+
+        for (Customer customer : customers) {
+            uniqueEmails.addAll(customer.getEmails());
+        }
+
+        return uniqueEmails.stream().collect(Collectors.toList());
+    }
+
+
+}
 //
 //public FilterCustomersResponse FilterFindCustomers(String currentUserId, int currentUserRole, FilterCustomersDto filterCustomersDto) throws IOException {
 ////        int num=Integer.parseInt(filterCustomersDto.getPage_num());

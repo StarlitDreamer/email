@@ -40,24 +40,24 @@
 //    }
 //
 ////    // 每隔一小时执行一次统计，并将结果保存到 email_report 索引
-////    @Scheduled(cron = "0 * * * * ?")  // 每小时执行一次
-////    public void generateEmailReport() {
-////        long bounceCount = getBounceCount();
-////        long deliveredCount = getDeliveredCount();
-//////        long currentTime = System.currentTimeMillis() / 1000;  // 获取当前时间（秒级时间戳）
-////
-////        // 创建报告
-////        EmailReport emailReport = new EmailReport();
-//////        emailReport.setReportTime(currentTime);
-////        emailReport.setBounceAmount(bounceCount);
-////        emailReport.setDeliveryAmount(deliveredCount);
-////
-////        // 保存到 email_report 索引
-////        emailReportRepository.save(emailReport);
-////
-////        // 打印日志，确认任务执行
-////        System.out.println("Email report generated. Bounce Count: " + bounceCount + ", Delivered Count: " + deliveredCount);
-////    }
+//    @Scheduled(cron = "0 * * * * ?")  // 每小时执行一次
+//    public void generateEmailReport() {
+//        long bounceCount = getBounceCount();
+//        long deliveredCount = getDeliveredCount();
+////        long currentTime = System.currentTimeMillis() / 1000;  // 获取当前时间（秒级时间戳）
+//
+//        // 创建报告
+//        EmailReport emailReport = new EmailReport();
+////        emailReport.setReportTime(currentTime);
+//        emailReport.setBounceAmount(bounceCount);
+//        emailReport.setDeliveryAmount(deliveredCount);
+//
+//        // 保存到 email_report 索引
+//        emailReportRepository.save(emailReport);
+//
+//        // 打印日志，确认任务执行
+//        System.out.println("Email report generated. Bounce Count: " + bounceCount + ", Delivered Count: " + deliveredCount);
+//    }
 //
 //    /**
 //     * 统计指定 emailTaskId 下 errorCode 为 200 的 emailId 数量
