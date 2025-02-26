@@ -40,13 +40,13 @@ public class CustomerServiceImpl {
     }
 
     public FilterCustomersResponse FilterFindCustomers(String currentUserId, int currentUserRole, FilterCustomersDto filterCustomersDto) throws IOException {
-        int num = Integer.parseInt(filterCustomersDto.getPage_num());
-        int size = Integer.parseInt(filterCustomersDto.getPage_size());
+        int num=filterCustomersDto.getPage_num();
+        int size=filterCustomersDto.getPage_size();
         String commodityName = filterCustomersDto.commodity_name;
         List<String> areaId = filterCustomersDto.area_id;
-        String countryId = filterCustomersDto.customer_country_id;
+        List<String> customerCountryId = filterCustomersDto.customer_country_id;
         Integer tradeType = filterCustomersDto.trade_type;
-        Integer receiverLevel = filterCustomersDto.receiver_level;
+        Integer customerLevel = filterCustomersDto.customer_level;
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         Map<String, Object> filters = new HashMap<>();
 
@@ -55,11 +55,12 @@ public class CustomerServiceImpl {
             belongUserIds.add("1");
             filters.put("belongUserId", belongUserIds);
         }
-        if (commodityName != null && !commodityName.isEmpty()) {
+        if (commodityName != null) {
             SearchResponse<Commodity> searchResponse = esClient.search(s -> s
                     .index("commodity")
                     .query(q -> q.bool(b -> b
-                            .must(m -> m.term(t -> t.field("commodity_name").value(commodityName)))
+//                            .must(m -> m.term(t -> t.field("commodity_name").value(commodityName)))
+                                    .must(m -> m.match(t -> t.field("commodity_name").query(commodityName)))
                     )), Commodity.class);
             List<String> CustomerIds = searchResponse.hits().hits().stream()
                     .map(hit -> hit.source().getCommodityId())
@@ -69,14 +70,14 @@ public class CustomerServiceImpl {
         if (areaId != null && !areaId.isEmpty()) {
             filters.put("area_id", areaId);
         }
-        if (countryId != null && !countryId.isEmpty()) {
-            filters.put("country_id", countryId);
+        if (customerCountryId != null && !customerCountryId.isEmpty()) {
+            filters.put("customer_country_id", customerCountryId);
         }
         if (tradeType != null) {
             filters.put("trade_type", tradeType);
         }
-        if (receiverLevel != null) {
-            filters.put("receiver_level", receiverLevel);
+        if (customerLevel != null) {
+            filters.put("customer_level", customerLevel);
         }
 
         filters.forEach((key, value) -> {
@@ -84,7 +85,7 @@ public class CustomerServiceImpl {
                 List<FieldValue> fieldValues = listValue.stream()
                         .map(v -> FieldValue.of(v.toString()))
                         .toList();
-                boolQuery.should(q -> q.terms(t -> t.field(key).terms(v -> v.value(fieldValues))));
+                boolQuery.must(q -> q.terms(t -> t.field(key).terms(v -> v.value(fieldValues))));
             }
             if (value instanceof String stringValue && !stringValue.isEmpty()) {
                 boolQuery.should(q -> q.match(m -> m.field(key).query(stringValue)));
@@ -92,7 +93,6 @@ public class CustomerServiceImpl {
             if (value instanceof Integer intValue) {
                 boolQuery.must(m -> m.term(t -> t.field(key).value(FieldValue.of(intValue))));
             }
-
         });
         SearchResponse<Customer> searchResponse;
         if (filters.isEmpty()) {
@@ -122,13 +122,13 @@ public class CustomerServiceImpl {
 
 
     public FilterCustomersResponse FilterFindSupplier(String currentUserId, int currentUserRole, FilterCustomersDto filterCustomersDto) throws IOException {
-        int num = Integer.parseInt(filterCustomersDto.getPage_num());
-        int size = Integer.parseInt(filterCustomersDto.getPage_size());
+        int num=filterCustomersDto.getPage_num();
+        int size=filterCustomersDto.getPage_size();
         String commodityName = filterCustomersDto.commodity_name;
         List<String> areaId = filterCustomersDto.area_id;
-        String countryId = filterCustomersDto.customer_country_id;
+        List<String> countryId = filterCustomersDto.customer_country_id;
         Integer tradeType = filterCustomersDto.trade_type;
-        Integer receiverLevel = filterCustomersDto.receiver_level;
+        Integer customerLevel = filterCustomersDto.customer_level;
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         Map<String, Object> filters = new HashMap<>();
 
@@ -141,7 +141,8 @@ public class CustomerServiceImpl {
             SearchResponse<Commodity> searchResponse = esClient.search(s -> s
                     .index("commodity")
                     .query(q -> q.bool(b -> b
-                            .must(m -> m.term(t -> t.field("commodity_name").value(commodityName)))
+//                            .must(m -> m.term(t -> t.field("commodity_name").value(commodityName)))
+                                    .must(m -> m.match(t -> t.field("commodity_name").query(commodityName)))
                     )), Commodity.class);
             List<String> CustomerIds = searchResponse.hits().hits().stream()
                     .map(hit -> hit.source().getCommodityId())
@@ -152,13 +153,13 @@ public class CustomerServiceImpl {
             filters.put("area_id", areaId);
         }
         if (countryId != null && !countryId.isEmpty()) {
-            filters.put("country_id", countryId);
+            filters.put("customer_level", countryId);
         }
         if (tradeType != null) {
             filters.put("trade_type", tradeType);
         }
-        if (receiverLevel != null) {
-            filters.put("receiver_level", receiverLevel);
+        if (customerLevel != null) {
+            filters.put("customer_level", customerLevel);
         }
 
         filters.forEach((key, value) -> {

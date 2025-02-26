@@ -14,12 +14,11 @@ import java.util.List;
 public class FilterCustomersDto {
     public String commodity_name;
     public List<String> area_id;
-    public String  customer_country_id;
+    public List<String>  customer_country_id;
     public Integer  trade_type;
-    public Integer  receiver_level;
+    public Integer  customer_level;
     @Builder.Default
-    public String  page_num="1";
+    public Integer  page_num=1;
     @Builder.Default
-    public String  page_size="10";
-
+    public Integer  page_size=10;
 }
