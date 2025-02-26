@@ -1,8 +1,8 @@
 package com.java.email.controller;
 
 import com.java.email.dto.CreateCycleEmailTaskRequest;
+import com.java.email.dto.CreateEmailTaskRequest;
 import com.java.email.entity.EmailTask;
-import com.java.email.repository.EmailTaskRepository;
 import com.java.email.service.EmailTaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,15 +17,11 @@ public class EmailTaskController {
     @Autowired
     private EmailTaskService emailTaskService;
 
-    @Autowired
-    private EmailTaskRepository emailTaskRepository;
-
-
     /**
      * 创建普通邮件任务
      */
     @PostMapping("create")
-    public String createEmailTask(@RequestBody EmailTask request) {
+    public String createEmailTask(@RequestBody CreateEmailTaskRequest request) {
         System.out.println(request.getSenderId());
         return emailTaskService.createEmailTask(request);
     }

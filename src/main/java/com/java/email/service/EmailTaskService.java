@@ -1,6 +1,7 @@
 package com.java.email.service;
 
 import com.java.email.dto.CreateCycleEmailTaskRequest;
+import com.java.email.dto.CreateEmailTaskRequest;
 import com.java.email.entity.Email;
 import com.java.email.entity.EmailTask;
 import com.java.email.repository.EmailRepository;
@@ -10,8 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class EmailTaskService {
@@ -25,17 +25,44 @@ public class EmailTaskService {
     @Autowired
     private TemplateService templateService;
 
+    @Autowired
+    private CustomerService customerService;
+
+    @Autowired
+    private  SupplierService supplierService;
+
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
-    private static final String redisQueueName = "TIMER_TASK9001";
+    private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
 
     /**
      * 创建普通邮件发送任务
      */
-    public String createEmailTask(EmailTask request) {
+    public String createEmailTask(CreateEmailTaskRequest request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
+
+        //获取接受者id列表
+        List<String> receiverId = request.getReceiverId();
+        List<String> receiverSupplierId = request.getReceiverSupplierId();
+
+        //获取接受者邮件
+        List<String> uniqueEmailsByCustomerIds = customerService.getUniqueEmailsByCustomerIds(receiverId);
+        List<String> uniqueEmailsBySupplierIds = supplierService.getUniqueEmailsBySupplierIds(receiverSupplierId);
+
+        // 使用 HashSet 合并并去重
+        Set<String> allUniqueEmails = new HashSet<>();
+        allUniqueEmails.addAll(uniqueEmailsByCustomerIds);
+        allUniqueEmails.addAll(uniqueEmailsBySupplierIds);
+
+        // 接受者邮箱列表
+        List<String> receiverEmails= new ArrayList<>(allUniqueEmails);
+
+        String receiverKey = request.getReceiverKey();
+        String receiverSupplierKey = request.getReceiverSupplierKey();
+
+
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
@@ -45,15 +72,11 @@ public class EmailTaskService {
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setEmailContent(request.getEmailContent());
-        emailTask.setReceiverId(request.getReceiverId());
+        emailTask.setReceiverId(receiverEmails);
         emailTask.setReceiverSupplierId(request.getReceiverSupplierId());
-        emailTask.setReceiverKey(request.getReceiverKey());
-        emailTask.setReceiverSupplierKey(request.getReceiverSupplierKey());
-        emailTask.setCancelReceiverId(request.getCancelReceiverId());
         emailTask.setAttachment(request.getAttachment());
         emailTask.setTaskType(1);
-        emailTask.setIndex(request.getIndex());
-        emailTask.setReceiverName(request.getReceiverName());
+        emailTask.setIndex(0L);
 
         // Set created_at timestamp
         long currentTime = System.currentTimeMillis() / 1000;
@@ -118,7 +141,6 @@ public class EmailTaskService {
         // 计算结束时间为当前时间6小时后的时间戳
         long endTime = currentTime + sendCycle * 24 * 60 * 60;
         emailTask.setEndDate(endTime);
-
 
 
         emailTask.setIntervalDate(sendCycle * 24 * 60 * 60);
