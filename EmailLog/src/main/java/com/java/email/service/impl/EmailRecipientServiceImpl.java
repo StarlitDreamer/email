@@ -33,7 +33,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     private static final String RESEND_EMAIL = "resend_details";
     private static final String USER_INDEX = "user";
 
-    @Autowired
+
     public EmailRecipientServiceImpl(ElasticsearchClient esClient) {
         this.esClient = esClient;
     }

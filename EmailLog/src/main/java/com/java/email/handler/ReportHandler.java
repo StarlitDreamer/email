@@ -2,6 +2,8 @@ package com.java.email.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.email.pojo.EmailReport;
+import com.java.email.service.EmailReportService;
 import com.java.email.vo.EmailTaskVo;
 import com.java.email.vo.EmailVo;
 import io.netty.buffer.Unpooled;
@@ -29,12 +31,14 @@ import java.util.HashMap;
 @Slf4j
 public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final EmailLogService emailLogService;
+    private final EmailReportService emailReportService;
     private final UserService userService;
     private final ObjectMapper objectMapper;
     private static final int MAX_PAGE_SIZE = 10000;
     
-    public ReportHandler(EmailLogService emailLogService, UserService userService) {
+    public ReportHandler(EmailLogService emailLogService, EmailReportService emailReportService, UserService userService) {
         this.emailLogService = emailLogService;
+        this.emailReportService = emailReportService;
         this.userService = userService;
         this.objectMapper = new ObjectMapper();
     }
@@ -100,19 +104,16 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         }
 
         EmailTask emailTask = emailTasks.get(0);
+        EmailReport emailReport=emailReportService.getEmailReport(emailTask.getEmailTaskId());
 
-        EmailVo emailVo=emailLogService.findByDynamicQueryEmail(
-                params, 1, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
-        // 获取任务相关的所有邮件
-        List<UndeliveredEmail> emailList = emailVo.getEmailList();
+
 
         // 统计数据
-        long totalEmailCount = emailList.size();
-        long totalSendNum = emailList.stream()
-            .filter(email -> email.getErrorCode() == 200L)
-            .count();
-        long totalBounceAmount = emailTask.getBounceAmount();
-        long totalUnsubscribeAmount = emailTask.getUnsubscribeAmount();
+        long totalEmailCount = emailReport.getEmailTotal();
+        long totalSendNum = emailReport.getDeliveryAmount();
+        long openAmount = emailReport.getOpenAmount();
+        long totalBounceAmount = emailReport.getBounceAmount();
+        long totalUnsubscribeAmount = emailReport.getUnsubscribeAmount();
 
         // 构建报表数据
         ReportVo reportVo = new ReportVo();
@@ -123,6 +124,12 @@ public class ReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> 
         delivery.setDeliveryAmount(formatAmount(totalSendNum));
         delivery.setTotal(totalEmailCount);
         reportVo.setDelivery(delivery);
+
+        ReportVo.Open open = new ReportVo.Open();
+        open.setRate(calculateRate(openAmount, totalEmailCount));
+        open.setOpenAmount(formatAmount(openAmount));
+        open.setTotal(totalEmailCount);
+        reportVo.setOpen(open);
         
         // 设置退信率
         ReportVo.Bounce bounce = new ReportVo.Bounce();

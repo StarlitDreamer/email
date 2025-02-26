@@ -2,6 +2,8 @@ package com.java.email.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
+import com.java.email.pojo.EmailReport;
+import com.java.email.service.EmailReportService;
 import com.java.email.utils.HttpUtil;
 import com.java.email.vo.EmailTaskVo;
 import com.java.email.vo.EmailVo;
@@ -29,12 +31,14 @@ import java.util.Collections;
 @Slf4j
 public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     private final EmailLogService emailLogService;
+    private final EmailReportService emailReportService;
     private final ObjectMapper objectMapper;
     private final UserService userService;
     private static final int MAX_PAGE_SIZE = 10000;
 
-    public ManualReportHandler(EmailLogService emailLogService, UserService userService) {
+    public ManualReportHandler(EmailLogService emailLogService, EmailReportService emailReportService, UserService userService) {
         this.emailLogService = emailLogService;
+        this.emailReportService = emailReportService;
         this.userService = userService;
         this.objectMapper = new ObjectMapper();
     }
@@ -101,21 +105,17 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         // 汇总统计数据
         long totalEmailCount = 0;
         long totalSendNum = 0;
+        long openAmount = 0;
         long totalBounceAmount = 0;
         long totalUnsubscribeAmount = 0;
 
         // 遍历所有任务并汇总数据
         for (EmailTask emailTask : emailTasks) {
-            params.put("emailTaskId", emailTask.getEmailTaskId());
-            EmailVo emailVo=emailLogService.findByDynamicQueryEmail(
-                    params, 1, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
-            List<UndeliveredEmail> emailList = emailVo.getEmailList();
-            params.remove("emailTaskId");
+            EmailReport emailReport=emailReportService.getEmailReport(emailTask.getEmailTaskId());
             
-            totalEmailCount += emailList.size();
-            totalSendNum += emailList.stream()
-                    .filter(email -> email.getErrorCode() == 200L)
-                    .count();
+            totalEmailCount += emailReport.getEmailTotal();
+            totalSendNum += emailReport.getDeliveryAmount();
+            openAmount += emailReport.getOpenAmount();
             totalBounceAmount += emailTask.getBounceAmount();
             totalUnsubscribeAmount += emailTask.getUnsubscribeAmount();
         }
@@ -129,6 +129,12 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         delivery.setDeliveryAmount(formatAmount(totalSendNum));
         delivery.setTotal(totalEmailCount);
         reportVo.setDelivery(delivery);
+
+        ReportVo.Open open = new ReportVo.Open();
+        open.setRate(calculateRate(openAmount, totalEmailCount));
+        open.setOpenAmount(formatAmount(openAmount));
+        open.setTotal(totalEmailCount);
+        reportVo.setOpen(open);
         
         // 设置退信率
         ReportVo.Bounce bounce = new ReportVo.Bounce();
