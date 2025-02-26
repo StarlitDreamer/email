@@ -23,7 +23,7 @@ public class Country {
     private String countryId;           // 国家ID，使用UUID，不分词
 
     @JsonProperty("country_code")
-    @Field(name = "country_code", type = FieldType.Keyword)
+    @Field(name = "country_code", type = FieldType.Text)
     private String countryCode;         // 国家代码，例如中国是zh、美国是us
 
     @JsonProperty("country_name")

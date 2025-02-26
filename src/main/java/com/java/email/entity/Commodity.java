@@ -27,7 +27,7 @@ public class Commodity {
     private String categoryId;            // 品类ID，商品所属品类
 
     @JsonProperty("commodity_name")
-    @Field(name = "commodity_name", type = FieldType.Keyword)
+    @Field(name = "commodity_name", type = FieldType.Text)
     private String commodityName;         // 商品名称，不分词
 
     @JsonProperty("created_at")
