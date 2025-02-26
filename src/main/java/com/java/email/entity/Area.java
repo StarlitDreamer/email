@@ -16,10 +16,6 @@ import java.util.List;
 @AllArgsConstructor
 @Document(indexName = "area")
 public class Area {
-    @JsonProperty("area_country")
-    @Field(name = "area_country", type = FieldType.Keyword)
-    private List<String> areaCountry;    // 区域内国家id
-
     @Id
     @JsonProperty("area_id")
     @Field(name = "area_id", type = FieldType.Keyword)
@@ -28,6 +24,10 @@ public class Area {
     @JsonProperty("area_name")
     @Field(name = "area_name", type = FieldType.Text)
     private String areaName;             // 区域名称
+
+    @JsonProperty("area_country")
+    @Field(name = "area_country", type = FieldType.Keyword)
+    private List<String> areaCountry;    // 区域内国家id
 
     @JsonProperty("created_at")
     @Field(name = "created_at", type = FieldType.Date)
