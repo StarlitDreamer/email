@@ -1,90 +1,59 @@
 package com.java.email.controller;
 
-import com.java.email.common.Result;
-import com.java.email.model.entity.Supplier;
+import com.java.email.model.dto.FilterSupplierDto;
+import com.java.email.model.dto.SearchAllSupplierDto;
+import com.java.email.model.response.FilterSupplierResponse;
+import com.java.email.model.response.SearchAllCustomerResponse;
 import com.java.email.service.SupplierService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/suppliers")
 public class SupplierController {
+
     @Autowired
     private SupplierService supplierService;
 
-
     /**
-     * 根据 supplierId 数组查询对应的 emails，并去除重复的 emails。
-     *
-     * @param supplierIds 供应商 ID 数组
-     * @return 去重后的 emails 列表
+     * 过滤查找供应商
+     * @param currentUserId 当前用户ID
+     * @param currentUserRole 当前用户角色
+     * @param filterSuppliersDto 过滤条件
+     * @return 过滤后的供应商列表
+     * @throws IOException 如果与 Elasticsearch 交互时出现问题
      */
-    @PostMapping("/emails")
-    public List<String> getUniqueEmails(@RequestBody List<String> supplierIds) {
-        return supplierService.getUniqueEmailsBySupplierIds(supplierIds);
+    @GetMapping("/filter")
+    public ResponseEntity<FilterSupplierResponse> filterFindSupplier(
+            @RequestHeader String currentUserId,
+            @RequestHeader int currentUserRole,
+            @RequestBody FilterSupplierDto filterSuppliersDto) throws IOException {
+
+        // 调用服务层方法
+        FilterSupplierResponse response = supplierService.FilterFindSupplier(currentUserId, currentUserRole, filterSuppliersDto);
+
+        // 返回成功响应
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @GetMapping("/filterAll")
+    public ResponseEntity<SearchAllCustomerResponse> filterFindAllSupplier(
+            @RequestHeader String currentUserId,
+            @RequestHeader int currentUserRole,
+            @RequestBody SearchAllSupplierDto searchAllSupplierDto) {
 
-    /**
-     * 根据条件筛选供应商
-     *
-     * @param ownerUserId   所属用户ID
-     * @param supplierLevel 供应商等级
-     * @param supplierName  供应商名称
-     * @param status        分配状态
-     * @param tradeType     贸易类型
-     * @param pageNumber          页码
-     * @param pageSize          每页大小
-     * @return 符合条件的供应商分页结果
-     */
-    @GetMapping("/search")
-    public Result<Page<Supplier>> findSuppliersByCriteria(
-            @RequestParam(required = false) String ownerUserId,
-            @RequestParam(required = false) Integer supplierLevel,
-            @RequestParam(required = false) String supplierName,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "1") int pageNumber,
-            @RequestParam(defaultValue = "10") int pageSize,
-            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
-            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
-
-        // 调用服务层方法，传递当前用户ID和角色
-        return supplierService.findSuppliersByCriteria(
-                ownerUserId, supplierLevel, supplierName, status, tradeType,
-                pageNumber-1, pageSize, currentUserId, currentUserRole);
-    }
-
-
-    /**
-     * 根据条件筛选供应商,并存入redis返回rediskey
-     *
-     * @param ownerUserId   所属用户ID
-     * @param supplierLevel 供应商等级
-     * @param supplierName  供应商名称
-     * @param status        分配状态
-     * @param tradeType     贸易类型
-     * @param pageNumber          页码
-     * @param size          每页大小
-     * @return 符合条件的供应商分页结果
-     */
-    @GetMapping("/search-all")
-    public Result<String> findSuppliersByCriteriaRedis(
-            @RequestParam(required = false) String ownerUserId,
-            @RequestParam(required = false) Integer supplierLevel,
-            @RequestParam(required = false) String supplierName,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) Integer tradeType,
-            @RequestParam(defaultValue = "0") int pageNumber,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestHeader("currentUserId") String currentUserId,
-            @RequestHeader("currentUserRole") int currentUserRole) {
-
-        return supplierService.findSuppliersByCriteriaRedis(
-                ownerUserId, supplierLevel, supplierName, status, tradeType,
-                pageNumber, size, currentUserId, currentUserRole);
+        try {
+            // 调用服务层方法获取供应商数据
+            SearchAllCustomerResponse response = supplierService.FindFindAllSupplier(currentUserId, currentUserRole, searchAllSupplierDto);
+            return ResponseEntity.ok(response);
+        } catch (IOException e) {
+            // 如果发生异常，返回500错误
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new SearchAllCustomerResponse(0, "Error fetching supplier data"));
+        }
     }
 }

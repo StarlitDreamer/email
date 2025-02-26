@@ -1,7 +1,7 @@
 //package com.java.email.service;
 //
-//import com.java.email.entity.EmailDetail;
-//import com.java.email.entity.EmailReport;
+//import com.java.email.model.entity.EmailDetail;
+//import com.java.email.model.entity.EmailReport;
 //import com.java.email.repository.EmailDetailRepository;
 //import com.java.email.repository.EmailReportRepository;
 //import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +16,6 @@
 //
 //    @Autowired
 //    private EmailDetailRepository emailDetailRepository;
-//
 //
 //    @Autowired
 //    private EmailReportRepository emailReportRepository;
@@ -122,43 +121,44 @@
 //            emailReportRepository.save(emailReport);
 //        }
 //    }
-////    public void generateEmailReport() {
-////        // 获取所有 email_task_id 的唯一列表
-////        List<EmailDetail> allEmailDetails = emailDetailRepository.findAll();
-////        Map<String, Set<String>> emailTaskIdMap = new HashMap<>();
-////
-////        // 按 email_task_id 分组
-////        for (EmailDetail emailDetail : allEmailDetails) {
-////            String emailTaskId = emailDetail.getEmailTaskId();
-////            emailTaskIdMap.computeIfAbsent(emailTaskId, k -> new HashSet<>()).add(emailDetail.getEmailId());
-////        }
-////
-////        // 遍历每个 email_task_id，统计 error_code 为 200 和 500 的数量
-////        for (Map.Entry<String, Set<String>> entry : emailTaskIdMap.entrySet()) {
-////            String emailTaskId = entry.getKey();
-////            Set<String> emailIds = entry.getValue();
-////
-////            // 统计 error_code 为 200 的数量
-////            long successCount = countEmailIdsByErrorCode(emailTaskId, 200);
-////
-////            // 统计 error_code 为 500 的数量
-////            long failedCount = countEmailIdsByErrorCode(emailTaskId, 500);
-////
-////            // 创建 EmailReport 对象
-////            EmailReport emailReport = new EmailReport();
-////            emailReport.setEmailTaskId(emailTaskId);
-////            emailReport.setDeliveryAmount(successCount);  // 送达数量
-////            emailReport.setBounceAmount(failedCount);     // 退信数量
-////            emailReport.setEmailTotal((long) emailIds.size());   // 邮件总数
-////
-////            // 打印日志，确认任务执行
-////            System.out.println("Email report generated. successCount : " + successCount + ", failedCount : " + failedCount);
-////
-////
-////            // 保存到 email_report 索引
-////            emailReportRepository.save(emailReport);
-////        }
-////    }
+//
+//    public void generateEmailReport() {
+//        // 获取所有 email_task_id 的唯一列表
+//        List<EmailDetail> allEmailDetails = emailDetailRepository.findAll();
+//        Map<String, Set<String>> emailTaskIdMap = new HashMap<>();
+//
+//        // 按 email_task_id 分组
+//        for (EmailDetail emailDetail : allEmailDetails) {
+//            String emailTaskId = emailDetail.getEmailTaskId();
+//            emailTaskIdMap.computeIfAbsent(emailTaskId, k -> new HashSet<>()).add(emailDetail.getEmailId());
+//        }
+//
+//        // 遍历每个 email_task_id，统计 error_code 为 200 和 500 的数量
+//        for (Map.Entry<String, Set<String>> entry : emailTaskIdMap.entrySet()) {
+//            String emailTaskId = entry.getKey();
+//            Set<String> emailIds = entry.getValue();
+//
+//            // 统计 error_code 为 200 的数量
+//            long successCount = countEmailIdsByErrorCode(emailTaskId, 200);
+//
+//            // 统计 error_code 为 500 的数量
+//            long failedCount = countEmailIdsByErrorCode(emailTaskId, 500);
+//
+//            // 创建 EmailReport 对象
+//            EmailReport emailReport = new EmailReport();
+//            emailReport.setEmailTaskId(emailTaskId);
+//            emailReport.setDeliveryAmount(successCount);  // 送达数量
+//            emailReport.setBounceAmount(failedCount);     // 退信数量
+//            emailReport.setEmailTotal((long) emailIds.size());   // 邮件总数
+//
+//            // 打印日志，确认任务执行
+//            System.out.println("Email report generated. successCount : " + successCount + ", failedCount : " + failedCount);
+//
+//
+//            // 保存到 email_report 索引
+//            emailReportRepository.save(emailReport);
+//        }
+//    }
 //
 //    /**
 //     * 根据 emailTaskId 和 errorCode 统计 emailId 数量
@@ -167,17 +167,17 @@
 //     * @param errorCode   错误码
 //     * @return 数量
 //     */
-////    private long countEmailIdsByErrorCode(String emailTaskId, Integer errorCode) {
-////        // 查询符合条件的 EmailDetail 列表
-////        List<EmailDetail> emailDetails = emailDetailRepository.findByEmailTaskIdAndErrorCode(emailTaskId, errorCode);
-////
-////        // 使用 Set 去重 emailId
-////        Set<String> emailIdSet = new HashSet<>();
-////        for (EmailDetail emailDetail : emailDetails) {
-////            emailIdSet.add(emailDetail.getEmailId());
-////        }
-////
-////        // 返回去重后的数量
-////        return emailIdSet.size();
-////    }
+//    private long countEmailIdsByErrorCode(String emailTaskId, Integer errorCode) {
+//        // 查询符合条件的 EmailDetail 列表
+//        List<EmailDetail> emailDetails = emailDetailRepository.findByEmailTaskIdAndErrorCode(emailTaskId, errorCode);
+//
+//        // 使用 Set 去重 emailId
+//        Set<String> emailIdSet = new HashSet<>();
+//        for (EmailDetail emailDetail : emailDetails) {
+//            emailIdSet.add(emailDetail.getEmailId());
+//        }
+//
+//        // 返回去重后的数量
+//        return emailIdSet.size();
+//    }
 //}

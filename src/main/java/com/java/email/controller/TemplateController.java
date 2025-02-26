@@ -1,13 +1,12 @@
 package com.java.email.controller;
 
 import com.java.email.common.Result;
-import com.java.email.model.entity.Template;
 import com.java.email.service.TemplateService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/templates")
@@ -26,73 +25,4 @@ public class TemplateController {
     public Result getTemplateContent(@PathVariable String templateId) {
         return Result.success(templateService.getTemplateContentById(templateId));
     }
-
-    /**
-     * 根据条件筛选模板
-     *
-     * @param belongUserId 所属用户ID列表
-     * @param creator      创建人
-     * @param creatorId    创建人ID
-     * @param status       模板状态
-     * @param templateName 模板名称
-     * @param templateType 模板类型
-     * @param pageNumber         页码
-     * @param size         每页大小
-     * @return 符合条件的模板分页结果
-     */
-    @GetMapping("/search")
-    public Result<Page<Template>> findTemplatesByCriteria(
-            @RequestParam(required = false) List<String> belongUserId,
-            @RequestParam(required = false) String creator,
-            @RequestParam(required = false) String creatorId,
-            @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) String templateName,
-            @RequestParam(required = false) Integer templateType,
-            @RequestParam(defaultValue = "0") int pageNumber,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
-            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
-
-        return templateService.findTemplatesByCriteria(
-                currentUserId, currentUserRole, belongUserId, creator, creatorId, status, templateName, templateType, pageNumber-1, size);
-    }
-//    @GetMapping("/search")
-//    public Result<Page<Template>> findTemplatesByCriteria(
-//            @RequestParam(required = false) List<String> belongUserId,
-//            @RequestParam(required = false) String creator,
-//            @RequestParam(required = false) String creatorId,
-//            @RequestParam(required = false) Integer status,
-//            @RequestParam(required = false) String templateName,
-//            @RequestParam(required = false) Integer templateType,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size) {
-//
-//        return templateService.findTemplatesByCriteria(
-//                belongUserId, creator, creatorId, status, templateName, templateType, page, size);
-//    }
-
-    /**
-     * 分页查询模板数据
-     *
-     * @param pageNum  当前页码（从 0 开始）
-     * @param pageSize 每页大小
-     * @return 当前页的数据列表
-     */
-    @GetMapping
-    public Result<List<Template>> getTemplates(
-            @RequestParam(defaultValue = "0") int pageNum,
-            @RequestParam(defaultValue = "10") int pageSize,
-            @RequestHeader("currentUserId") String currentUserId, // 从请求头中获取当前用户ID
-            @RequestHeader("currentUserRole") int currentUserRole) { // 从请求头中获取当前用户角色
-
-        List<Template> templates = templateService.getTemplates(currentUserId, currentUserRole, pageNum, pageSize);
-        return Result.success(templates);
-    }
-//    @GetMapping
-//    public Result<List<Template>> getTemplates(
-//            @RequestParam(defaultValue = "0") int pageNum,
-//            @RequestParam(defaultValue = "10") int pageSize) {
-//        List<Template> templates = templateService.getTemplates(pageNum, pageSize);
-//        return Result.success(templates);
-//    }
 }

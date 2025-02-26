@@ -8,13 +8,12 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/emails")
-//@RequestMapping("/api")
 public class EmailController {
     @Autowired
     private EmailService emailService;
 
     /**
-     * 根据emailTaskId更新emailStatus
+     * 根据emailTaskId更新emailStatus（改变任务状态）
      *
      * @param emailTaskId 邮件任务ID
      * @param emailStatus 新的邮件状态
@@ -33,7 +32,7 @@ public class EmailController {
     }
 
     /**
-     * 根据email_task_id更新emailStatus为4
+     * 根据email_task_id更新emailStatus为4（重置任务）
      *
      * @param emailTaskId 邮件任务ID
      * @return 更新后的邮件实体
@@ -48,32 +47,4 @@ public class EmailController {
             return Result.error("更新邮件状态失败: " + e.getMessage());  // 返回错误响应
         }
     }
-//    /**
-//     * 根据emailTaskId更新emailStatus
-//     *
-//     * @param emailTaskId 邮件任务ID
-//     * @param emailStatus 新的邮件状态
-//     * @return 更新后的邮件实体
-//     */
-//    @PutMapping("/update-status/{emailTaskId}")
-//    public Email updateEmailStatus(@PathVariable String emailTaskId,
-//                                   @RequestParam Integer emailStatus) {
-//        return emailService.updateEmailStatus(emailTaskId, emailStatus);
-//    }
-
-//    @PostMapping("/send-conditions")
-//    public Response getSendConditions(@RequestBody RequestData requestData) {
-//        // 构建响应数据
-//        Response response = new Response();
-//        response.setCode(200);
-//        response.setMsg("成功");
-//        response.setData(new ResponseData(
-//                requestData.getEmailType(),
-//                requestData.getArea(),
-//                requestData.getCountry(),
-//                requestData.getReceiverInfo()
-//        ));
-//
-//        return response;
-//    }
 }

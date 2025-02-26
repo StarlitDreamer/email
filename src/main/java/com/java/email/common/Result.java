@@ -22,5 +22,5 @@ public class Result<T>{
 
     public static Result error(String msg){
         return new Result(400,msg, null);
-    }//1
+    }
 }
