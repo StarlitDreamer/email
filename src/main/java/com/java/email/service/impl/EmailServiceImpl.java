@@ -234,11 +234,6 @@ public class EmailServiceImpl implements EmailService {
                 return Result.error("邮件类型ID不能为空");
             }
 
-            // // 生日类型不准删除
-             if (request.getEmail_type_id().equals(TypeConstData.BIRTH_TYPE_ID)) {
-                 return Result.error("生日类型不能删除");
-             }
-
             // 先检查文档是否存在
             log.info("Checking email type with ID: {}", request.getEmail_type_id());
             
