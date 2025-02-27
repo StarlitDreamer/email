@@ -1,5 +1,6 @@
 package com.java.email.controller;
 
+import com.java.email.common.Result;
 import com.java.email.model.entity.EmailTask;
 import com.java.email.model.request.CreateCycleEmailTaskRequest;
 import com.java.email.model.request.CreateEmailTaskRequest;
@@ -18,32 +19,48 @@ public class EmailTaskController {
     /**
      * 创建普通邮件任务
      */
-    @PostMapping("create")
-    public String createEmailTask(@RequestBody CreateEmailTaskRequest request) {
-        return emailTaskService.createEmailTask(request);
+    @PostMapping("create/{currentUserId}")
+    public Result createEmailTask(@PathVariable String currentUserId,@RequestBody CreateEmailTaskRequest request) {
+        try {
+            return Result.success(emailTaskService.createEmailTask(currentUserId,request));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     /**
      * 创建循环邮件任务
      */
     @PostMapping("createCycle")
-    public String createCycleEmailTask(@RequestBody CreateCycleEmailTaskRequest request) {
-        return emailTaskService.createCycleEmailTask(request);
+    public Result createCycleEmailTask(@PathVariable String currentUserId,@RequestBody CreateCycleEmailTaskRequest request) {
+        try {
+            return Result.success(emailTaskService.createCycleEmailTask(currentUserId,request));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     /**
      * 创建节日邮件任务
      */
     @PostMapping("createFestival")
-    public String createFestivalEmailTask(@RequestBody EmailTask request) {
-        return emailTaskService.createFestivalEmailTask(request);
+    public Result createFestivalEmailTask(@PathVariable String currentUserId,@RequestBody EmailTask request) {
+        try {
+            return Result.success(emailTaskService.createFestivalEmailTask(currentUserId,request));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
     }
 
     /**
      * 改变生日任务状态
      */
     @PutMapping("updateBirth")
-    public String updateBirthEmailTask(@RequestBody UpdateBirthEmailTask request) {
-        return emailTaskService.updateBirthEmailTask(request);
+    public Result updateBirthEmailTask(@RequestBody UpdateBirthEmailTask request) {
+        try {
+            return Result.success(emailTaskService.updateBirthEmailTask(request));
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
     }
 }

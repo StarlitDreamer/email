@@ -12,4 +12,7 @@ import lombok.NoArgsConstructor;
 public class Receiver {
     private String receiver_id;
     private String receiver_name;
+    public Receiver(String receiver_id) {
+        this.receiver_id = receiver_id;
+    }
 }

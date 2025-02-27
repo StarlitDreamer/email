@@ -1,10 +1,11 @@
 package com.java.email.service;
 
-import com.java.email.model.request.CreateCycleEmailTaskRequest;
-import com.java.email.model.request.CreateEmailTaskRequest;
 import com.java.email.model.entity.Email;
 import com.java.email.model.entity.EmailTask;
+import com.java.email.model.request.CreateCycleEmailTaskRequest;
+import com.java.email.model.request.CreateEmailTaskRequest;
 import com.java.email.model.request.UpdateBirthEmailTask;
+import com.java.email.model.response.GetEmailsByCustomerIdsResponse;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
 import jakarta.annotation.Resource;
@@ -12,7 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class EmailTaskService {
@@ -30,7 +33,7 @@ public class EmailTaskService {
     private CustomerService customerService;
 
     @Autowired
-    private  SupplierService supplierService;
+    private SupplierService supplierService;
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
@@ -40,21 +43,48 @@ public class EmailTaskService {
     /**
      * 创建普通邮件发送任务
      */
-    public String createEmailTask(CreateEmailTaskRequest request) {
+    public String createEmailTask(String currentUserId,CreateEmailTaskRequest request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
+
+        // 存储结果的集合
+        List<String> receiverNames = new ArrayList<>();
+        List<String> receiverEmails = new ArrayList<>();
 
         //获取接受者id列表
         List<String> receiverId = request.getReceiverId();
         List<String> receiverSupplierId = request.getReceiverSupplierId();
 
+        List<GetEmailsByCustomerIdsResponse> customerResponses = customerService.getCustomerEmailsAndNames(receiverId);
+
+        // 遍历并按需求存储
+        for (GetEmailsByCustomerIdsResponse response : customerResponses) {
+            String customerName = response.getCustomerName();
+            List<String> emails = response.getCustomerEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(customerName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
+
+        //redis中的key
+        String receiverKey = request.getReceiverKey();
+        String receiverSupplierKey = request.getReceiverSupplierKey();
+
+        //获取redis中接受者id列表
+        List<String> receiverKeyId = new ArrayList<>();
+        List<String> receiverKeySupplierId = new ArrayList<>();
 
 
-        // 使用 HashSet 合并并去重
-        Set<String> allUniqueEmails = new HashSet<>();
 
-        // 接受者邮箱列表
-        List<String> receiverEmails= new ArrayList<>(allUniqueEmails);
+        // 合并列表
+        receiverId.addAll(receiverSupplierId);
+
+        // 如果需要返回合并后的列表
+        List<String> mergedList = receiverId;
+
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
@@ -63,8 +93,6 @@ public class EmailTaskService {
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setEmailContent(request.getEmailContent());
-        emailTask.setReceiverId(receiverEmails);
-        emailTask.setReceiverSupplierId(request.getReceiverSupplierId());
         emailTask.setAttachment(request.getAttachment());
         emailTask.setTaskType(1);
         emailTask.setIndex(0L);
@@ -94,7 +122,7 @@ public class EmailTaskService {
     /**
      * 创建循环邮件发送任务
      */
-    public String createCycleEmailTask(CreateCycleEmailTaskRequest request) {
+    public String createCycleEmailTask(String currentUserId,CreateCycleEmailTaskRequest request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
 
@@ -156,31 +184,9 @@ public class EmailTaskService {
     }
 
     /**
-     * 改变生日任务状态
-     */
-    public String updateBirthEmailTask(UpdateBirthEmailTask request) {
-        EmailTask emailTask = new EmailTask();
-        emailTask.setEmailTaskId("birth");
-        emailTask.setSubject(request.getSubject());
-        emailTask.setTemplateId(request.getTemplateId());
-        emailTask.setAttachment(request.getAttachment());
-
-        long currentTime = System.currentTimeMillis() / 1000;
-
-        Email email = new Email();
-        email.setEmailTaskId("birth"); // Set email_task_id
-        email.setCreatedAt(currentTime);  // Set created_at
-        email.setUpdateAt(currentTime);   // Set update_at
-        email.setEmailStatus(Integer.valueOf(request.getEmailStatus()));          // Set email_status to 1 (开始状态)
-
-        emailTaskRepository.save(emailTask);
-        return "Email task updated";
-    }
-
-    /**
      * 创建节日邮件发送任务
      */
-    public String createFestivalEmailTask(EmailTask request) {
+    public String createFestivalEmailTask(String currentUserId,EmailTask request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
 
@@ -225,5 +231,27 @@ public class EmailTaskService {
         redisTemplate.opsForValue().set(emailTaskId, "youjian");
 
         return "Email task created with ID: " + emailTaskId;
+    }
+
+    /**
+     * 改变生日任务状态
+     */
+    public String updateBirthEmailTask(UpdateBirthEmailTask request) {
+        EmailTask emailTask = new EmailTask();
+        emailTask.setEmailTaskId("birth");
+        emailTask.setSubject(request.getSubject());
+        emailTask.setTemplateId(request.getTemplateId());
+        emailTask.setAttachment(request.getAttachment());
+
+        long currentTime = System.currentTimeMillis() / 1000;
+
+        Email email = new Email();
+        email.setEmailTaskId("birth"); // Set email_task_id
+        email.setCreatedAt(currentTime);  // Set created_at
+        email.setUpdateAt(currentTime);   // Set update_at
+        email.setEmailStatus(Integer.valueOf(request.getEmailStatus()));          // Set email_status to 1 (开始状态)
+
+        emailTaskRepository.save(emailTask);
+        return "Email task updated";
     }
 }

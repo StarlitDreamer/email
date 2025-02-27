@@ -15,6 +15,7 @@ import com.java.email.model.entity.Customer;
 import com.java.email.model.entity.Receiver;
 import com.java.email.model.response.FilterAllReceiverResponse;
 import com.java.email.model.response.FilterReceiverResponse;
+import com.java.email.model.response.GetEmailsByCustomerIdsResponse;
 import com.java.email.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -56,6 +57,17 @@ public class CustomerService {
         return customers.stream()
                 .map(Customer::getEmails)
                 .flatMap(List::stream)
+                .collect(Collectors.toList());
+    }
+
+    // 根据 customerId 列表查询客户名称和邮箱
+    public List<GetEmailsByCustomerIdsResponse> getCustomerEmailsAndNames(List<String> customerIds) {
+        // 查询客户数据
+        List<Customer> customers = customerRepository.findByCustomerIdIn(customerIds);
+
+        // 将查询结果转换为响应格式
+        return customers.stream()
+                .map(customer -> new GetEmailsByCustomerIdsResponse(customer.getCustomerId(), customer.getCustomerName(), customer.getEmails()))
                 .collect(Collectors.toList());
     }
 
@@ -320,13 +332,13 @@ public class CustomerService {
                     .size(totalCount), Customer.class);
         }
 
-        List<Receiver> receiverList = new ArrayList<>();
+        List<String> receiverList = new ArrayList<>();
         for (Hit<Customer> CustomerHit : searchResponse.hits().hits()) {
             Customer receiver = CustomerHit.source();
             if (receiver == null) {
                 continue;
             }
-            receiverList.add(new Receiver(receiver.getCustomerId(), receiver.getCustomerName()));
+            receiverList.add(receiver.getCustomerId());
         }
         String receiver_key = "receiver_list:" + IdUtil.fastUUID();
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();

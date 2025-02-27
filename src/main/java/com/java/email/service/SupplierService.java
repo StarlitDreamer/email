@@ -73,7 +73,7 @@ public class SupplierService {
 
         if (currentUserRole == 4) {
             belongUserIds.add(currentUserId);
-            belongUserIds.add("1");
+//            belongUserIds.add("1");
             filters.put("belong_user_id", belongUserIds);
             System.out.println(belongUserIds);
         }
