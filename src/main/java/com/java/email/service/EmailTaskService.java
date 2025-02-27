@@ -6,6 +6,7 @@ import com.java.email.model.request.CreateCycleEmailTaskRequest;
 import com.java.email.model.request.CreateEmailTaskRequest;
 import com.java.email.model.request.UpdateBirthEmailTask;
 import com.java.email.model.response.GetEmailsByCustomerIdsResponse;
+import com.java.email.model.response.GetEmailsBySupplierIdsResponse;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
 import jakarta.annotation.Resource;
@@ -56,10 +57,12 @@ public class EmailTaskService {
         List<String> receiverId = request.getReceiverId();
         List<String> receiverSupplierId = request.getReceiverSupplierId();
 
-        List<GetEmailsByCustomerIdsResponse> customerResponses = customerService.getCustomerEmailsAndNames(receiverId);
+        List<GetEmailsByCustomerIdsResponse> customerEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverId);
+
+        List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierId);
 
         // 遍历并按需求存储
-        for (GetEmailsByCustomerIdsResponse response : customerResponses) {
+        for (GetEmailsByCustomerIdsResponse response : customerEmailsAndNames) {
             String customerName = response.getCustomerName();
             List<String> emails = response.getCustomerEmails();
 
@@ -69,6 +72,18 @@ public class EmailTaskService {
                 receiverEmails.add(emails.get(i));
             }
         }
+
+        for (GetEmailsBySupplierIdsResponse response : supplierEmailsAndNames) {
+            String supplierName = response.getSupplierName();
+            List<String> emails = response.getSupplierEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(supplierName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
+
 
         //redis中的key
         String receiverKey = request.getReceiverKey();
@@ -80,6 +95,7 @@ public class EmailTaskService {
 
         // 根据 receiverKey 从 Redis 中取出存储的值
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
+
         Object cachedReceiverList = operations.get(receiverKey);
 
         // 如果缓存中有数据，进行处理
@@ -93,7 +109,16 @@ public class EmailTaskService {
             }
         }
 
-        System.out.println(receiverKeyId);
+        Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
+
+        if (cachedReceiverSupplierList != null) {
+            List<String> receiverList = (List<String>) cachedReceiverSupplierList;
+
+            for (String receiverIds : receiverList) {
+                receiverKeySupplierId.add(receiverIds);
+            }
+        }
+
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
