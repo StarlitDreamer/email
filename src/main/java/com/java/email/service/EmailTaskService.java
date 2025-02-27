@@ -11,6 +11,7 @@ import com.java.email.repository.EmailTaskRepository;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -47,7 +48,7 @@ public class EmailTaskService {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
 
-        // 存储结果的集合
+        // 存储接受者结果的集合
         List<String> receiverNames = new ArrayList<>();
         List<String> receiverEmails = new ArrayList<>();
 
@@ -77,14 +78,22 @@ public class EmailTaskService {
         List<String> receiverKeyId = new ArrayList<>();
         List<String> receiverKeySupplierId = new ArrayList<>();
 
+        // 根据 receiverKey 从 Redis 中取出存储的值
+        ValueOperations<String, Object> operations = redisTemplate.opsForValue();
+        Object cachedReceiverList = operations.get(receiverKey);
 
+        // 如果缓存中有数据，进行处理
+        if (cachedReceiverList != null) {
+            // 将从 Redis 中取出的对象转换为 List<String>
+            List<String> receiverList = (List<String>) cachedReceiverList;
 
-        // 合并列表
-        receiverId.addAll(receiverSupplierId);
+            // 遍历 receiverList，打印每个 receiver_id
+            for (String receiverIds : receiverList) {
+                receiverKeyId.add(receiverIds);
+            }
+        }
 
-        // 如果需要返回合并后的列表
-        List<String> mergedList = receiverId;
-
+        System.out.println(receiverKeyId);
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
@@ -94,6 +103,8 @@ public class EmailTaskService {
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setEmailContent(request.getEmailContent());
         emailTask.setAttachment(request.getAttachment());
+        emailTask.setReceiverName(receiverNames);
+        emailTask.setReceiverId(receiverEmails);
         emailTask.setTaskType(1);
         emailTask.setIndex(0L);
 
