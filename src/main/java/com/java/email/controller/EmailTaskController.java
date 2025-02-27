@@ -20,7 +20,6 @@ public class EmailTaskController {
      */
     @PostMapping("create")
     public String createEmailTask(@RequestBody CreateEmailTaskRequest request) {
-        System.out.println(request.getSenderId());
         return emailTaskService.createEmailTask(request);
     }
 

@@ -15,7 +15,7 @@ import com.java.email.model.entity.Receiver;
 import com.java.email.model.entity.Supplier;
 import com.java.email.model.response.FilterAllReceiverResponse;
 import com.java.email.model.response.FilterReceiverResponse;
-
+import com.java.email.repository.SupplierRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -32,6 +32,9 @@ public class SupplierService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private SupplierRepository supplierRepository;
+
     // Elasticsearch 客户端
     private final ElasticsearchClient esClient;
 
@@ -44,6 +47,15 @@ public class SupplierService {
     // 构造函数，注入 ElasticsearchClient
     public SupplierService(ElasticsearchClient esClient) {
         this.esClient = esClient;
+    }
+
+    // 根据 supplierId 列表查询供应商邮箱
+    public List<String> getEmailsBySupplierIds(List<String> supplierIds) {
+        List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(supplierIds);
+        return suppliers.stream()
+                .map(Supplier::getEmails)
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
     }
 
     public FilterReceiverResponse FilterFindSupplier(String currentUserId, int currentUserRole, FilterSupplierDto filterSupplierDto) throws IOException {

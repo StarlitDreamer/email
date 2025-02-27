@@ -9,12 +9,20 @@ import com.java.email.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/customers")
 public class CustomerController {
 
     @Autowired
     private CustomerService customerService;
+
+    // 根据 customerId 列表查询客户邮箱
+    @PostMapping("/getEmails")
+    public List<String> getEmails(@RequestBody List<String> customerIds) {
+        return customerService.getEmailsByCustomerIds(customerIds);
+    }
 
     /**
      * 过滤查找客户

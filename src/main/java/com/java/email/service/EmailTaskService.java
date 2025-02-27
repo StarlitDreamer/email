@@ -48,6 +48,8 @@ public class EmailTaskService {
         List<String> receiverId = request.getReceiverId();
         List<String> receiverSupplierId = request.getReceiverSupplierId();
 
+
+
         // 使用 HashSet 合并并去重
         Set<String> allUniqueEmails = new HashSet<>();
 
@@ -57,7 +59,6 @@ public class EmailTaskService {
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(emailTaskId);
-        emailTask.setSenderId(request.getSenderId());
         emailTask.setSubject(request.getSubject());
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
@@ -115,7 +116,6 @@ public class EmailTaskService {
         emailTask.setReceiverSupplierKey(request.getReceiverSupplierKey());
         emailTask.setAttachment(request.getAttachment());
         emailTask.setIndex(0L);
-        emailTask.setSenderId(request.getSenderId());
         emailTask.setTaskType(2);
 
 

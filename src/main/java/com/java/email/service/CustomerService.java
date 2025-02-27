@@ -15,6 +15,7 @@ import com.java.email.model.entity.Customer;
 import com.java.email.model.entity.Receiver;
 import com.java.email.model.response.FilterAllReceiverResponse;
 import com.java.email.model.response.FilterReceiverResponse;
+import com.java.email.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -32,6 +33,9 @@ public class CustomerService {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Autowired
+    private CustomerRepository customerRepository;
+
     // Elasticsearch 客户端
     private final ElasticsearchClient esClient;
 
@@ -44,6 +48,15 @@ public class CustomerService {
     // 构造函数，注入 ElasticsearchClient
     public CustomerService(ElasticsearchClient esClient) {
         this.esClient = esClient;
+    }
+
+    // 根据 customerId 列表查询客户邮箱
+    public List<String> getEmailsByCustomerIds(List<String> customerIds) {
+        List<Customer> customers = customerRepository.findByCustomerIdIn(customerIds);
+        return customers.stream()
+                .map(Customer::getEmails)
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
     }
 
     // 根据当前用户ID、角色和过滤条件，查询客户列表

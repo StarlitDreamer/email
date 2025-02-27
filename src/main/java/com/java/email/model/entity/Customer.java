@@ -93,5 +93,4 @@ public class Customer {
     @JsonProperty("updated_at")
     @Field(name = "updated_at", type = FieldType.Date)
     private String updatedAt;           // 更新日期
-
 }

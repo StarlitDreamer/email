@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("/suppliers")
@@ -17,6 +18,12 @@ public class SupplierController {
 
     @Autowired
     private SupplierService supplierService;
+
+    // 根据 supplierId 列表查询供应商邮箱
+    @PostMapping("/getEmails")
+    public List<String> getEmails(@RequestBody List<String> supplierIds) {
+        return supplierService.getEmailsBySupplierIds(supplierIds);
+    }
 
     /**
      * 过滤查找供应商
