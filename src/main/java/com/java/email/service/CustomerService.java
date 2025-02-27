@@ -9,9 +9,12 @@ import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.java.email.model.dto.FilterCustomerDto;
 import com.java.email.model.dto.SearchAllCustomerDto;
-import com.java.email.model.entity.*;
-import com.java.email.model.response.FilterCustomerResponse;
-import com.java.email.model.response.SearchAllCustomerResponse;
+import com.java.email.model.entity.Area;
+import com.java.email.model.entity.Commodity;
+import com.java.email.model.entity.Customer;
+import com.java.email.model.entity.Receiver;
+import com.java.email.model.response.FilterAllReceiverResponse;
+import com.java.email.model.response.FilterReceiverResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -44,7 +47,7 @@ public class CustomerService {
     }
 
     // 根据当前用户ID、角色和过滤条件，查询客户列表
-    public FilterCustomerResponse FilterFindCustomers(String currentUserId, int currentUserRole, FilterCustomerDto filterCustomerDto) throws IOException {
+    public FilterReceiverResponse FilterFindCustomers(String currentUserId, int currentUserRole, FilterCustomerDto filterCustomerDto) throws IOException {
 
         // 获取分页参数
         int num = filterCustomerDto.getPage_num();
@@ -179,21 +182,21 @@ public class CustomerService {
         }
 
         // 处理 Elasticsearch 查询结果，将每个客户转换为 Receiver 对象
-        List<ReceiverCustomer> receiverList = new ArrayList<>();
+        List<Receiver> receiverList = new ArrayList<>();
         for (Hit<Customer> CustomerHit : searchResponse.hits().hits()) {
             Customer receiver = CustomerHit.source();
             if (receiver == null) {
                 continue;  // 如果客户数据为空，则跳过
             }
             // 将查询到的客户信息包装成 Receiver 对象
-            receiverList.add(new ReceiverCustomer(receiver.getCustomerId(), receiver.getCustomerName()));
+            receiverList.add(new Receiver(receiver.getCustomerId(), receiver.getCustomerName()));
         }
         belongUserIds.clear();
         // 返回过滤后的客户列表和分页信息
-        return new FilterCustomerResponse(receiverList, receiverList.size(), num, size);
+        return new FilterReceiverResponse(receiverList.size(), num, size,receiverList);
     }
 
-    public SearchAllCustomerResponse findFindAllCustomer(String currentUserId, int currentUserRole, SearchAllCustomerDto searchAllCustomerDto) throws IOException {
+    public FilterAllReceiverResponse findFindAllCustomer(String currentUserId, int currentUserRole, SearchAllCustomerDto searchAllCustomerDto) throws IOException {
         CountResponse countResponse = esClient.count(c -> c
                 .index(INDEX_NAME)  // 索引名称
         );
@@ -304,17 +307,17 @@ public class CustomerService {
                     .size(totalCount), Customer.class);
         }
 
-        List<ReceiverCustomer> receiverList = new ArrayList<>();
+        List<Receiver> receiverList = new ArrayList<>();
         for (Hit<Customer> CustomerHit : searchResponse.hits().hits()) {
             Customer receiver = CustomerHit.source();
             if (receiver == null) {
                 continue;
             }
-            receiverList.add(new ReceiverCustomer(receiver.getCustomerId(), receiver.getCustomerName()));
+            receiverList.add(new Receiver(receiver.getCustomerId(), receiver.getCustomerName()));
         }
         String receiver_key = "receiver_list:" + IdUtil.fastUUID();
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
         operations.set(receiver_key, receiverList, 1, TimeUnit.DAYS);
-        return new SearchAllCustomerResponse(receiverList.size(), receiver_key);
+        return new FilterAllReceiverResponse(receiverList.size(), receiver_key);
     }
 }

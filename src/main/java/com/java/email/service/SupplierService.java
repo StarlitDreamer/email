@@ -11,10 +11,11 @@ import com.java.email.model.dto.FilterSupplierDto;
 import com.java.email.model.dto.SearchAllSupplierDto;
 import com.java.email.model.entity.Area;
 import com.java.email.model.entity.Commodity;
-import com.java.email.model.entity.ReceiverSupplier;
+import com.java.email.model.entity.Receiver;
 import com.java.email.model.entity.Supplier;
-import com.java.email.model.response.FilterSupplierResponse;
-import com.java.email.model.response.SearchAllCustomerResponse;
+import com.java.email.model.response.FilterAllReceiverResponse;
+import com.java.email.model.response.FilterReceiverResponse;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -45,7 +46,7 @@ public class SupplierService {
         this.esClient = esClient;
     }
 
-    public FilterSupplierResponse FilterFindSupplier(String currentUserId, int currentUserRole, FilterSupplierDto filterSupplierDto) throws IOException {
+    public FilterReceiverResponse FilterFindSupplier(String currentUserId, int currentUserRole, FilterSupplierDto filterSupplierDto) throws IOException {
         int num=filterSupplierDto.getPage_num();
         int size=filterSupplierDto.getPage_size();
         String commodityName = filterSupplierDto.commodity_name;
@@ -158,20 +159,20 @@ public class SupplierService {
                     .size(size), Supplier.class);
         }
 
-        List<ReceiverSupplier> receiverList = new ArrayList<>();
+        List<Receiver> receiverList = new ArrayList<>();
         for (Hit<Supplier> CustomerHit : searchResponse.hits().hits()) {
             Supplier receiver = CustomerHit.source();
             if (receiver == null) {
                 continue;
             }
-            receiverList.add(new ReceiverSupplier(receiver.getSupplierId(), receiver.getSupplierName()));
+            receiverList.add(new Receiver(receiver.getSupplierId(), receiver.getSupplierName()));
         }
         belongUserIds.clear();
-        return new FilterSupplierResponse(receiverList, receiverList.size(), num, size);
+        return new FilterReceiverResponse(receiverList.size(), num, size,receiverList);
     }
 
 
-    public SearchAllCustomerResponse FindFindAllSupplier(String currentUserId, int currentUserRole, SearchAllSupplierDto searchAllSupplierDto) throws IOException {
+    public FilterAllReceiverResponse FindFindAllSupplier(String currentUserId, int currentUserRole, SearchAllSupplierDto searchAllSupplierDto) throws IOException {
         CountResponse countResponse = esClient.count(c -> c
                 .index("supplier")  // 索引名称
         );
@@ -285,19 +286,19 @@ public class SupplierService {
                     .size(totalCount), Supplier.class);
         }
 
-        List<ReceiverSupplier> receiverList = new ArrayList<>();
+        List<Receiver> receiverList = new ArrayList<>();
         for (Hit<Supplier> CustomerHit : searchResponse.hits().hits()) {
             Supplier receiver = CustomerHit.source();
             if (receiver == null) {
                 continue;
             }
-            receiverList.add(new ReceiverSupplier(receiver.getSupplierId(), receiver.getSupplierName()));
+            receiverList.add(new Receiver(receiver.getSupplierId(), receiver.getSupplierName()));
         }
         String supplier_key = "supplier_list:" + IdUtil.fastUUID();
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
         operations.set(supplier_key, receiverList, 1, TimeUnit.DAYS);
         System.out.println(receiverList);
         belongUserIds.clear();
-        return new SearchAllCustomerResponse(receiverList.size(), supplier_key);
+        return new FilterAllReceiverResponse(receiverList.size(), supplier_key);
     }
 }
