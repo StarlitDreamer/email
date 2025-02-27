@@ -923,7 +923,7 @@ public class SupplierServiceImpl implements SupplierService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
             }
@@ -1178,7 +1178,7 @@ public class SupplierServiceImpl implements SupplierService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                         .withQuery(q -> q.bool(mainQuery.build()))
-                        .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                         .withPageable(pageable)
                         .build();
 
@@ -1336,7 +1336,7 @@ public class SupplierServiceImpl implements SupplierService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -1714,7 +1714,9 @@ public class SupplierServiceImpl implements SupplierService {
                         }
                     }
                     map.put("no_accept_email_type_name", emailTypeNames);
-
+                    map.put("status", supplier.getStatus());
+                    map.put("created_at", supplier.getCreatedAt());
+                    map.put("updated_at", supplier.getUpdatedAt());
                     
                     return map;
                 })

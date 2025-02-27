@@ -689,7 +689,7 @@ public class CustomerServiceImpl implements CustomerService {
 
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
 
@@ -894,7 +894,7 @@ public class CustomerServiceImpl implements CustomerService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
             }
@@ -1148,7 +1148,7 @@ public class CustomerServiceImpl implements CustomerService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
             }
@@ -1303,7 +1303,7 @@ public class CustomerServiceImpl implements CustomerService {
                 // 构建查询
                 searchQuery = NativeQuery.builder()
                     .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "created_at"))
+                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
                     .withPageable(pageable)
                     .build();
             }
