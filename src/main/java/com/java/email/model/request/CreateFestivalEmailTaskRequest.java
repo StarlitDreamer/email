@@ -8,7 +8,7 @@ import java.util.List;
 
 //创建循环发送
 @Data
-public class CreateCycleEmailTaskRequest {
+public class CreateFestivalEmailTaskRequest {
     @JsonProperty("subject")
     private String subject;               // 邮件主题
 
@@ -17,6 +17,9 @@ public class CreateCycleEmailTaskRequest {
 
     @JsonProperty("template_id")
     private String templateId;            // 模板ID
+
+    @JsonProperty("start_date")
+    private  Integer startDate;
 
     @JsonProperty("receiver_id")
     private List<String> receiverId;      // 收件人ID列表
@@ -30,9 +33,6 @@ public class CreateCycleEmailTaskRequest {
     @JsonProperty("receiver_supplier_key")
     private String receiverSupplierKey;   // 收件人供应商Key
 
-    @JsonProperty("attachments")
+    @JsonProperty("attachment")
     private List<Attachment> attachment;  // 附件
-
-    @JsonProperty("send_cycle")
-    private Integer sendCycle;               // 发送周期，单位为秒
 }
