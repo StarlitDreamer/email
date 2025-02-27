@@ -51,12 +51,8 @@ public class EmailTaskService {
         // 使用 HashSet 合并并去重
         Set<String> allUniqueEmails = new HashSet<>();
 
-
         // 接受者邮箱列表
         List<String> receiverEmails= new ArrayList<>(allUniqueEmails);
-
-        String receiverKey = request.getReceiverKey();
-        String receiverSupplierKey = request.getReceiverSupplierKey();
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();

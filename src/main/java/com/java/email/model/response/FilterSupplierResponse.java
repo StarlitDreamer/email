@@ -1,7 +1,7 @@
 package com.java.email.model.response;
 
 
-import com.java.email.model.entity.ReceiverSupplier;
+import com.java.email.model.entity.Receiver;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class FilterSupplierResponse {
-    public List<ReceiverSupplier> receiverSupplier;
+    public List<Receiver> receiver;
     public Integer total_items;
     public Integer page_num;
     public Integer page_size;

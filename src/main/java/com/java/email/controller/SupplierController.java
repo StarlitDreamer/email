@@ -27,7 +27,7 @@ public class SupplierController {
      * @return 过滤后的供应商列表
      * @throws IOException 如果与 Elasticsearch 交互时出现问题
      */
-    @GetMapping("/filter")
+    @PostMapping("/filter")
     public ResponseEntity<FilterSupplierResponse> filterFindSupplier(
             @RequestHeader String currentUserId,
             @RequestHeader int currentUserRole,
@@ -40,7 +40,7 @@ public class SupplierController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @GetMapping("/filterAll")
+    @PostMapping("/filterAll")
     public ResponseEntity<SearchAllCustomerResponse> filterFindAllSupplier(
             @RequestHeader String currentUserId,
             @RequestHeader int currentUserRole,

@@ -280,7 +280,7 @@ public class CustomerService {
                 List<FieldValue> fieldValues = listValue.stream()
                         .map(v -> FieldValue.of(v.toString()))
                         .toList();
-                boolQuery.should(q -> q.terms(t -> t.field(key).terms(v -> v.value(fieldValues))));
+                boolQuery.must(q -> q.terms(t -> t.field(key).terms(v -> v.value(fieldValues))));
             }
             if (value instanceof String stringValue && !stringValue.isEmpty()) {
                 boolQuery.should(q -> q.match(m -> m.field(key).query(stringValue)));

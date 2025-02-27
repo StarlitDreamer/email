@@ -27,7 +27,7 @@ public class CustomerController {
      * @return 过滤后的客户列表
      * @throws IOException 如果与 Elasticsearch 交互时出现问题
      */
-    @GetMapping("/filter")
+    @PostMapping("/filter")
     public ResponseEntity<FilterCustomerResponse> filterFindCustomer(
             @RequestHeader String currentUserId,
             @RequestHeader int currentUserRole,
@@ -40,7 +40,7 @@ public class CustomerController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @GetMapping("/filterAll")
+    @PostMapping("/filterAll")
     public ResponseEntity<SearchAllCustomerResponse> filterFindAllCustomer(
             @RequestHeader String currentUserId,
             @RequestHeader int currentUserRole,
