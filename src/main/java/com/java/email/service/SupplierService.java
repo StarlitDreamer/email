@@ -45,6 +45,8 @@ public class SupplierService {
     // 用于存储属于用户的ID列表
     private final List<String> belongUserIds = new ArrayList<>();
 
+    private Integer status=2;
+
     // 构造函数，注入 ElasticsearchClient
     public SupplierService(ElasticsearchClient esClient) {
         this.esClient = esClient;
@@ -82,10 +84,11 @@ public class SupplierService {
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         Map<String, Object> filters = new HashMap<>();
 
+        filters.put("status", status);
 
         if (currentUserRole == 4) {
             belongUserIds.add(currentUserId);
-//            belongUserIds.add("1");
+            belongUserIds.add("1");
             filters.put("belong_user_id", belongUserIds);
             System.out.println(belongUserIds);
         }
@@ -209,6 +212,8 @@ public class SupplierService {
 
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         Map<String, Object> filters = new HashMap<>();
+
+        filters.put("status", status);
 
         // 用于存储属于用户的ID列表
         final List<String> belongUserIds = new ArrayList<>();

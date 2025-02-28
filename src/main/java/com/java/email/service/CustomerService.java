@@ -43,8 +43,10 @@ public class CustomerService {
     // Elasticsearch 中存储客户信息的索引名称
     private final String INDEX_NAME = "customer";
 
-   // 用于存储属于用户的ID列表
+    // 用于存储属于用户的ID列表
     private final List<String> belongUserIds = new ArrayList<>();
+
+    private Integer status = 2;
 
     // 构造函数，注入 ElasticsearchClient
     public CustomerService(ElasticsearchClient esClient) {
@@ -99,6 +101,8 @@ public class CustomerService {
             System.out.println(belongUserIds);
         }
 
+        filters.put("status", status);
+
         // 如果提供了商品名称，构建商品查询
         if (commodityName != null) {
             // 通过 Elasticsearch 查询商品信息
@@ -132,7 +136,7 @@ public class CustomerService {
                     )), Area.class);
 
             // 提取area_country，进行flatten操作以获得所有国家ID
-           areaCountryIds = areaSearchResponse.hits().hits().stream()
+            areaCountryIds = areaSearchResponse.hits().hits().stream()
                     .flatMap(hit -> hit.source().getAreaCountry().stream())  // 展开areaCountry中的List<String>
                     .filter(Objects::nonNull)  // 排除空值
                     .distinct()  // 去重
@@ -218,7 +222,7 @@ public class CustomerService {
         }
         belongUserIds.clear();
         // 返回过滤后的客户列表和分页信息
-        return new FilterReceiverResponse(receiverList.size(), num, size,receiverList);
+        return new FilterReceiverResponse(receiverList.size(), num, size, receiverList);
     }
 
     public FilterAllReceiverResponse findFindAllCustomer(String currentUserId, int currentUserRole, SearchAllCustomerDto searchAllCustomerDto) throws IOException {
@@ -237,6 +241,8 @@ public class CustomerService {
 
         // 用于存储属于用户的ID列表
         final List<String> belongUserIds = new ArrayList<>();
+
+        filters.put("status", status);
 
         if (currentUserRole == 4) {
             belongUserIds.add(currentUserId);
