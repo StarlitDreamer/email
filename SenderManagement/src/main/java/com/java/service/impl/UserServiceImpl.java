@@ -268,14 +268,14 @@ public class UserServiceImpl implements UserService {
     public void updateUserinfo(UpdateUserDto user) throws IOException {
         // 公司不允许被修改
         GetResponse<User> checkUserResponse = esClient.get(g -> g
-            .index(INDEX_NAME)
-            .id(user.getUser_id()), User.class);
+                .index(INDEX_NAME)
+                .id(user.getUser_id()), User.class);
         User checkUser = checkUserResponse.source();
         if (checkUser == null) {
             throw new IOException("用户不存在");
         }
         Integer checkUserRole = checkUser.getUserRole();
-        if (checkUserRole == null || checkUserRole == 1 ) {
+        if (checkUserRole == null || checkUserRole == 1) {
             throw new IOException("公司不允许被修改");
         }
         // 检查用户账号和邮箱是否重复
@@ -285,7 +285,7 @@ public class UserServiceImpl implements UserService {
                 throw new IOException(duplicateFieldMessage);
             }
         }
-        
+
         //修改用户信息
         Map<String, String> map = Stream.of(
                         new AbstractMap.SimpleEntry<>("user_name", user.getUser_name()),
@@ -308,7 +308,7 @@ public class UserServiceImpl implements UserService {
                         .doc(map),
                 User.class);
         boolean redisDelete = redisService.delete(RedisConstData.USER_LOGIN_TOKEN + user.getUser_id());
-        if(!redisDelete){
+        if (!redisDelete) {
             throw new IOException("更新用户信息，删除token失败");
         }
     }
@@ -368,8 +368,8 @@ public class UserServiceImpl implements UserService {
         List<String> mergedList = null;
         if (authsByRole == null) {//添加
             mergedList = user_auth_id;
-        }else {
-            mergedList=authsByRole;
+        } else {
+            mergedList = authsByRole;
         }
         Map<String, Object> updateData = new HashMap<>();
         updateData.put("user_auth_id", mergedList);
@@ -386,11 +386,11 @@ public class UserServiceImpl implements UserService {
             String currentUserId = ThreadLocalUtil.getUserId(); // 获取当前大管理ID
             // 查询所有属于该小管理的普通用户
             SearchResponse<User> searchResponse = esClient.search(s -> s
-                            .index(INDEX_NAME)
-                            .query(q -> q.bool(b -> b
-                                    .must(m -> m.term(t -> t.field("belong_user_id").value(user_id)))
-                                    .must(m -> m.term(t -> t.field("user_role").value(4)))
-                            )), User.class);
+                    .index(INDEX_NAME)
+                    .query(q -> q.bool(b -> b
+                            .must(m -> m.term(t -> t.field("belong_user_id").value(user_id)))
+                            .must(m -> m.term(t -> t.field("user_role").value(4)))
+                    )), User.class);
 
             // 提取需要更新的用户ID
             List<String> updateUserId = searchResponse.hits().hits().stream()
@@ -406,8 +406,8 @@ public class UserServiceImpl implements UserService {
                                     .index(INDEX_NAME)
                                     .id(id)
                                     .action(a -> a.doc(Map.of(
-                                        "belong_user_id", currentUserId,
-                                        "updated_at", getTimestampWithTimezone()
+                                            "belong_user_id", currentUserId,
+                                            "updated_at", getTimestampWithTimezone()
                                     )))
                             )
                     );
@@ -433,7 +433,7 @@ public class UserServiceImpl implements UserService {
         }
         // 更新权限后，删除token。
         boolean redisDelete = redisService.delete(RedisConstData.USER_LOGIN_TOKEN + user_id);
-        if(!redisDelete){
+        if (!redisDelete) {
             throw new IOException("更新用户信息，删除token失败");
         }
     }
@@ -466,7 +466,7 @@ public class UserServiceImpl implements UserService {
             throw new IOException("不能删除公司或大管理员账号");
         }
         boolean redisDelete = redisService.delete(RedisConstData.USER_LOGIN_TOKEN + userId);
-        if(!redisDelete){
+        if (!redisDelete) {
             throw new IOException("删除token失败");
         }
         deleteUserFromUserIndex(userId);
@@ -589,8 +589,8 @@ public class UserServiceImpl implements UserService {
     public String getDuplicateFieldMessage(String userAccount, String userEmail) throws IOException {
         String checkUserAccount = userAccount == null ? "" : userAccount;
         String checkUserEmail = userEmail == null ? "" : userEmail;
-    // 检查账号是否重复
-    SearchResponse<User> accountResponse = esClient.search(s -> s
+        // 检查账号是否重复
+        SearchResponse<User> accountResponse = esClient.search(s -> s
                         .index(INDEX_NAME)
                         .query(q -> q
                                 .term(t -> t
@@ -600,31 +600,32 @@ public class UserServiceImpl implements UserService {
                         )
                         .size(0),
                 User.class
-    );
+        );
 
-    // 检查邮箱是否重复
-    SearchResponse<User> emailResponse = esClient.search(s -> s
-                .index(INDEX_NAME)
-                .query(q -> q
-                        .term(t -> t
-                                .field("user_email")
-                                .value(v -> v.stringValue(checkUserEmail))
+        // 检查邮箱是否重复
+        SearchResponse<User> emailResponse = esClient.search(s -> s
+                        .index(INDEX_NAME)
+                        .query(q -> q
+                                .term(t -> t
+                                        .field("user_email")
+                                        .value(v -> v.stringValue(checkUserEmail))
+                                )
                         )
-                )
-                .size(0),
-            User.class
-    );
+                        .size(0),
+                User.class
+        );
 
-    if (accountResponse.hits().total().value() > 0 && emailResponse.hits().total().value() > 0) {
-        throw new IOException("用户账号和邮箱已存在");
-    } else if (accountResponse.hits().total().value() > 0) {
-        throw new IOException("用户账号已存在");
-    } else if (emailResponse.hits().total().value() > 0) {
-        throw new IOException("用户邮箱已存在");
-    } else {
-        return null;
+        if (accountResponse.hits().total().value() > 0 && emailResponse.hits().total().value() > 0) {
+            throw new IOException("用户账号和邮箱已存在");
+        } else if (accountResponse.hits().total().value() > 0) {
+            throw new IOException("用户账号已存在");
+        } else if (emailResponse.hits().total().value() > 0) {
+            throw new IOException("用户邮箱已存在");
+        } else {
+            return null;
+        }
     }
-}
+
     public static String setTimestamps() {
         LocalDateTime currentTime = LocalDateTime.now();
         return currentTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
