@@ -211,6 +211,7 @@ public class EmailTaskService {
         // Create Email object for the "email" index
         Email email = new Email();
         email.setEmailTaskId(emailTaskId); // Set email_task_id
+        email.setEmailId(emailTaskId);
         email.setCreatedAt(currentTime);  // Set created_at
         email.setUpdateAt(currentTime);   // Set update_at
         email.setEmailStatus(1);          // Set email_status to 1 (开始状态)
@@ -409,6 +410,7 @@ public class EmailTaskService {
         // Create Email object for the "email" index
         Email email = new Email();
         email.setEmailTaskId(emailTaskId); // Set email_task_id
+        email.setEmailId(emailTaskId);
         email.setCreatedAt(currentTime);  // Set created_at
         email.setUpdateAt(currentTime);   // Set update_at
         email.setEmailStatus(1);          // Set email_status to 1 (开始状态)
@@ -593,6 +595,7 @@ public class EmailTaskService {
         // Create Email object for the "email" index
         Email email = new Email();
         email.setEmailTaskId(emailTaskId); // Set email_task_id
+        email.setEmailId(emailTaskId);
         email.setCreatedAt(currentTime);  // Set created_at
         email.setUpdateAt(currentTime);   // Set update_at
         email.setEmailStatus(1);          // Set email_status to 1 (开始状态)
