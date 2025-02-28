@@ -1,5 +1,6 @@
 package com.java.email.service;
 
+import com.java.email.model.entity.Attachment;
 import com.java.email.model.entity.Email;
 import com.java.email.model.entity.EmailTask;
 import com.java.email.model.request.CreateCycleEmailTaskRequest;
@@ -36,6 +37,9 @@ public class EmailTaskService {
 
     @Autowired
     private SupplierService supplierService;
+
+    @Autowired
+    private UserService userService;
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
@@ -89,7 +93,6 @@ public class EmailTaskService {
                 }
             }
         }
-
 
         //redis中的key
         String receiverKey = request.getReceiverKey();
@@ -155,14 +158,22 @@ public class EmailTaskService {
             }
         }
 
+        List<Attachment> attachments = new ArrayList<>();
+
+        for (Attachment attachment : request.getAttachment()) {
+            Attachment attachment1 = new Attachment(attachment.getAttachmentId(),attachment.getAttachmentName(),attachment.getAttachmentUrl());
+            attachments.add(attachment1);
+        }
+
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(emailTaskId);
         emailTask.setSubject(request.getSubject());
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
+        emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
         emailTask.setEmailContent(request.getEmailContent());
-        emailTask.setAttachment(request.getAttachment());
+        emailTask.setAttachment(attachments);
         emailTask.setReceiverName(receiverNames);
         emailTask.setReceiverId(receiverEmails);
         emailTask.setTaskType(1);
@@ -237,7 +248,6 @@ public class EmailTaskService {
                 }
             }
         }
-
 
         //redis中的key
         String receiverKey = request.getReceiverKey();
@@ -407,7 +417,6 @@ public class EmailTaskService {
                 }
             }
         }
-
 
         //redis中的key
         String receiverKey = request.getReceiverKey();

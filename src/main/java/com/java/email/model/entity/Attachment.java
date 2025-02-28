@@ -56,5 +56,11 @@ public class Attachment {
 
     @JsonProperty("updated_at")
     @Field(name = "updated_at", type = FieldType.Long)
-private long updatedAt;
+    private long updatedAt;
+
+    public Attachment(String attachmentId,String attachmentName,String attachmentUrl){
+        this.attachmentId = attachmentId;
+        this.attachmentName = attachmentName;
+        this.attachmentUrl = attachmentUrl;
+    }
 }

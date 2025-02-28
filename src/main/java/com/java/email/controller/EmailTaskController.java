@@ -19,7 +19,7 @@ public class EmailTaskController {
     /**
      * 创建普通邮件任务
      */
-    @PostMapping("create/{currentUserId}")
+    @PostMapping("create")
     public Result createEmailTask(@RequestHeader String currentUserId,@RequestBody CreateEmailTaskRequest request) {
         try {
             return Result.success(emailTaskService.createEmailTask(currentUserId,request));
@@ -31,8 +31,8 @@ public class EmailTaskController {
     /**
      * 创建循环邮件任务
      */
-    @PostMapping("createCycle/{currentUserId}")
-    public Result createCycleEmailTask(@PathVariable String currentUserId,@RequestBody CreateCycleEmailTaskRequest request) {
+    @PostMapping("createCycle")
+    public Result createCycleEmailTask(@RequestHeader String currentUserId,@RequestBody CreateCycleEmailTaskRequest request) {
         try {
             return Result.success(emailTaskService.createCycleEmailTask(currentUserId,request));
         } catch (Exception e) {
@@ -43,8 +43,8 @@ public class EmailTaskController {
     /**
      * 创建节日邮件任务
      */
-    @PostMapping("createFestival/{currentUserId}")
-    public Result createFestivalEmailTask(@PathVariable String currentUserId,@RequestBody EmailTask request) {
+    @PostMapping("createFestival")
+    public Result createFestivalEmailTask(@RequestHeader String currentUserId,@RequestBody EmailTask request) {
         try {
             return Result.success(emailTaskService.createFestivalEmailTask(currentUserId,request));
         } catch (Exception e) {

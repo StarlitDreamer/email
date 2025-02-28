@@ -87,7 +87,7 @@ public class EmailTask {
     private String senderName;            // 发送者姓名，支持分词
 
     @JsonProperty("attachment")
-    @Field(name = "attachment", type = FieldType.Nested)
+//    @Field(name = "attachment", type = FieldType.Nested)
     private List<Attachment> attachment;  // 附件列表，包含多个附件
 
     @JsonProperty("bounce_amount")
