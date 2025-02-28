@@ -99,7 +99,9 @@ public class SupplierService {
         }else {
             belongUserIds.add("1");  // 可能代表管理员或系统用户
             belongUserIds.add(currentUserId);
-            filters.put("belong_user_id", belongUserIds);
+            if (currentUserRole!=2){
+                filters.put("belong_user_id", belongUserIds);
+            }
         }
 
         if (commodityName != null && !commodityName.isEmpty()) {
@@ -240,7 +242,9 @@ public class SupplierService {
         }else {
             belongUserIds.add("1");  // 可能代表管理员或系统用户
             belongUserIds.add(currentUserId);
-            filters.put("belong_user_id", belongUserIds);
+            if (currentUserRole!=2){
+                filters.put("belong_user_id", belongUserIds);
+            }
         }
 
         if (commodityName != null && !commodityName.isEmpty()) {
