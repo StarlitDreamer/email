@@ -529,7 +529,7 @@ public class CustomerServiceImpl implements CustomerService {
 
             // 所属用户为公司，则直接查询所有与公司相关的客户
             if(belongUserName != null && belongUserName.equals(UserConstData.COMPANY_USER_NAME)) {
-                mainQuery.must(m -> m.term(t -> t.field("belong_user_id").value(currentUserId)));
+                mainQuery.must(m -> m.term(t -> t.field("belong_user_id").value(UserConstData.COMPANY_USER_ID)));
                 // 创建人条件
                 if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
                     List<UserDocument> creators = userRepository.findByUserNameLike(request.getCreatorName().trim());
