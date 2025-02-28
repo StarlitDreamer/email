@@ -158,12 +158,34 @@ public class EmailTaskService {
             }
         }
 
-        List<Attachment> attachments = new ArrayList<>();
+        String emailContent = request.getEmailContent();
 
-        for (Attachment attachment : request.getAttachment()) {
-            Attachment attachment1 = new Attachment(attachment.getAttachmentId(),attachment.getAttachmentName(),attachment.getAttachmentUrl());
-            attachments.add(attachment1);
+        // 使用 StringBuilder 进行字符串拼接
+        StringBuilder emailContentBuilder = new StringBuilder(emailContent);
+
+        // 找到 </body> 标签的位置
+        int bodyEndIndex = emailContent.indexOf("</body>");
+
+        // 确保 <body> 标签结束的位置正确
+        if (bodyEndIndex != -1) {
+            // 获取 <body> 标签结束位置前的内容
+            String bodyContent = emailContent.substring(0, bodyEndIndex);
+
+            // 准备附件信息
+            StringBuilder attachmentInfoBuilder = new StringBuilder();
+            for (Attachment attachment : request.getAttachment()) {
+                String attachmentInfo = "Name: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                        ", URL: " + attachment.getAttachmentUrl();
+                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
+            }
+
+            // 将附件信息插入到 <body> 结束标签之前
+            emailContentBuilder.replace(bodyEndIndex, bodyEndIndex, attachmentInfoBuilder.toString());
         }
+
+        // 获取最终的 emailContent
+        emailContent = emailContentBuilder.toString();
+
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
@@ -172,8 +194,8 @@ public class EmailTaskService {
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
-        emailTask.setEmailContent(request.getEmailContent());
-        emailTask.setAttachment(attachments);
+        emailTask.setEmailContent(emailContent);
+        emailTask.setAttachment(request.getAttachment());
         emailTask.setReceiverName(receiverNames);
         emailTask.setReceiverId(receiverEmails);
         emailTask.setTaskType(1);
@@ -317,6 +339,32 @@ public class EmailTaskService {
 
         String templateContentById = templateService.getTemplateContentById(templateId);
 
+        // 使用 StringBuilder 进行字符串拼接
+        StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
+
+        // 找到 </body> 标签的位置
+        int bodyEndIndex = templateContentById.indexOf("</body>");
+
+        // 确保 <body> 标签结束的位置正确
+        if (bodyEndIndex != -1) {
+            // 获取 <body> 标签结束位置前的内容
+            String bodyContent = templateContentById.substring(0, bodyEndIndex);
+
+            // 准备附件信息
+            StringBuilder attachmentInfoBuilder = new StringBuilder();
+            for (Attachment attachment : request.getAttachment()) {
+                String attachmentInfo = "Name: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                        ", URL: " + attachment.getAttachmentUrl();
+                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
+            }
+
+            // 将附件信息插入到 <body> 结束标签之前
+            emailContentBuilder.replace(bodyEndIndex, bodyEndIndex, attachmentInfoBuilder.toString());
+        }
+
+        // 获取最终的 emailContent
+        templateContentById = emailContentBuilder.toString();
+
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(emailTaskId);
@@ -325,10 +373,9 @@ public class EmailTaskService {
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setEmailContent(templateContentById);
-        emailTask.setReceiverId(request.getReceiverId());
-        emailTask.setReceiverSupplierId(request.getReceiverSupplierId());
-        emailTask.setReceiverKey(request.getReceiverKey());
-        emailTask.setReceiverSupplierKey(request.getReceiverSupplierKey());
+        emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
+        emailTask.setReceiverName(receiverNames);
+        emailTask.setReceiverId(receiverEmails);
         emailTask.setAttachment(request.getAttachment());
         emailTask.setIndex(0L);
         emailTask.setTaskType(2);
@@ -343,12 +390,18 @@ public class EmailTaskService {
         //获取发送天数
         long sendCycle = request.getSendCycle();
 
-        // 计算结束时间为当前时间6小时后的时间戳
+        // 计算结束时间
         long endTime = currentTime + sendCycle * 24 * 60 * 60;
         emailTask.setEndDate(endTime);
 
+        long intervalDate=60*60;
 
-        emailTask.setIntervalDate(sendCycle * 24 * 60 * 60);
+        if (receiverEmails.size()!=0){
+            intervalDate = sendCycle * 24 * 60 * 60 / receiverEmails.size();
+        }
+
+        emailTask.setIntervalDate(intervalDate);
+
         // Save to Elasticsearch
         emailTaskRepository.save(emailTask);
 
@@ -364,7 +417,6 @@ public class EmailTaskService {
         emailRepository.save(email);
 
         // Save email_task_id to Redis
-//        redisTemplate.opsForValue().set("email_task_id:" + emailTaskId, emailTaskId);
         redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
 
         return "Email task created with ID: " + emailTaskId;
@@ -482,18 +534,48 @@ public class EmailTaskService {
             }
         }
 
+        String templateId = request.getTemplateId();
+
+        String templateContentById = templateService.getTemplateContentById(templateId);
+
+        // 使用 StringBuilder 进行字符串拼接
+        StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
+
+        // 找到 </body> 标签的位置
+        int bodyEndIndex = templateContentById.indexOf("</body>");
+
+        // 确保 <body> 标签结束的位置正确
+        if (bodyEndIndex != -1) {
+            // 获取 <body> 标签结束位置前的内容
+            String bodyContent = templateContentById.substring(0, bodyEndIndex);
+
+            // 准备附件信息
+            StringBuilder attachmentInfoBuilder = new StringBuilder();
+            for (Attachment attachment : request.getAttachment()) {
+                String attachmentInfo = "Name: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                        ", URL: " + attachment.getAttachmentUrl();
+                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
+            }
+
+            // 将附件信息插入到 <body> 结束标签之前
+            emailContentBuilder.replace(bodyEndIndex, bodyEndIndex, attachmentInfoBuilder.toString());
+        }
+
+        // 获取最终的 emailContent
+        templateContentById = emailContentBuilder.toString();
+
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(emailTaskId);
         emailTask.setSubject(request.getSubject());
+        emailTask.setEmailContent(templateContentById);
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
-        emailTask.setReceiverId(request.getReceiverId());
-        emailTask.setReceiverSupplierId(request.getReceiverSupplierId());
-        emailTask.setReceiverKey(request.getReceiverKey());
-        emailTask.setReceiverSupplierKey(request.getReceiverSupplierKey());
+        emailTask.setReceiverName(receiverNames);
+        emailTask.setReceiverId(receiverEmails);
+        emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
         emailTask.setAttachment(request.getAttachment());
-        emailTask.setTaskType(request.getTaskType());
+        emailTask.setTaskType(3);
         emailTask.setStartDate(request.getStartDate());
 
         // Set created_at timestamp
@@ -501,8 +583,8 @@ public class EmailTaskService {
         emailTask.setCreatedAt(currentTime);
 
         // 计算结束时间为当前时间6小时后的时间戳
-//        long endTime = currentTime + 6 * 60 * 60;
-//        emailTask.setEndDate(endTime);
+        long endTime = currentTime + 6 * 60 * 60;
+        emailTask.setEndDate(endTime);
 
         // Save to Elasticsearch
         emailTaskRepository.save(emailTask);
@@ -519,8 +601,7 @@ public class EmailTaskService {
         emailRepository.save(email);
 
         // Save email_task_id to Redis
-//        redisTemplate.opsForValue().set("email_task_id:" + emailTaskId, emailTaskId);
-        redisTemplate.opsForValue().set(emailTaskId, "youjian");
+        redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
 
         return "Email task created with ID: " + emailTaskId;
     }
