@@ -57,30 +57,36 @@ public class EmailTaskService {
         List<String> receiverId = request.getReceiverId();
         List<String> receiverSupplierId = request.getReceiverSupplierId();
 
-        List<GetEmailsByCustomerIdsResponse> customerEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverId);
+        if (receiverId != null && !receiverId.isEmpty()) {
+            // List 不为空
+            List<GetEmailsByCustomerIdsResponse> customerEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverId);
 
-        List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierId);
+            // 遍历并按需求存储
+            for (GetEmailsByCustomerIdsResponse response : customerEmailsAndNames) {
+                String customerName = response.getCustomerName();
+                List<String> emails = response.getCustomerEmails();
 
-        // 遍历并按需求存储
-        for (GetEmailsByCustomerIdsResponse response : customerEmailsAndNames) {
-            String customerName = response.getCustomerName();
-            List<String> emails = response.getCustomerEmails();
-
-            // 将 customerName 添加多次
-            for (int i = 0; i < emails.size(); i++) {
-                receiverNames.add(customerName);
-                receiverEmails.add(emails.get(i));
+                // 将 customerName 添加多次
+                for (int i = 0; i < emails.size(); i++) {
+                    receiverNames.add(customerName);
+                    receiverEmails.add(emails.get(i));
+                }
             }
         }
 
-        for (GetEmailsBySupplierIdsResponse response : supplierEmailsAndNames) {
-            String supplierName = response.getSupplierName();
-            List<String> emails = response.getSupplierEmails();
+        if (receiverSupplierId != null && !receiverSupplierId.isEmpty()) {
+            // List 不为空
+            List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierId);
 
-            // 将 customerName 添加多次
-            for (int i = 0; i < emails.size(); i++) {
-                receiverNames.add(supplierName);
-                receiverEmails.add(emails.get(i));
+            for (GetEmailsBySupplierIdsResponse response : supplierEmailsAndNames) {
+                String supplierName = response.getSupplierName();
+                List<String> emails = response.getSupplierEmails();
+
+                // 将 customerName 添加多次
+                for (int i = 0; i < emails.size(); i++) {
+                    receiverNames.add(supplierName);
+                    receiverEmails.add(emails.get(i));
+                }
             }
         }
 
@@ -96,29 +102,58 @@ public class EmailTaskService {
         // 根据 receiverKey 从 Redis 中取出存储的值
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
 
-        Object cachedReceiverList = operations.get(receiverKey);
+        if (receiverKey != null) {
+            Object cachedReceiverList = operations.get(receiverKey);
 
-        // 如果缓存中有数据，进行处理
-        if (cachedReceiverList != null) {
-            // 将从 Redis 中取出的对象转换为 List<String>
-            List<String> receiverList = (List<String>) cachedReceiverList;
+            // 如果缓存中有数据，进行处理
+            if (cachedReceiverList != null) {
+                // 将从 Redis 中取出的对象转换为 List<String>
+                List<String> receiverList = (List<String>) cachedReceiverList;
 
-            // 遍历 receiverList，打印每个 receiver_id
-            for (String receiverIds : receiverList) {
-                receiverKeyId.add(receiverIds);
+                // 遍历 receiverList，打印每个 receiver_id
+                for (String receiverIds : receiverList) {
+                    receiverKeyId.add(receiverIds);
+                }
             }
         }
 
-        Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
+        if (receiverSupplierKey!=null) {
+            Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
 
-        if (cachedReceiverSupplierList != null) {
-            List<String> receiverList = (List<String>) cachedReceiverSupplierList;
+            if (cachedReceiverSupplierList != null) {
+                List<String> receiverList = (List<String>) cachedReceiverSupplierList;
 
-            for (String receiverIds : receiverList) {
-                receiverKeySupplierId.add(receiverIds);
+                for (String receiverIds : receiverList) {
+                    receiverKeySupplierId.add(receiverIds);
+                }
             }
         }
 
+        List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverKeyId);
+
+        List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverKeySupplierId);
+
+        for (GetEmailsByCustomerIdsResponse response : customerKeyEmailsAndNames) {
+            String customerName = response.getCustomerName();
+            List<String> emails = response.getCustomerEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(customerName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
+
+        for (GetEmailsBySupplierIdsResponse response : supplierKeyEmailsAndNames) {
+            String supplierName = response.getSupplierName();
+            List<String> emails = response.getSupplierEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(supplierName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
@@ -161,6 +196,112 @@ public class EmailTaskService {
     public String createCycleEmailTask(String currentUserId,CreateCycleEmailTaskRequest request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
+
+        // 存储接受者结果的集合
+        List<String> receiverNames = new ArrayList<>();
+        List<String> receiverEmails = new ArrayList<>();
+
+        //获取接受者id列表
+        List<String> receiverId = request.getReceiverId();
+        List<String> receiverSupplierId = request.getReceiverSupplierId();
+
+        if (receiverId != null && !receiverId.isEmpty()) {
+            // List 不为空
+            List<GetEmailsByCustomerIdsResponse> customerEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverId);
+
+            // 遍历并按需求存储
+            for (GetEmailsByCustomerIdsResponse response : customerEmailsAndNames) {
+                String customerName = response.getCustomerName();
+                List<String> emails = response.getCustomerEmails();
+
+                // 将 customerName 添加多次
+                for (int i = 0; i < emails.size(); i++) {
+                    receiverNames.add(customerName);
+                    receiverEmails.add(emails.get(i));
+                }
+            }
+        }
+
+        if (receiverSupplierId != null && !receiverSupplierId.isEmpty()) {
+            // List 不为空
+            List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierId);
+
+            for (GetEmailsBySupplierIdsResponse response : supplierEmailsAndNames) {
+                String supplierName = response.getSupplierName();
+                List<String> emails = response.getSupplierEmails();
+
+                // 将 customerName 添加多次
+                for (int i = 0; i < emails.size(); i++) {
+                    receiverNames.add(supplierName);
+                    receiverEmails.add(emails.get(i));
+                }
+            }
+        }
+
+
+        //redis中的key
+        String receiverKey = request.getReceiverKey();
+        String receiverSupplierKey = request.getReceiverSupplierKey();
+
+        //获取redis中接受者id列表
+        List<String> receiverKeyId = new ArrayList<>();
+        List<String> receiverKeySupplierId = new ArrayList<>();
+
+        // 根据 receiverKey 从 Redis 中取出存储的值
+        ValueOperations<String, Object> operations = redisTemplate.opsForValue();
+
+        if (receiverKey != null) {
+            Object cachedReceiverList = operations.get(receiverKey);
+
+            // 如果缓存中有数据，进行处理
+            if (cachedReceiverList != null) {
+                // 将从 Redis 中取出的对象转换为 List<String>
+                List<String> receiverList = (List<String>) cachedReceiverList;
+
+                // 遍历 receiverList，打印每个 receiver_id
+                for (String receiverIds : receiverList) {
+                    receiverKeyId.add(receiverIds);
+                }
+            }
+        }
+
+        if (receiverSupplierKey!=null) {
+            Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
+
+            if (cachedReceiverSupplierList != null) {
+                List<String> receiverList = (List<String>) cachedReceiverSupplierList;
+
+                for (String receiverIds : receiverList) {
+                    receiverKeySupplierId.add(receiverIds);
+                }
+            }
+        }
+
+        List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverKeyId);
+
+        List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverKeySupplierId);
+
+        for (GetEmailsByCustomerIdsResponse response : customerKeyEmailsAndNames) {
+            String customerName = response.getCustomerName();
+            List<String> emails = response.getCustomerEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(customerName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
+
+        for (GetEmailsBySupplierIdsResponse response : supplierKeyEmailsAndNames) {
+            String supplierName = response.getSupplierName();
+            List<String> emails = response.getSupplierEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(supplierName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
 
         String templateId = request.getTemplateId();
 
@@ -225,6 +366,112 @@ public class EmailTaskService {
     public String createFestivalEmailTask(String currentUserId,EmailTask request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
+
+        // 存储接受者结果的集合
+        List<String> receiverNames = new ArrayList<>();
+        List<String> receiverEmails = new ArrayList<>();
+
+        //获取接受者id列表
+        List<String> receiverId = request.getReceiverId();
+        List<String> receiverSupplierId = request.getReceiverSupplierId();
+
+        if (receiverId != null && !receiverId.isEmpty()) {
+            // List 不为空
+            List<GetEmailsByCustomerIdsResponse> customerEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverId);
+
+            // 遍历并按需求存储
+            for (GetEmailsByCustomerIdsResponse response : customerEmailsAndNames) {
+                String customerName = response.getCustomerName();
+                List<String> emails = response.getCustomerEmails();
+
+                // 将 customerName 添加多次
+                for (int i = 0; i < emails.size(); i++) {
+                    receiverNames.add(customerName);
+                    receiverEmails.add(emails.get(i));
+                }
+            }
+        }
+
+        if (receiverSupplierId != null && !receiverSupplierId.isEmpty()) {
+            // List 不为空
+            List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierId);
+
+            for (GetEmailsBySupplierIdsResponse response : supplierEmailsAndNames) {
+                String supplierName = response.getSupplierName();
+                List<String> emails = response.getSupplierEmails();
+
+                // 将 customerName 添加多次
+                for (int i = 0; i < emails.size(); i++) {
+                    receiverNames.add(supplierName);
+                    receiverEmails.add(emails.get(i));
+                }
+            }
+        }
+
+
+        //redis中的key
+        String receiverKey = request.getReceiverKey();
+        String receiverSupplierKey = request.getReceiverSupplierKey();
+
+        //获取redis中接受者id列表
+        List<String> receiverKeyId = new ArrayList<>();
+        List<String> receiverKeySupplierId = new ArrayList<>();
+
+        // 根据 receiverKey 从 Redis 中取出存储的值
+        ValueOperations<String, Object> operations = redisTemplate.opsForValue();
+
+        if (receiverKey != null) {
+            Object cachedReceiverList = operations.get(receiverKey);
+
+            // 如果缓存中有数据，进行处理
+            if (cachedReceiverList != null) {
+                // 将从 Redis 中取出的对象转换为 List<String>
+                List<String> receiverList = (List<String>) cachedReceiverList;
+
+                // 遍历 receiverList，打印每个 receiver_id
+                for (String receiverIds : receiverList) {
+                    receiverKeyId.add(receiverIds);
+                }
+            }
+        }
+
+        if (receiverSupplierKey!=null) {
+            Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
+
+            if (cachedReceiverSupplierList != null) {
+                List<String> receiverList = (List<String>) cachedReceiverSupplierList;
+
+                for (String receiverIds : receiverList) {
+                    receiverKeySupplierId.add(receiverIds);
+                }
+            }
+        }
+
+        List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverKeyId);
+
+        List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverKeySupplierId);
+
+        for (GetEmailsByCustomerIdsResponse response : customerKeyEmailsAndNames) {
+            String customerName = response.getCustomerName();
+            List<String> emails = response.getCustomerEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(customerName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
+
+        for (GetEmailsBySupplierIdsResponse response : supplierKeyEmailsAndNames) {
+            String supplierName = response.getSupplierName();
+            List<String> emails = response.getSupplierEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(supplierName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
