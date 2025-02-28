@@ -47,6 +47,5 @@ public class ResendDetails {
 
     @JsonProperty("status")
     @Field(name = "status", type = FieldType.Integer)
-    private Integer status;  // 重发状态，0未重发1重发成功2重发失败
-
+    private Integer status;  // 重发状态，0未重发1重发成功2重发失
 }
