@@ -31,7 +31,7 @@ public class EmailTaskController {
     /**
      * 创建循环邮件任务
      */
-    @PostMapping("createCycle")
+    @PostMapping("createCycle/{currentUserId}")
     public Result createCycleEmailTask(@PathVariable String currentUserId,@RequestBody CreateCycleEmailTaskRequest request) {
         try {
             return Result.success(emailTaskService.createCycleEmailTask(currentUserId,request));
@@ -43,7 +43,7 @@ public class EmailTaskController {
     /**
      * 创建节日邮件任务
      */
-    @PostMapping("createFestival")
+    @PostMapping("createFestival/{currentUserId}")
     public Result createFestivalEmailTask(@PathVariable String currentUserId,@RequestBody EmailTask request) {
         try {
             return Result.success(emailTaskService.createFestivalEmailTask(currentUserId,request));
