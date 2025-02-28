@@ -12,6 +12,7 @@ import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -179,9 +180,20 @@ public class FileServiceImpl implements FileService {
 
             // 添加角色条件
             mainQuery.must(m -> m
-                    .term(t -> t
-                            .field("user_role")
-                            .value(3)
+            .bool(b -> b
+                    .should(s -> s
+                            .term(t -> t
+                                    .field("user_role")
+                                    .value(2)
+                            )
+                    )
+                    .should(s -> s
+                            .term(t -> t
+                                    .field("user_role")
+                                    .value(3)
+                                    )
+                            )
+                            .minimumShouldMatch("1")
                     )
             );
 
