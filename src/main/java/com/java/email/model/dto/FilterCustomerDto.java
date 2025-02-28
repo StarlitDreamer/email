@@ -17,6 +17,7 @@ public class FilterCustomerDto {
     public List<String>  customer_country_id;
     public Integer  trade_type;
     public Integer  customer_level;
+    public Integer  is_user;
     @Builder.Default
     public Integer  page_num=1;
     @Builder.Default

@@ -17,6 +17,7 @@ public class FilterSupplierDto {
     public List<String>  supplier_country_id;
     public Integer  trade_type;
     public Integer supplier_level;
+    public Integer  is_user;
     @Builder.Default
     public Integer  page_num=1;
     @Builder.Default

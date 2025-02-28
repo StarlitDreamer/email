@@ -80,15 +80,20 @@ public class SupplierService {
         List<String> supplierCountryId = filterSupplierDto.supplier_country_id;
         Integer tradeType = filterSupplierDto.trade_type;
         Integer supplierLevel = filterSupplierDto.supplier_level;
+        Integer isUser = filterSupplierDto.is_user;
 
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         Map<String, Object> filters = new HashMap<>();
 
         filters.put("status", status);
 
-        if (currentUserRole == 4) {
-            belongUserIds.add(currentUserId);
-            belongUserIds.add("1");
+        // 如果当前用户角色是 4（假设为特殊角色），则限制只能查询特定的用户ID
+        if (currentUserRole == 4 && isUser != null) {
+            if (isUser == 0) {
+                belongUserIds.add("1");  // 可能代表管理员或系统用户
+            } else {
+                belongUserIds.add(currentUserId);
+            }
             filters.put("belong_user_id", belongUserIds);
             System.out.println(belongUserIds);
         }
@@ -209,6 +214,7 @@ public class SupplierService {
         List<String> supplierCountryId = searchAllSupplierDto.supplier_country_id;
         Integer tradeType = searchAllSupplierDto.trade_type;
         Integer supplierLevel = searchAllSupplierDto.supplier_level;
+        Integer isUser = searchAllSupplierDto.is_user;
 
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         Map<String, Object> filters = new HashMap<>();
@@ -218,12 +224,17 @@ public class SupplierService {
         // 用于存储属于用户的ID列表
         final List<String> belongUserIds = new ArrayList<>();
 
-        if (currentUserRole == 4) {
-            belongUserIds.add(currentUserId);
-            belongUserIds.add("1");
-            filters.put("belong_user_d", belongUserIds);
+        // 如果当前用户角色是 4（假设为特殊角色），则限制只能查询特定的用户ID
+        if (currentUserRole == 4 && isUser != null) {
+            if (isUser == 0) {
+                belongUserIds.add("1");  // 可能代表管理员或系统用户
+            } else {
+                belongUserIds.add(currentUserId);
+            }
+            filters.put("belong_user_id", belongUserIds);
             System.out.println(belongUserIds);
         }
+
         if (commodityName != null && !commodityName.isEmpty()) {
             SearchResponse<Commodity> searchResponse = esClient.search(s -> s
                     .index("commodity")

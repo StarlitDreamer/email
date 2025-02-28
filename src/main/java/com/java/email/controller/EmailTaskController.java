@@ -20,7 +20,7 @@ public class EmailTaskController {
      * 创建普通邮件任务
      */
     @PostMapping("create/{currentUserId}")
-    public Result createEmailTask(@PathVariable String currentUserId,@RequestBody CreateEmailTaskRequest request) {
+    public Result createEmailTask(@RequestHeader String currentUserId,@RequestBody CreateEmailTaskRequest request) {
         try {
             return Result.success(emailTaskService.createEmailTask(currentUserId,request));
         } catch (Exception e) {

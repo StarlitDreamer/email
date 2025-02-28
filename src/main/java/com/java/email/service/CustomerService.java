@@ -86,6 +86,7 @@ public class CustomerService {
         List<String> customerCountryId = filterCustomerDto.customer_country_id;
         Integer tradeType = filterCustomerDto.trade_type;
         Integer customerLevel = filterCustomerDto.customer_level;
+        Integer isUser = filterCustomerDto.is_user;
 
         // 创建一个布尔查询构建器，用于构建复杂查询条件
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
@@ -94,9 +95,12 @@ public class CustomerService {
         Map<String, Object> filters = new HashMap<>();
 
         // 如果当前用户角色是 4（假设为特殊角色），则限制只能查询特定的用户ID
-        if (currentUserRole == 4) {
-            belongUserIds.add(currentUserId);
-            belongUserIds.add("1");  // 可能代表管理员或系统用户
+        if (currentUserRole == 4 && isUser != null) {
+            if (isUser == 0) {
+                belongUserIds.add("1");  // 可能代表管理员或系统用户
+            } else {
+                belongUserIds.add(currentUserId);
+            }
             filters.put("belong_user_id", belongUserIds);
             System.out.println(belongUserIds);
         }
@@ -235,6 +239,7 @@ public class CustomerService {
         List<String> customerCountryId = searchAllCustomerDto.customer_country_id;
         Integer tradeType = searchAllCustomerDto.trade_type;
         Integer customerLevel = searchAllCustomerDto.customer_level;
+        Integer isUser = searchAllCustomerDto.is_user;
 
         BoolQuery.Builder boolQuery = new BoolQuery.Builder();
         Map<String, Object> filters = new HashMap<>();
@@ -244,10 +249,15 @@ public class CustomerService {
 
         filters.put("status", status);
 
-        if (currentUserRole == 4) {
-            belongUserIds.add(currentUserId);
-            belongUserIds.add("1");
+        // 如果当前用户角色是 4（假设为特殊角色），则限制只能查询特定的用户ID
+        if (currentUserRole == 4 && isUser != null) {
+            if (isUser == 0) {
+                belongUserIds.add("1");  // 可能代表管理员或系统用户
+            } else {
+                belongUserIds.add(currentUserId);
+            }
             filters.put("belong_user_id", belongUserIds);
+            System.out.println(belongUserIds);
         }
         if (commodityName != null && !commodityName.isEmpty()) {
             SearchResponse<Commodity> searchResponse = esClient.search(s -> s
