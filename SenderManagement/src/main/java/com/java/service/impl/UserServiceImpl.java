@@ -299,6 +299,12 @@ public class UserServiceImpl implements UserService {
         if (map.containsKey("user_password")) {
             map.put("user_password", DigestUtil.md5Hex(map.get("user_password")));
         }
+        if(map.containsKey("user_email")){
+            String userEmail = map.get("user_email");
+            String[] split = userEmail.split("@");
+            String user_host= "smtp."+split[1];
+            map.put("user_host",user_host);
+        }
         if (map.isEmpty()) {
             throw new IOException("没有需要修改的信息");
         }
@@ -568,7 +574,7 @@ public class UserServiceImpl implements UserService {
     public User createUserDocument(Integer user_role, String user_name, String user_account, String user_password, String user_email, String user_email_code) {
         User userDocument = new User();
         String[] parts = user_email.split("@");
-        String userHost = parts[1];
+        String userHost = "smtp."+parts[1];
         userDocument.setUserId(IdUtil.randomUUID());//uuid
         userDocument.setUserRole(user_role);
         userDocument.setCreatorId(null);//创建者id
