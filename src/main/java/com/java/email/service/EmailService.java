@@ -1,6 +1,7 @@
 package com.java.email.service;
 
 import com.java.email.model.entity.Email;
+import com.java.email.model.request.ResetTaskStatusRequest;
 import com.java.email.model.request.UpdateTaskStatusRequest;
 import com.java.email.repository.EmailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,17 +47,15 @@ public class EmailService {
     /**
      * 根据email_task_id更新emailStatus为4
      *
-     * @param emailTaskId 邮件任务ID
-     * @param newStatus   新的邮件状态
      * @return 更新后的邮件实体
      */
-    public Email resetEmailStatus(String emailTaskId, Integer newStatus) {
+    public Email resetEmailStatus(ResetTaskStatusRequest request) {
         // 根据email_task_id查找Email实体
-        Email email = emailRepository.findByEmailTaskId(emailTaskId)
+        Email email = emailRepository.findByEmailTaskId(request.getTaskId())
                 .orElseThrow(() -> new RuntimeException("邮件任务未找到"));
 
         // 更新邮件状态为4
-        email.setEmailStatus(newStatus);
+        email.setEmailStatus(4);
 
         // 保存更新后的Email实体
         return emailRepository.save(email);
