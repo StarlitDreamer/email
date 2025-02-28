@@ -103,10 +103,11 @@ public class CustomerService {
             }
             filters.put("belong_user_id", belongUserIds);
             System.out.println(belongUserIds);
+        }else {
+            belongUserIds.add("1");  // 可能代表管理员或系统用户
+            belongUserIds.add(currentUserId);
+            filters.put("belong_user_id", belongUserIds);
         }
-        belongUserIds.add("1");  // 可能代表管理员或系统用户
-        belongUserIds.add(currentUserId);
-        filters.put("belong_user_id", belongUserIds);
 
         filters.put("status", status);
 
@@ -261,11 +262,11 @@ public class CustomerService {
             }
             filters.put("belong_user_id", belongUserIds);
             System.out.println(belongUserIds);
+        }else {
+            belongUserIds.add("1");  // 可能代表管理员或系统用户
+            belongUserIds.add(currentUserId);
+            filters.put("belong_user_id", belongUserIds);
         }
-
-        belongUserIds.add("1");  // 可能代表管理员或系统用户
-        belongUserIds.add(currentUserId);
-        filters.put("belong_user_id", belongUserIds);
 
         if (commodityName != null && !commodityName.isEmpty()) {
             SearchResponse<Commodity> searchResponse = esClient.search(s -> s
