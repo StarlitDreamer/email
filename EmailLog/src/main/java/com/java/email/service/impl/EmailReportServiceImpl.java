@@ -4,9 +4,10 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import com.java.email.pojo.EmailReport;
 import com.java.email.service.EmailReportService;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-
+@Service
 public class EmailReportServiceImpl implements EmailReportService {
 
     private final ElasticsearchClient esClient;

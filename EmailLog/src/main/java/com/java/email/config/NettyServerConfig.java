@@ -27,6 +27,7 @@ public class NettyServerConfig {
     private final UserService userService;
     private final EmailRecipientService emailRecipientService;
     private final EmailManageService emailManageService;
+    private final EmailReportService emailReportService;
 
     @Value("${netty.port}")
     private int port;
@@ -34,12 +35,13 @@ public class NettyServerConfig {
     @Autowired
     private RedisService redisService;
 
-    public NettyServerConfig(EmailLogService emailLogService, UserService userService, EmailRecipientService emailRecipientService, EmailManageService emailManageService) {
+    public NettyServerConfig(EmailLogService emailLogService, UserService userService, EmailRecipientService emailRecipientService, EmailManageService emailManageService, EmailReportService emailReportService) {
         this.emailLogService = emailLogService;
         this.userService = userService;
         this.emailRecipientService = emailRecipientService;
 
         this.emailManageService = emailManageService;
+        this.emailReportService = emailReportService;
         startNettyServer();
     }
     @PostConstruct
@@ -58,8 +60,8 @@ public class NettyServerConfig {
                                 //.addLast(new EmailLogHandler(emailLogService))
                                 //.addLast(new QueryLogHandler(emailLogService,userService))
                                // .addLast(new FailLogHandler(emailLogService,userService))
-                                .addLast(new ReportHandler(emailLogService,userService))
-                                    .addLast(new ManualReportHandler(emailLogService,userService))
+                                .addLast(new ReportHandler(emailLogService,emailReportService,userService))
+                                    .addLast(new ManualReportHandler(emailLogService,emailReportService,userService))
                                // .addLast(new QueryOneLogHandler(emailLogService,userService))
                                     .addLast(new FilterEmailTaskHandler(emailLogService,userService,emailManageService))
                                     .addLast(new FilterEmailHandler(emailLogService,userService,emailRecipientService))
