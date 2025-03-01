@@ -191,19 +191,24 @@ public class EmailTaskService {
 
             // 准备附件信息
             StringBuilder attachmentInfoBuilder = new StringBuilder();
-            for (Attachment attachment : request.getAttachment()) {
-                String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                        ", 附件URL: " + attachment.getAttachmentUrl();
-                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
+            List<Attachment> attachments = request.getAttachment();
+            int size = attachments.size();
+            for (Attachment attachment : attachments) {
+                size--;
+                if (size == 0) {
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                            ", 附件URL: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
+                }else {
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                            ", 附件URL: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
+                }
             }
 
             // 将附件信息插入到 <body> 结束标签之前
             emailContentBuilder.replace(bodyEndIndex, bodyEndIndex, attachmentInfoBuilder.toString());
         }
-
-        // 在 emailContent 最后插入 unsubscribe URL
-        String unsubscribeUrl = "http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}";
-        emailContentBuilder.append("<br><p><a href=\"").append(unsubscribeUrl).append("\">点击此处取消订阅</a></p>");
 
         // 获取最终的 emailContent
         emailContent = emailContentBuilder.toString();
