@@ -13,14 +13,6 @@ public class ResendDetailsController {
     @Autowired
     private ResendDetailsService resendDetailsService;
 
-//    /**
-//     * 接受email_task_id，创建重发记录
-//     */
-//    @PostMapping
-//    public ResendDetails createResendDetails(@RequestParam String emailTaskId) {
-//        return resendDetailsService.createResendDetails(emailTaskId);
-//    }
-
     @PostMapping("/resend")
     public Result<String> resendEmail(@RequestBody ResendEmailRequest request) {
         // 拼接 "resend_" 字符串
