@@ -96,6 +96,9 @@ public class EmailServiceImpl implements EmailService {
                         } else if ("500".equals(status)) {
                             // 未发送的邮件
                             b.must(m -> m.term(t -> t.field("error_code").value(500)));
+                        } else if ("535".equals(status)) {
+                            b.must(m->m.term(t -> t.field("error_code").value(535)));
+
                         }
                         // 如果status不是200或500，忽略此条件
                     }
@@ -116,7 +119,9 @@ public class EmailServiceImpl implements EmailService {
                     // 处理其他查询参数
                     if (params != null && !params.isEmpty()) {
                         addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
-                    } else b.must(m -> m.matchAll(ma -> ma));
+                    } else {
+                        b.must(m -> m.matchAll(ma -> ma));
+                    }
 
                     return b;
                 }));
@@ -287,7 +292,9 @@ public class EmailServiceImpl implements EmailService {
                     // 处理其他查询参数
                     if (params != null && !params.isEmpty()) {
                         addOtherQueryParams(b, params, userRole, userEmail, finalManagedUserEmails);
-                    } else b.must(m -> m.matchAll(ma -> ma));
+                    } else {
+                        b.must(m -> m.matchAll(ma -> ma));
+                    }
 
                     return b;
                 }));
