@@ -392,10 +392,19 @@ public class EmailTaskService {
 
             // 准备附件信息
             StringBuilder attachmentInfoBuilder = new StringBuilder();
-            for (Attachment attachment : request.getAttachment()) {
-                String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                        ", 附件URL: " + attachment.getAttachmentUrl();
-                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
+            List<Attachment> attachments = request.getAttachment();
+            int size = attachments.size();
+            for (Attachment attachment : attachments) {
+                size--;
+                if (size == 0) {
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                            ", 附件URL: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
+                }else {
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                            ", 附件URL: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
+                }
             }
 
             // 将附件信息插入到 <body> 结束标签之前
@@ -414,7 +423,7 @@ public class EmailTaskService {
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setEmailContent(templateContentById);
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
-        emailTask.setSenderName(userService.getUserEmailByUserId(currentUserId));
+        emailTask.setSenderName(userService.getUserNameByUserId(currentUserId));
         emailTask.setReceiverName(receiverNames);
         emailTask.setReceiverId(receiverEmails);
         emailTask.setAttachment(request.getAttachment());
@@ -593,10 +602,19 @@ public class EmailTaskService {
 
             // 准备附件信息
             StringBuilder attachmentInfoBuilder = new StringBuilder();
-            for (Attachment attachment : request.getAttachment()) {
-                String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                        ", 附件URL: " + attachment.getAttachmentUrl();
-                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
+            List<Attachment> attachments = request.getAttachment();
+            int size = attachments.size();
+            for (Attachment attachment : attachments) {
+                size--;
+                if (size == 0) {
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                            ", 附件URL: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
+                }else {
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                            ", 附件URL: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
+                }
             }
 
             // 将附件信息插入到 <body> 结束标签之前
@@ -617,7 +635,7 @@ public class EmailTaskService {
         emailTask.setReceiverName(receiverNames);
         emailTask.setReceiverId(receiverEmails);
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
-        emailTask.setSenderName(userService.getUserEmailByUserId(currentUserId));
+        emailTask.setSenderName(userService.getUserNameByUserId(currentUserId));
         emailTask.setAttachment(request.getAttachment());
         emailTask.setTaskType(3);
         emailTask.setStartDate(request.getStartDate());
