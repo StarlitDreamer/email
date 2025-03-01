@@ -390,7 +390,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             }
 
             // 并行查询resend_details 索引
-            CompletableFuture<SearchResponse<RsendDetails>> customerFuture = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<SearchResponse<RsendDetails>> rsendFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     return esClient.search(s -> s
                                     .index(RESEND_EMAIL)
@@ -438,12 +438,12 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
 
 
             // 等待所有查询完成
-            CompletableFuture.allOf(customerFuture).join();
+            CompletableFuture.allOf(rsendFuture).join();
 
-            // 处理Customer结果
-            SearchResponse<RsendDetails> customerResponse = customerFuture.get();
-            if (customerResponse != null) {
-                for (Hit<RsendDetails> hit : customerResponse.hits().hits()) {
+
+            SearchResponse<RsendDetails> rsendResponse = rsendFuture.get();
+            if (rsendResponse != null) {
+                for (Hit<RsendDetails> hit : rsendResponse.hits().hits()) {
                     RsendDetails rsendDetails = hit.source();
                     if (rsendDetails != null && rsendDetails.getEmailResendId() != null) {
                         emails.add(rsendDetails.getEmailResendId());

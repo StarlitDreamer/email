@@ -90,7 +90,6 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
                 objectMapper.writeValueAsString(Result.fail("缺少必要的参数: startTime 或 endTime")));
             return;
         }
-
         // 构建查询参数
         Map<String, String> params = new HashMap<>();
         params.put("start_date", startTime);
