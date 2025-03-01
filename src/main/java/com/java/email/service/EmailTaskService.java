@@ -228,6 +228,7 @@ public class EmailTaskService {
         long currentTime = System.currentTimeMillis() / 1000;
         emailTask.setCreatedAt(currentTime);
         emailTask.setStartDate(currentTime);
+
         // Save to Elasticsearch
         emailTaskRepository.save(emailTask);
 
@@ -647,6 +648,7 @@ public class EmailTaskService {
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setAttachment(request.getAttachment());
         emailTask.setEmailContent(templateContentById);
+        emailTask.setTaskType(4);
 
         long currentTime = System.currentTimeMillis() / 1000;
 
