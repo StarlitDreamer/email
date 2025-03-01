@@ -36,7 +36,9 @@ public class EmailService {
             throw new RuntimeException("邮件任务未找到");
         }
 
-        String senderId = emailTask.getSenderId();
+        String senderEmail = emailTask.getSenderId();
+
+        String senderId = userService.getUserIdByEmail(senderEmail);
 
         // 判断当前用户角色进行权限控制
         if (currentUserRole == 4 && !currentUserId.equals(senderId)) {

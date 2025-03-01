@@ -19,4 +19,9 @@ public class UserController {
     public String getUserEmail(@RequestParam String userId) {
         return userService.getUserEmailByUserId(userId);
     }
+
+    @GetMapping("/getUserIdByEmail")
+    public String getUserIdByEmail(@RequestParam String userEmail) {
+        return userService.getUserIdByEmail(userEmail);
+    }
 }

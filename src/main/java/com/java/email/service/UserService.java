@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +32,15 @@ public class UserService {
             return user.getUserName();
         } else {
             throw new RuntimeException("User not found for userId: " + userId);
+        }
+    }
+
+    public String getUserIdByEmail(String userEmail) {
+        Optional<User> userOptional = userRepository.findByUserEmail(userEmail);
+        if (userOptional.isPresent()) {
+            return userOptional.get().getUserId(); // 获取 userId
+        } else {
+            return null; // 用户未找到
         }
     }
 

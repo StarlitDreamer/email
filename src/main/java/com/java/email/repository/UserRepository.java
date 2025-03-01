@@ -5,6 +5,7 @@ import org.springframework.data.elasticsearch.repository.ElasticsearchRepository
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UserRepository extends ElasticsearchRepository<User, String> {
@@ -12,5 +13,7 @@ public interface UserRepository extends ElasticsearchRepository<User, String> {
     User findByUserId(String userId);
 
     List<User> findByBelongUserid(String userId);
+
+    Optional<User> findByUserEmail(String userEmail);
 }
 
