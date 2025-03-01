@@ -3,9 +3,11 @@ package com.java.email.controller;
 import com.java.email.common.Result;
 import com.java.email.model.dto.FilterCustomerDto;
 import com.java.email.model.dto.SearchAllCustomerDto;
+import com.java.email.model.entity.Customer;
 import com.java.email.model.response.FilterAllReceiverResponse;
 import com.java.email.model.response.FilterReceiverResponse;
 import com.java.email.model.response.GetEmailsByCustomerIdsResponse;
+import com.java.email.repository.CustomerRepository;
 import com.java.email.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +20,15 @@ public class CustomerController {
 
     @Autowired
     private CustomerService customerService;
+
+    @Autowired
+    private CustomerRepository customerRepository;
+
+    // 根据客户ID查找客户
+    @GetMapping("/{customerId}")
+    public Customer getCustomerById(@PathVariable String customerId) {
+        return customerRepository.findByCustomerId(customerId);
+    }
 
     // 根据 customerId 列表查询客户邮箱
     @PostMapping("/getEmails")

@@ -21,7 +21,7 @@ public class CreateEmailTaskRequest {
     private String emailContent;            // 邮件内容
 
     @JsonProperty("receiver_id")
-    private List<String> receiverId;        // 客户id
+    private List<String> customerId;        // 客户id
 
     @JsonProperty("receiver_supplier_id")
     private List<String> receiverSupplierId; // 供应商id

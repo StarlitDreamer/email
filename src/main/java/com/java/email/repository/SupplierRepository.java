@@ -8,4 +8,7 @@ import java.util.List;
 public interface SupplierRepository extends ElasticsearchRepository<Supplier, String> {
     // 根据 supplierId 列表查询对应的供应商邮箱
     List<Supplier> findBySupplierIdIn(List<String> supplierIds);
+
+    //
+    Supplier findBySupplierId(String supplierId);
 }

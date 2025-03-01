@@ -1,6 +1,7 @@
 package com.java.email.service;
 
 import com.java.email.model.entity.Attachment;
+import com.java.email.model.entity.Customer;
 import com.java.email.model.entity.Email;
 import com.java.email.model.entity.EmailTask;
 import com.java.email.model.request.CreateCycleEmailTaskRequest;
@@ -8,6 +9,7 @@ import com.java.email.model.request.CreateEmailTaskRequest;
 import com.java.email.model.request.UpdateBirthEmailTaskRequest;
 import com.java.email.model.response.GetEmailsByCustomerIdsResponse;
 import com.java.email.model.response.GetEmailsBySupplierIdsResponse;
+import com.java.email.repository.CustomerRepository;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
 import jakarta.annotation.Resource;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class EmailTaskService {
@@ -34,6 +37,9 @@ public class EmailTaskService {
 
     @Autowired
     private CustomerService customerService;
+
+    @Autowired
+    private CustomerRepository customerRepository;
 
     @Autowired
     private SupplierService supplierService;
@@ -57,9 +63,19 @@ public class EmailTaskService {
         List<String> receiverNames = new ArrayList<>();
         List<String> receiverEmails = new ArrayList<>();
 
+        String emailTypeId = request.getEmailTypeId();
+
         //获取接受者id列表
-        List<String> receiverId = request.getReceiverId();
-        List<String> receiverSupplierId = request.getReceiverSupplierId();
+        List<String> customerId = request.getCustomerId();
+
+        // 假设 customers 是存储 Customer 对象的列表
+        List<Customer> customers = customerRepository.findByCustomerIdIn(customerId);
+
+        // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
+        List<String> receiverId = customers.stream()
+                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
+                .map(Customer::getCustomerId)
+                .collect(Collectors.toList());
 
         if (receiverId != null && !receiverId.isEmpty()) {
             // List 不为空
@@ -77,6 +93,10 @@ public class EmailTaskService {
                 }
             }
         }
+
+
+
+        List<String> receiverSupplierId = request.getReceiverSupplierId();
 
         if (receiverSupplierId != null && !receiverSupplierId.isEmpty()) {
             // List 不为空

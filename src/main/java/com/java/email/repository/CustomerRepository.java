@@ -8,4 +8,7 @@ import java.util.List;
 public interface CustomerRepository extends ElasticsearchRepository<Customer, String> {
     // 根据 customerId 列表查询对应的客户邮箱
     List<Customer> findByCustomerIdIn(List<String> customerIds);
+
+    // 根据客户ID查找客户
+    Customer findByCustomerId(String customerId);
 }
