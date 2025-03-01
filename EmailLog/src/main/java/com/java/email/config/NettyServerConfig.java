@@ -59,7 +59,7 @@ public class NettyServerConfig {
                                     .addLast(new TokenCheckHandler(redisService))
                                 //.addLast(new EmailLogHandler(emailLogService))
                                 //.addLast(new QueryLogHandler(emailLogService,userService))
-                               // .addLast(new FailLogHandler(emailLogService,userService))
+                                //.addLast(new FailLogHandler(emailLogService,userService))
                                 .addLast(new ReportHandler(emailLogService,emailReportService,userService))
                                     .addLast(new ManualReportHandler(emailLogService,emailReportService,userService))
                                // .addLast(new QueryOneLogHandler(emailLogService,userService))
