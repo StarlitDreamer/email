@@ -8,10 +8,7 @@ import com.java.email.model.response.ResetTaskStatusResponse;
 import com.java.email.model.response.UpdateTaskStatusResponse;
 import com.java.email.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -27,10 +24,10 @@ public class EmailController {
      * @return 更新后的邮件实体集合
      */
     @PutMapping("/update-status")
-    public Result<UpdateTaskStatusResponse> updateEmailStatus(@RequestBody UpdateTaskStatusRequest request) {
+    public Result<UpdateTaskStatusResponse> updateEmailStatus(@RequestHeader String currentUserId, @RequestHeader int currentUserRole, @RequestBody UpdateTaskStatusRequest request) {
         try {
             // 调用服务层方法更新状态
-            List<Email> updatedEmails = emailService.updateEmailStatusForAll(request);
+            List<Email> updatedEmails = emailService.updateEmailStatusForAll(currentUserId,currentUserRole,request);
 
             // 创建响应列表
             List<UpdateTaskStatusResponse> responseList = updatedEmails.stream()
@@ -42,7 +39,7 @@ public class EmailController {
                     })
                     .toList();
             UpdateTaskStatusResponse response = new UpdateTaskStatusResponse();
-            response.setEmailTaskId(request.getTaskId());
+            response.setEmailTaskId(request.getEmailTaskId());
             response.setEmailStatus(request.getOperateStatus());
             return Result.success(response);  // 返回成功响应，包含更新后的邮件列表
         } catch (Exception e) {

@@ -5,8 +5,8 @@ import lombok.Data;
 
 @Data
 public class UpdateTaskStatusRequest {
-    @JsonProperty("task_id")
-    private String taskId;
+    @JsonProperty("email_task_id")
+    private String emailTaskId;
 
     @JsonProperty("operate_status")
     private String OperateStatus;
