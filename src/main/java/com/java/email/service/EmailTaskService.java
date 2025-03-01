@@ -1,9 +1,6 @@
 package com.java.email.service;
 
-import com.java.email.model.entity.Attachment;
-import com.java.email.model.entity.Customer;
-import com.java.email.model.entity.Email;
-import com.java.email.model.entity.EmailTask;
+import com.java.email.model.entity.*;
 import com.java.email.model.request.CreateCycleEmailTaskRequest;
 import com.java.email.model.request.CreateEmailTaskRequest;
 import com.java.email.model.request.UpdateBirthEmailTaskRequest;
@@ -12,6 +9,7 @@ import com.java.email.model.response.GetEmailsBySupplierIdsResponse;
 import com.java.email.repository.CustomerRepository;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
+import com.java.email.repository.SupplierRepository;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -40,6 +38,9 @@ public class EmailTaskService {
 
     @Autowired
     private CustomerRepository customerRepository;
+
+    @Autowired
+    private SupplierRepository supplierRepository;
 
     @Autowired
     private SupplierService supplierService;
@@ -105,9 +106,18 @@ public class EmailTaskService {
 
         List<String> receiverSupplierId = request.getReceiverSupplierId();
 
-        if (receiverSupplierId != null && !receiverSupplierId.isEmpty()) {
+        List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(receiverSupplierId);
+
+// 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
+        List<String> receiverSupplierIds = suppliers.stream()
+                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
+                .map(Supplier::getSupplierId)
+                .collect(Collectors.toList());
+
+
+        if (receiverSupplierIds != null && !receiverSupplierIds.isEmpty()) {
             // List 不为空
-            List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierId);
+            List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierIds);
 
             for (GetEmailsBySupplierIdsResponse response : supplierEmailsAndNames) {
                 String supplierName = response.getSupplierName();
@@ -140,7 +150,7 @@ public class EmailTaskService {
                 // 将从 Redis 中取出的对象转换为 List<String>
                 List<String> receiverList = (List<String>) cachedReceiverList;
 
-                // 遍历 receiverList，打印每个 receiver_id
+                // 遍历 receiverList， receiver_id
                 for (String receiverIds : receiverList) {
                     receiverKeyId.add(receiverIds);
                 }
@@ -159,9 +169,27 @@ public class EmailTaskService {
             }
         }
 
-        List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverKeyId);
+        // 假设 customers 是存储 Customer 对象的列表
+        List<Customer> customersKey = customerRepository.findByCustomerIdIn(receiverKeyId);
 
-        List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverKeySupplierId);
+        // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
+        List<String> receiverIdKey = customers.stream()
+                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
+                .map(Customer::getCustomerId)
+                .collect(Collectors.toList());
+
+        List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverIdKey);
+
+
+        List<Supplier> suppliersKey = supplierRepository.findBySupplierIdIn(receiverKeySupplierId);
+
+        // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
+        List<String> receiverSupplierIdsKey = suppliers.stream()
+                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
+                .map(Supplier::getSupplierId)
+                .collect(Collectors.toList());
+
+        List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierIdsKey);
 
         for (GetEmailsByCustomerIdsResponse response : customerKeyEmailsAndNames) {
             String customerName = response.getCustomerName();
