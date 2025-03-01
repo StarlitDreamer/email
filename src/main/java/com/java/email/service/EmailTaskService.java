@@ -616,11 +616,15 @@ public class EmailTaskService {
      * 改变生日任务状态
      */
     public String updateBirthEmailTask(String tackId,UpdateBirthEmailTaskRequest request) {
+        String templateId = request.getTemplateId();
+        String templateContentById = templateService.getTemplateContentById(templateId);
+
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(tackId);
         emailTask.setSubject(request.getSubject());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setAttachment(request.getAttachment());
+        emailTask.setEmailContent(templateContentById);
 
         long currentTime = System.currentTimeMillis() / 1000;
 
