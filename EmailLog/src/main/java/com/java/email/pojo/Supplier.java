@@ -13,11 +13,9 @@ import java.io.Serializable;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Supplier implements Serializable {
     private static final long serialVersionUID = 100212415L;
-    /**
-     * 接受的邮件类型id，默认接受所有类型，当退订某种类型时，就从这里删除对应的类型id
-     */
-    @JsonProperty("accept_email_type_id")
-    private String[] acceptEmailTypeid;
+
+    @JsonProperty("no_accept_email_type_id")
+    private String[] noAcceptEmailTypeId;
     /**
      * 所属用户，该供应商所属于哪个用户，插入用户的uuid
      */

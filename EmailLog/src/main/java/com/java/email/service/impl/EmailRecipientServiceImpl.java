@@ -156,7 +156,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     @Override
     public Map<String, String> getRecipientDetail(String email, Map<String, String> params) {
         try {
-            String level = params.get("level") != null ? params.get("level") : null;
+            String level = params.get("receiver_level") != null ? params.get("receiver_level") : null;
             // 并行查询Customer和Supplier索引
             CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
                 try {

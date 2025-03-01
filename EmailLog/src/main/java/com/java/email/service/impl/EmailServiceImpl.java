@@ -259,8 +259,8 @@ public class EmailServiceImpl implements EmailService {
 
                     // 处理邮件状态查询
                             // 发送失败的邮件
-                            b.must(m -> m.term(t -> t.field("error_code").value(500)));
-                            b.must(m -> m.term(t -> t.field("error_code").value(535)));
+                            b.should(m -> m.term(t -> t.field("error_code").value(500)));
+                            b.should(m -> m.term(t -> t.field("error_code").value(535)));
 
 
 

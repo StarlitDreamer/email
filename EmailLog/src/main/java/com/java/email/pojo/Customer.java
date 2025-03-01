@@ -16,10 +16,7 @@ import java.io.Serializable;
 public class Customer implements Serializable {
     private static final long serialVersionUID = 10045L;
     /**
-     * 接受的邮件类型，默认接受所有类型，当退订某种类型时，就从这里删除对应的类型id
-     */
-    @JsonProperty("accept_email_typeid")
-    private String[] acceptEmailTypeid;
+
     /**
      * 所属用户，该客户所属于哪个用户，插入用户的uuid
      */
@@ -33,7 +30,7 @@ public class Customer implements Serializable {
      * 商品id
      */
     @JsonProperty("commodity_id")
-    private String commodityid;
+    private String[] commodityid;
     /**
      * 联系人
      */
@@ -98,7 +95,7 @@ public class Customer implements Serializable {
     private String updatedAt;
 
     @JsonProperty("no_accept_email_type_id")
-    private String noAcceptEmailTypeId;
+    private String[] noAcceptEmailTypeId;
 
     // 定义索引映射
     public static TypeMapping createMapping() {
