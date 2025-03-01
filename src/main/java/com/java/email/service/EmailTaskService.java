@@ -55,7 +55,7 @@ public class EmailTaskService {
     /**
      * 创建普通邮件发送任务
      */
-    public String createEmailTask(String currentUserId,CreateEmailTaskRequest request) {
+    public String createEmailTask(String currentUserId, CreateEmailTaskRequest request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
 
@@ -93,8 +93,6 @@ public class EmailTaskService {
                 }
             }
         }
-
-
 
         List<String> receiverSupplierId = request.getReceiverSupplierId();
 
@@ -140,7 +138,7 @@ public class EmailTaskService {
             }
         }
 
-        if (receiverSupplierKey!=null) {
+        if (receiverSupplierKey != null) {
             Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
 
             if (cachedReceiverSupplierList != null) {
@@ -203,6 +201,10 @@ public class EmailTaskService {
             emailContentBuilder.replace(bodyEndIndex, bodyEndIndex, attachmentInfoBuilder.toString());
         }
 
+        // 在 emailContent 最后插入 unsubscribe URL
+        String unsubscribeUrl = "http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}";
+        emailContentBuilder.append("<br><p><a href=\"").append(unsubscribeUrl).append("\">点击此处取消订阅</a></p>");
+
         // 获取最终的 emailContent
         emailContent = emailContentBuilder.toString();
 
@@ -214,7 +216,7 @@ public class EmailTaskService {
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
-        emailTask.setSenderName(userService.getUserEmailByUserId(currentUserId));
+        emailTask.setSenderName(userService.getUserNameByUserId(currentUserId));
         emailTask.setEmailContent(emailContent);
         emailTask.setAttachment(request.getAttachment());
         emailTask.setReceiverName(receiverNames);
@@ -225,7 +227,7 @@ public class EmailTaskService {
         // Set created_at timestamp
         long currentTime = System.currentTimeMillis() / 1000;
         emailTask.setCreatedAt(currentTime);
-
+        emailTask.setStartDate(currentTime);
         // Save to Elasticsearch
         emailTaskRepository.save(emailTask);
 
@@ -248,7 +250,7 @@ public class EmailTaskService {
     /**
      * 创建循环邮件发送任务
      */
-    public String createCycleEmailTask(String currentUserId,CreateCycleEmailTaskRequest request) {
+    public String createCycleEmailTask(String currentUserId, CreateCycleEmailTaskRequest request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
 
@@ -319,7 +321,7 @@ public class EmailTaskService {
             }
         }
 
-        if (receiverSupplierKey!=null) {
+        if (receiverSupplierKey != null) {
             Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
 
             if (cachedReceiverSupplierList != null) {
@@ -417,9 +419,9 @@ public class EmailTaskService {
         long endTime = currentTime + sendCycle * 24 * 60 * 60;
         emailTask.setEndDate(endTime);
 
-        long intervalDate=60*60;
+        long intervalDate = 60 * 60;
 
-        if (receiverEmails.size()!=0){
+        if (receiverEmails.size() != 0) {
             intervalDate = sendCycle * 24 * 60 * 60 / receiverEmails.size();
         }
 
@@ -449,7 +451,7 @@ public class EmailTaskService {
     /**
      * 创建节日邮件发送任务
      */
-    public String createFestivalEmailTask(String currentUserId,EmailTask request) {
+    public String createFestivalEmailTask(String currentUserId, EmailTask request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
 
@@ -520,7 +522,7 @@ public class EmailTaskService {
             }
         }
 
-        if (receiverSupplierKey!=null) {
+        if (receiverSupplierKey != null) {
             Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
 
             if (cachedReceiverSupplierList != null) {
@@ -635,7 +637,7 @@ public class EmailTaskService {
     /**
      * 改变生日任务状态
      */
-    public String updateBirthEmailTask(String tackId,UpdateBirthEmailTaskRequest request) {
+    public String updateBirthEmailTask(String tackId, UpdateBirthEmailTaskRequest request) {
         String templateId = request.getTemplateId();
         String templateContentById = templateService.getTemplateContentById(templateId);
 
