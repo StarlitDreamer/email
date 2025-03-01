@@ -174,8 +174,8 @@ public class EmailTaskService {
             // 准备附件信息
             StringBuilder attachmentInfoBuilder = new StringBuilder();
             for (Attachment attachment : request.getAttachment()) {
-                String attachmentInfo = "Name: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                        ", URL: " + attachment.getAttachmentUrl();
+                String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                        ", 附件URL: " + attachment.getAttachmentUrl();
                 attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
             }
 
@@ -194,6 +194,7 @@ public class EmailTaskService {
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
+        emailTask.setSenderName(userService.getUserEmailByUserId(currentUserId));
         emailTask.setEmailContent(emailContent);
         emailTask.setAttachment(request.getAttachment());
         emailTask.setReceiverName(receiverNames);
@@ -354,8 +355,8 @@ public class EmailTaskService {
             // 准备附件信息
             StringBuilder attachmentInfoBuilder = new StringBuilder();
             for (Attachment attachment : request.getAttachment()) {
-                String attachmentInfo = "Name: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                        ", URL: " + attachment.getAttachmentUrl();
+                String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                        ", 附件URL: " + attachment.getAttachmentUrl();
                 attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
             }
 
@@ -375,6 +376,7 @@ public class EmailTaskService {
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setEmailContent(templateContentById);
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
+        emailTask.setSenderName(userService.getUserEmailByUserId(currentUserId));
         emailTask.setReceiverName(receiverNames);
         emailTask.setReceiverId(receiverEmails);
         emailTask.setAttachment(request.getAttachment());
@@ -554,8 +556,8 @@ public class EmailTaskService {
             // 准备附件信息
             StringBuilder attachmentInfoBuilder = new StringBuilder();
             for (Attachment attachment : request.getAttachment()) {
-                String attachmentInfo = "Name: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                        ", URL: " + attachment.getAttachmentUrl();
+                String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                        ", 附件URL: " + attachment.getAttachmentUrl();
                 attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><br>");  // 每个附件信息包裹在 <p> 标签中
             }
 
@@ -576,6 +578,7 @@ public class EmailTaskService {
         emailTask.setReceiverName(receiverNames);
         emailTask.setReceiverId(receiverEmails);
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
+        emailTask.setSenderName(userService.getUserEmailByUserId(currentUserId));
         emailTask.setAttachment(request.getAttachment());
         emailTask.setTaskType(3);
         emailTask.setStartDate(request.getStartDate());

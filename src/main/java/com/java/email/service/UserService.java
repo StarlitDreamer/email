@@ -24,6 +24,16 @@ public class UserService {
         }
     }
 
+    // 根据 userId 查询 userEmail
+    public String getUserNameByUserId(String userId) {
+        User user = userRepository.findByUserId(userId);
+        if (user != null) {
+            return user.getUserName();
+        } else {
+            throw new RuntimeException("User not found for userId: " + userId);
+        }
+    }
+
     // 返回下属用户的 userid 列表
     public List<String> getSubordinateUserIds(String userId) {
         List<User> users = userRepository.findByBelongUserid(userId);
