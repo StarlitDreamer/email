@@ -19,10 +19,10 @@ public class EmailReportController {
      * @param emailTaskId 邮件任务ID
      * @return 返回更新结果
      */
-    @PutMapping("/unsubscribe/{emailTaskId}")
-    public Result updateUnsubscribeAmount(@PathVariable String emailTaskId) {
+    @PutMapping("/unsubscribe")
+    public Result updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
         try {
-            EmailReport updatedEmailReport = emailReportService.updateUnsubscribeAmount(emailTaskId);
+            EmailReport updatedEmailReport = emailReportService.updateUnsubscribeAmount(emailTaskId,receiverEmail);
             return Result.success(updatedEmailReport);
         } catch (Exception e) {
             return Result.error("更新退订数量失败: " + e.getMessage());

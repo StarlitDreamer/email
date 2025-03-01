@@ -17,7 +17,8 @@ public class EmailReportService {
      * @param emailTaskId 邮件任务ID
      * @return 更新后的EmailReport实体
      */
-    public EmailReport updateUnsubscribeAmount(String emailTaskId) {
+    public EmailReport updateUnsubscribeAmount(String emailTaskId,String receiverEmail) {
+
         // 根据email_task_id查找EmailReport实体
         EmailReport emailReport = emailReportRepository.findByEmailTaskId(emailTaskId)
                 .orElseThrow(() -> new RuntimeException("邮件任务报告未找到"));

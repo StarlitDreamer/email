@@ -16,6 +16,16 @@ public class EmailTaskController {
     @Autowired
     private EmailTaskService emailTaskService;
 
+    // 根据 email_task_id 查询 email_type_id
+    @GetMapping("/{emailTaskId}")
+    public String getEmailTypeId(@PathVariable String emailTaskId) {
+        String emailTypeId = emailTaskService.getEmailTypeId(emailTaskId);
+        if (emailTypeId != null) {
+            return emailTypeId;
+        }
+        return "未找到 emailTaskId 对应的 email_type_id";  // 或返回 404 错误
+    }
+
     /**
      * 创建普通邮件任务
      */

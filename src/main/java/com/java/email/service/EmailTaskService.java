@@ -52,6 +52,15 @@ public class EmailTaskService {
 
     private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
 
+    // 根据 emailTaskId 获取 email_type_id
+    public String getEmailTypeId(String emailTaskId) {
+        EmailTask emailTask = emailTaskRepository.findByEmailTaskId(emailTaskId);
+        if (emailTask != null) {
+            return emailTask.getEmailTypeId();
+        }
+        return null;  // 或抛出自定义异常，表示未找到记录
+    }
+
     /**
      * 创建普通邮件发送任务
      */
