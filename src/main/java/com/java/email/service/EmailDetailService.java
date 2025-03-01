@@ -115,7 +115,7 @@ public class EmailDetailService {
             emailReport.setEmailTotal((long) emailIds.size());   // 邮件总数
 
             // 打印日志，确认任务执行
-            System.out.println("Email report generated. successCount : " + successCount + ", failedCount : " + failedCount);
+            System.out.println("emailTaskId : " + emailTaskId + ", successCount : " + successCount + ", failedCount : " + failedCount);
 
             // 保存到 email_report 索引
             emailReportRepository.save(emailReport);

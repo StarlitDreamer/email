@@ -41,7 +41,11 @@ public class EmailReportService {
                 .orElseThrow(() -> new RuntimeException("邮件任务报告未找到"));
 
         // 增加打开数量
-        emailReport.setOpenAmount(emailReport.getOpenAmount() + 1);
+        if (emailReport.getOpenAmount()!=null){
+            emailReport.setOpenAmount(emailReport.getOpenAmount() + 1);
+        }else {
+         emailReport.setOpenAmount(1L);
+        }
 
         // 保存更新后的EmailReport实体
         return emailReportRepository.save(emailReport);
