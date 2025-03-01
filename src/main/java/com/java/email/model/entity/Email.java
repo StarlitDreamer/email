@@ -19,10 +19,10 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Document(indexName = "email")
 public class Email {
-    @Id
     @Field(name = "email_id", type = FieldType.Keyword)
     private String emailId;              // 邮件ID，使用UUID，不分词
 
+    @Id
     @JsonProperty("email_task_id")
     @Field(name = "email_task_id", type = FieldType.Keyword)
     private String emailTaskId;          // 邮件任务ID，使用UUID，不分词

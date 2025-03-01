@@ -4,7 +4,7 @@ import com.java.email.common.Result;
 import com.java.email.model.entity.EmailTask;
 import com.java.email.model.request.CreateCycleEmailTaskRequest;
 import com.java.email.model.request.CreateEmailTaskRequest;
-import com.java.email.model.request.UpdateBirthEmailTask;
+import com.java.email.model.request.UpdateBirthEmailTaskRequest;
 import com.java.email.service.EmailTaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -55,10 +55,10 @@ public class EmailTaskController {
     /**
      * 改变生日任务状态
      */
-    @PutMapping("updateBirth")
-    public Result updateBirthEmailTask(@RequestBody UpdateBirthEmailTask request) {
+    @PutMapping("updateBirth/{tackId}")
+    public Result updateBirthEmailTask(@PathVariable String tackId,@RequestBody UpdateBirthEmailTaskRequest request) {
         try {
-            return Result.success(emailTaskService.updateBirthEmailTask(request));
+            return Result.success(emailTaskService.updateBirthEmailTask(tackId,request));
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

@@ -7,8 +7,8 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class UpdateBirthEmailTask {
-    @JsonProperty("email_status")
+public class UpdateBirthEmailTaskRequest {
+    @JsonProperty("operate_status")
     private String emailStatus;
 
     @JsonProperty("subject")
