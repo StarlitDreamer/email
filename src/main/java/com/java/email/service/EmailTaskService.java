@@ -226,6 +226,7 @@ public class EmailTaskService {
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(emailTaskId);
+        emailTask.setEmailId(emailTaskId);
         emailTask.setSubject(request.getSubject());
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
@@ -608,6 +609,7 @@ public class EmailTaskService {
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(emailTaskId);
+        emailTask.setEmailId(emailTaskId);
         emailTask.setSubject(request.getSubject());
         emailTask.setEmailContent(templateContentById);
         emailTask.setEmailTypeId(request.getEmailTypeId());
