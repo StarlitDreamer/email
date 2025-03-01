@@ -1,11 +1,15 @@
 package com.java.email.service;
 
+import com.java.email.model.entity.Customer;
 import com.java.email.model.entity.Email;
 import com.java.email.model.entity.EmailTask;
+import com.java.email.model.entity.Supplier;
 import com.java.email.model.request.ResetTaskStatusRequest;
 import com.java.email.model.request.UpdateTaskStatusRequest;
+import com.java.email.repository.CustomerRepository;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
+import com.java.email.repository.SupplierRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +27,33 @@ public class EmailService {
     @Autowired
     private EmailTaskRepository emailTaskRepository;
 
+    @Autowired
+    private CustomerRepository customerRepository;
+
+    @Autowired
+    private SupplierRepository supplierRepository;
+
+    /**
+     * 根据邮箱查找客户或供应商
+     *
+     * @param email 邮箱
+     * @return 找到的客户ID或供应商ID，若都未找到则返回null
+     */
+    public String findCustomerOrSupplierByEmail(String email) {
+        // 查询客户
+        Customer customer = customerRepository.findByEmails(email);
+        if (customer != null) {
+            return customer.getCustomerId();  // 返回客户ID
+        }
+
+        // 如果没有找到客户，查询供应商
+        Supplier supplier = supplierRepository.findByEmails(email);
+        if (supplier != null) {
+            return supplier.getSupplierId();  // 返回供应商ID
+        }
+
+        return null;  // 如果都没有找到，返回null
+    }
 
     /**
      * 根据 emailTaskId 更新所有相关 email 的状态

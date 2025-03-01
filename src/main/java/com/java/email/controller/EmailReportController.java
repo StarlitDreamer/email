@@ -1,8 +1,9 @@
 package com.java.email.controller;
 
+import com.java.email.common.Result;
 import com.java.email.model.entity.EmailReport;
 import com.java.email.service.EmailReportService;
-import com.java.email.common.Result;
+import com.java.email.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +14,8 @@ public class EmailReportController {
     @Autowired
     private EmailReportService emailReportService;
 
+    @Autowired
+    private EmailService emailService;
     /**
      * 用户点击退订链接，根据email_task_id增加退订数量。
      *
@@ -21,6 +24,8 @@ public class EmailReportController {
      */
     @PutMapping("/unsubscribe")
     public Result updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
+        String customerIdOrSupplierIdByEmail = emailService.findCustomerOrSupplierByEmail(receiverEmail);
+        System.out.println(customerIdOrSupplierIdByEmail);
         try {
             EmailReport updatedEmailReport = emailReportService.updateUnsubscribeAmount(emailTaskId,receiverEmail);
             return Result.success(updatedEmailReport);

@@ -9,6 +9,8 @@ public interface CustomerRepository extends ElasticsearchRepository<Customer, St
     // 根据 customerId 列表查询对应的客户邮箱
     List<Customer> findByCustomerIdIn(List<String> customerIds);
 
+    Customer findByEmails(String email);  // 按照邮箱查找客户
+
     // 根据客户ID查找客户
     Customer findByCustomerId(String customerId);
 }
