@@ -390,7 +390,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             }
 
             // 并行查询resend_details 索引
-            CompletableFuture<SearchResponse<RsendDetails>> rsendFuture = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<SearchResponse<RsendDetails>> resendFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     return esClient.search(s -> s
                                     .index(RESEND_EMAIL)
@@ -438,12 +438,12 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
 
 
             // 等待所有查询完成
-            CompletableFuture.allOf(rsendFuture).join();
+            CompletableFuture.allOf(resendFuture).join();
 
 
-            SearchResponse<RsendDetails> rsendResponse = rsendFuture.get();
-            if (rsendResponse != null) {
-                for (Hit<RsendDetails> hit : rsendResponse.hits().hits()) {
+            SearchResponse<RsendDetails> resendResponse = resendFuture.get();
+            if (resendResponse != null) {
+                for (Hit<RsendDetails> hit : resendResponse.hits().hits()) {
                     RsendDetails rsendDetails = hit.source();
                     if (rsendDetails != null && rsendDetails.getEmailResendId() != null) {
                         emails.add(rsendDetails.getEmailResendId());
@@ -465,7 +465,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     public RsendDetails getResendDetails(String emailId) {
         try {
 
-            CompletableFuture<SearchResponse<RsendDetails>> customerFuture = CompletableFuture.supplyAsync(() -> {
+            CompletableFuture<SearchResponse<RsendDetails>> reSendrFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     Query query = TermQuery.of(t -> t
                             .field("email_resend_id")
@@ -485,10 +485,10 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             });
 
 
-            CompletableFuture.allOf(customerFuture).join();
+            CompletableFuture.allOf(reSendrFuture).join();
 
             // 处理Customer结果
-            SearchResponse<RsendDetails> customerResponse = customerFuture.get();
+            SearchResponse<RsendDetails> customerResponse = reSendrFuture.get();
             if (customerResponse != null && customerResponse.hits().total().value() > 0) {
                 return customerResponse.hits().hits().get(0).source();
             }
