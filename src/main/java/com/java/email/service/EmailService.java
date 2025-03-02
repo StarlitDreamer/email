@@ -80,7 +80,7 @@ public class EmailService {
         // 判断当前用户角色进行权限控制
         if (currentUserRole == 4 && !currentUserId.equals(senderId)) {
             // 普通用户只能修改自己的邮件
-            throw new RuntimeException("无权限修改该邮件任务");
+            throw new RuntimeException("普通用户，无权限修改该邮件任务");
         }
 
         List<String> subordinateUserIds = userService.getSubordinateUserIds(currentUserId);
@@ -100,12 +100,12 @@ public class EmailService {
         for (Email email : emails) {
             if (currentUserRole == 4 && !senderId.equals(currentUserId)) {
                 // 普通用户只能修改自己的邮件
-                throw new RuntimeException("无权限修改该邮件");
+                throw new RuntimeException("普通用户1，无权限修改该邮件");
             }
 
             if (currentUserRole == 3 && !subordinateUserIds.contains(senderId)) {
                 // 小管理只能修改自己和下属的邮件
-                throw new RuntimeException("无权限修改该邮件");
+                throw new RuntimeException("小管理，无权限修改该邮件");
             }
 
             // 更新邮件状态
@@ -121,9 +121,17 @@ public class EmailService {
      *
      * @return 更新后的邮件实体集合
      */
-    public List<Email> resetEmailStatusForAll(ResetTaskStatusRequest request) {
+    public List<Email> resetEmailStatusForAll(String currentUserId, int currentUserRole, ResetTaskStatusRequest request) {
 
         EmailTask byEmailTaskId = emailTaskRepository.findByEmailTaskId(request.getTaskId());
+
+        String senderId = byEmailTaskId.getSenderId();
+
+        // 判断当前用户角色进行权限控制
+        if (currentUserRole == 4 && !currentUserId.equals(senderId)) {
+            // 普通用户只能修改自己的邮件
+            throw new RuntimeException("无权限修改该邮件任务");
+        }
 
         String emailTaskId = UUID.randomUUID().toString();
 
@@ -148,6 +156,14 @@ public class EmailService {
         emailTask.setStartDate(currentTime);
 
         emailTask.setEndDate(currentTime + byEmailTaskId.getTaskCycle() * 24 * 60 * 60);
+
+        long intervalDate = 60 * 60;
+
+        if (emailTask.getReceiverId().size() != 0) {
+            intervalDate = emailTask.getTaskCycle() * 24 * 60 * 60 / emailTask.getReceiverId().size();
+        }
+
+        emailTask.setIntervalDate(intervalDate);
 
         emailTaskRepository.save(emailTask);
 

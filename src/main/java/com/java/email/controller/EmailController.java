@@ -53,10 +53,10 @@ public class EmailController {
      * @return 更新后的邮件实体集合
      */
     @PutMapping("/reset-status")
-    public Result<ResetTaskStatusResponse> resetEmailStatus(@RequestBody ResetTaskStatusRequest request) {
+    public Result<ResetTaskStatusResponse> resetEmailStatus(@RequestHeader String currentUserId, @RequestHeader int currentUserRole,@RequestBody ResetTaskStatusRequest request) {
         try {
             // 调用服务层方法根据 emailTaskId 更新状态为 4
-            List<Email> updatedEmails = emailService.resetEmailStatusForAll(request);
+            List<Email> updatedEmails = emailService.resetEmailStatusForAll(currentUserId,currentUserRole,request);
 
             // 创建响应列表
             List<ResetTaskStatusResponse> responseList = updatedEmails.stream()
