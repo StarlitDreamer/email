@@ -63,6 +63,7 @@ public class EmailReportController {
         if (supplier.getNoAcceptEmailTypeId() == null) {
             supplier.setNoAcceptEmailTypeId(new ArrayList<>()); // 如果noAcceptEmailTypeId为空，初始化为空列表
         }
+
         supplier.getNoAcceptEmailTypeId().add(emailTypeId);
 
         supplierRepository.save(supplier);  // 保存更新后的Customer实体
