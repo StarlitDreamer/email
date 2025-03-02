@@ -16,6 +16,7 @@ import java.util.ArrayList;
 @RestController
 @RequestMapping("/email-report")
 public class EmailReportController {
+
     @Autowired
     private CustomerRepository customerRepository;
 
@@ -69,7 +70,7 @@ public class EmailReportController {
         supplierRepository.save(supplier);  // 保存更新后的Customer实体
 
         try {
-            EmailReport updatedEmailReport = emailReportService.updateUnsubscribeAmount(emailTaskId, receiverEmail);
+            EmailReport updatedEmailReport = emailReportService.updateUnsubscribeAmount(emailTaskId);
             return Result.success(updatedEmailReport);
         } catch (Exception e) {
             return Result.error("更新退订数量失败: " + e.getMessage());

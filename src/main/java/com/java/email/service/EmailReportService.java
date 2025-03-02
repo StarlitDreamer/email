@@ -17,7 +17,7 @@ public class EmailReportService {
      * @param emailTaskId 邮件任务ID
      * @return 更新后的EmailReport实体
      */
-    public EmailReport updateUnsubscribeAmount(String emailTaskId,String receiverEmail) {
+    public EmailReport updateUnsubscribeAmount(String emailTaskId) {
 
         // 根据email_task_id查找EmailReport实体
         EmailReport emailReport = emailReportRepository.findByEmailTaskId(emailTaskId)

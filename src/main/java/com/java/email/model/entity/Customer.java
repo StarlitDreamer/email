@@ -80,7 +80,7 @@ public class Customer {
     private String belongUserId;               // 所属用户ID
 
     /**
-     * 不接受的邮件类型id，当退订某种类型时，就从这里删除对应的类型id
+     * 不接受的邮件类型id，当退订某种类型时，就从这里添加对应的类型id
      */
     @JsonProperty("no_accept_email_type_id")
     @Field(name = "no_accept_email_type_id", type = FieldType.Keyword)
