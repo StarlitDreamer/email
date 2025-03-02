@@ -9,9 +9,13 @@ import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.JsonData;
+import co.elastic.clients.util.ObjectBuilder;
+import com.java.email.exception.NoDataFoundException;
 import com.java.email.pojo.EmailTask;
+import com.java.email.pojo.RsendDetails;
 import com.java.email.service.EmailRecipientService;
 import com.java.email.vo.EmailVo;
+import com.java.email.vo.RsendDetailsVo;
 import lombok.extern.slf4j.Slf4j;
 import com.java.email.pojo.Email;
 import com.java.email.pojo.UndeliveredEmail;
@@ -245,7 +249,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, List<String> emailTaskIds, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException {
         try {
-            // 如果emailTaskIds为null，直接返回空结果
+            // 如果 emailTaskIds 为 null，直接返回空结果
             if (emailTaskIds == null || emailTaskIds.isEmpty()) {
                 EmailVo emptyResult = new EmailVo();
                 emptyResult.setEmailList(Collections.emptyList());
@@ -257,16 +261,63 @@ public class EmailServiceImpl implements EmailService {
             Set<String> recipientEmails = params != null ?
                     emailRecipientService.findMatchingRecipientEmails(params) : null;
 
+            Set<String> resendEmails;
+            Set<String> resendEmailTaskIdSet = null;
+
+            // 检查是否有 resend_status 参数
+            if (params.containsKey("resend_status") || params.containsKey("resend_start_date") || params.containsKey("resend_end_date")) {
+                // 根据 resend_status 获取相关的 email_task_id
+                RsendDetailsVo resendEmail = emailRecipientService.findResendDetails(params);
+                resendEmailTaskIdSet = resendEmail != null ?
+                        new HashSet<>(resendEmail.getResendTaskIds()) : null;
+                resendEmails = resendEmail != null ?
+                        resendEmail.getRecipientEmails() : null;
+
+            } else {
+                resendEmails = null;
+            }
+
+            // 找到 emailTaskIds 和 resendEmailTaskIdSet 中的交集
+            Set<String> commonTaskIds = new HashSet<>(emailTaskIds);
+            if (resendEmailTaskIdSet != null) {
+                commonTaskIds.retainAll(resendEmailTaskIdSet);
+            }
+
+            List<String> finalEmailTaskIds = new ArrayList<>(commonTaskIds);
+            // 检查 receiver_level 和 receiver_birth 参数
+            // 添加收件人邮箱过滤
+            if (recipientEmails != null && resendEmails != null) {
+                recipientEmails.retainAll(resendEmails);
+            }
+            if ((params.containsKey("receiver_level") || params.containsKey("receiver_birth")) &&
+                (recipientEmails == null || recipientEmails.isEmpty())) {
+                // 直接返回空结果，不执行查询
+                EmailVo emptyResult = new EmailVo();
+                emptyResult.setEmailList(Collections.emptyList());
+                emptyResult.setTotal(0L);
+                return emptyResult;
+            }
+
+            // 继续执行查询
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
                 s.from((page - 1) * size);
                 s.size(size);
 
                 s.query(q -> q.bool(b -> {
-                    // 必须匹配指定的emailTaskIds
+                    if (recipientEmails != null && !recipientEmails.isEmpty()) {
+                        b.must(m -> m.terms(t -> t
+                                .field("receiver_id")
+                                .terms(tt -> tt.value(recipientEmails.stream()
+                                        .map(FieldValue::of)
+                                        .toList()))
+                        ));
+                    }
+
+                    // 必须匹配指定的 emailTaskIds
                     b.must(m -> m.terms(t -> t
                             .field("email_task_id")
-                            .terms(tt -> tt.value(emailTaskIds.stream()
+                            .terms(tt -> tt.value(finalEmailTaskIds.stream()
                                     .map(FieldValue::of)
                                     .collect(Collectors.toList())))
                     ));
@@ -275,28 +326,6 @@ public class EmailServiceImpl implements EmailService {
                     b.should(m -> m.term(t -> t.field("error_code").value(500)));
                     b.should(m -> m.term(t -> t.field("error_code").value(535)));
                     b.minimumShouldMatch("1"); // 至少匹配一个错误码
-
-                    // 添加收件人邮箱过滤
-                    if (recipientEmails != null && !recipientEmails.isEmpty()) {
-                        b.must(m -> m.terms(t -> t
-                                .field("receiver_id")
-                                .terms(tt -> tt.value(recipientEmails.stream()
-                                        .map(FieldValue::of)
-                                        .collect(Collectors.toList())))
-                        ));
-                    }
-
-                    // 添加重发邮件ID过滤
-                    Set<String> resendEmailId = params != null ? 
-                        emailRecipientService.findResendDetails(params) : null;
-                    if (resendEmailId != null && !resendEmailId.isEmpty()) {
-                        b.must(m -> m.terms(t -> t
-                                .field("email_id")
-                                .terms(tt -> tt.value(resendEmailId.stream()
-                                        .map(FieldValue::of)
-                                        .collect(Collectors.toList())))
-                        ));
-                    }
 
                     // 添加角色权限过滤
                     addRoleBasedFilter(b, userRole, userEmail, finalManagedUserEmails);

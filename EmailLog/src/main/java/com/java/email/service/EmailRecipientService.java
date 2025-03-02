@@ -2,6 +2,7 @@ package com.java.email.service;
 
 import com.java.email.pojo.ResendStrategy;
 import com.java.email.pojo.RsendDetails;
+import com.java.email.vo.RsendDetailsVo;
 
 import java.util.List;
 import java.util.Map;
@@ -27,8 +28,8 @@ public interface EmailRecipientService {
     /**
      * 从resend_details 索引中查找符合条件的重发邮件id
      */
-    Set<String> findResendDetails (Map<String, String> params);
+    RsendDetailsVo findResendDetails (Map<String, String> params);
 
 
-    RsendDetails getResendDetails(String emailId);
+    RsendDetails getResendDetails(String emailTaskId,String emailId);
 } 

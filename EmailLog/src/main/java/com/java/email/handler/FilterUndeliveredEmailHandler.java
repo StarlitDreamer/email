@@ -158,7 +158,7 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                         filterEmailVo.setReceiver_name(email.getReceiverName());
                         filterEmailVo.setReceiver_birth(receiverInfo.get("birth"));
 
-                        RsendDetails resendInfo = emailRecipientService.getResendDetails(email.getEmailId());
+                        RsendDetails resendInfo = emailRecipientService.getResendDetails(email.getEmailTaskId(),email.getReceiverId());
                         if (resendInfo != null) {
                             filterEmailVo.setResend_start_date(resendInfo.getStartTime());
                             filterEmailVo.setResend_end_date(resendInfo.getEndTime());

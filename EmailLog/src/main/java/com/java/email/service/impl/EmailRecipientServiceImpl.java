@@ -15,6 +15,7 @@ import com.java.email.pojo.Customer;
 import com.java.email.pojo.RsendDetails;
 import com.java.email.pojo.Supplier;
 import com.java.email.service.EmailRecipientService;
+import com.java.email.vo.RsendDetailsVo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -379,9 +380,10 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     }
 
     @Override
-    public Set<String> findResendDetails(Map<String, String> params) {
+    public RsendDetailsVo findResendDetails(Map<String, String> params) {
 
-        Set<String> emails = new HashSet<>();
+        Set<String> emailTasks = new HashSet<>();
+        Set<String> resendEmails = new HashSet<>();
         try {
             // 如果没有查询条件，返回null表示不需要邮箱过滤
             if (params == null || params.isEmpty() ||
@@ -446,13 +448,17 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                 for (Hit<RsendDetails> hit : resendResponse.hits().hits()) {
                     RsendDetails rsendDetails = hit.source();
                     if (rsendDetails != null && rsendDetails.getEmailResendId() != null) {
-                        emails.add(rsendDetails.getEmailResendId());
+                        emailTasks.add(rsendDetails.getEmailTaskId());
+                        resendEmails.add(rsendDetails.getAccepterEmail());
                     }
                 }
             }
 
+            RsendDetailsVo rsendDetailsVo = new RsendDetailsVo();
+            rsendDetailsVo.setRecipientEmails(resendEmails);
+            rsendDetailsVo.setResendTaskIds(emailTasks);
 
-            return emails;
+            return rsendDetailsVo;
 
         } catch (Exception e) {
             log.error("Error finding matching recipient emails: params={}, error={}",
@@ -462,19 +468,28 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     }
 
     @Override
-    public RsendDetails getResendDetails(String emailId) {
+    public RsendDetails getResendDetails(String emailTaskId, String emailId) {
         try {
 
             CompletableFuture<SearchResponse<RsendDetails>> reSendrFuture = CompletableFuture.supplyAsync(() -> {
                 try {
-                    Query query = TermQuery.of(t -> t
-                            .field("email_resend_id")
-                            .value(emailId)
+                    // 创建 BoolQuery 组合查询条件
+                    Query boolQuery = BoolQuery.of(b -> b
+                            .must(
+                                    TermQuery.of(t -> t
+                                            .field("accepter_email")
+                                            .value(emailId)
+                                    )._toQuery(),
+                                    TermQuery.of(t -> t
+                                            .field("email_task_id")
+                                            .value(emailTaskId)
+                                    )._toQuery()
+                            )
                     )._toQuery();
 
                     return esClient.search(s -> s
                                     .index(RESEND_EMAIL)
-                                    .query(query)
+                                    .query(boolQuery)
                                     .size(1),
                             RsendDetails.class
                     );
@@ -484,24 +499,22 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                 }
             });
 
-
             CompletableFuture.allOf(reSendrFuture).join();
 
-            // 处理Customer结果
+            // 处理 Customer 结果
             SearchResponse<RsendDetails> customerResponse = reSendrFuture.get();
             if (customerResponse != null && customerResponse.hits().total().value() > 0) {
                 return customerResponse.hits().hits().get(0).source();
             }
 
-
-            log.info("未找到收件人信息: email={}", emailId);
+            log.info("未找到收件人信息: emailTaskId={}, email={}", emailTaskId, emailId);
             return null;
 
         } catch (Exception e) {
-            log.error("获取收件人详细信息失败: email={}, error={}", emailId, e.getMessage(), e);
+            log.error("获取收件人详细信息失败: emailTaskId={}, email={}, error={}", emailTaskId, emailId, e.getMessage(), e);
             return null;
         }
-
-
     }
+
+
 }
