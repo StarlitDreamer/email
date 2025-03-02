@@ -37,6 +37,8 @@ public class EmailService {
     private RedisTemplate<String, Object> redisTemplate;
 
     private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
+    @Autowired
+    private UserRepository userRepository;
 
 
     /**
@@ -133,8 +135,10 @@ public class EmailService {
 
         String senderId = byEmailTaskId.getSenderId();
 
+        User byUserEmail = userRepository.findByUserEmail(senderId);
+
         // 判断当前用户角色进行权限控制
-        if (currentUserRole == 4 && !currentUserId.equals(senderId)) {
+        if (currentUserRole == 4 && !currentUserId.equals(byUserEmail)) {
             // 普通用户只能修改自己的邮件
             throw new RuntimeException("无权限修改该邮件任务");
         }
@@ -157,6 +161,7 @@ public class EmailService {
         emailTask.setTaskType(2);
 
         long currentTime = System.currentTimeMillis() / 1000;
+
         emailTask.setCreatedAt(currentTime);
 
         emailTask.setStartDate(currentTime);
