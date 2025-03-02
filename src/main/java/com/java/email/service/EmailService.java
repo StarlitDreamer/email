@@ -138,7 +138,7 @@ public class EmailService {
         User byUserEmail = userRepository.findByUserEmail(senderId);
 
         // 判断当前用户角色进行权限控制
-        if (currentUserRole == 4 && !currentUserId.equals(byUserEmail)) {
+        if (currentUserRole == 4 && !currentUserId.equals(byUserEmail.getUserId())) {
             // 普通用户只能修改自己的邮件
             throw new RuntimeException("无权限修改该邮件任务");
         }

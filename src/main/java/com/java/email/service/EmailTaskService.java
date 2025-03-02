@@ -632,6 +632,10 @@ public class EmailTaskService {
 
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
+        emailContentBuilder.append("http://localhost:8080/email-report/unsubscribe?");
+
+
+
 
         // 找到 </body> 标签的位置
         int bodyEndIndex = templateContentById.indexOf("</body>");
@@ -645,6 +649,10 @@ public class EmailTaskService {
             StringBuilder attachmentInfoBuilder = new StringBuilder();
             List<Attachment> attachments = request.getAttachment();
             int size = attachments.size();
+            if (size==0){
+                String attachmentInfo = "<p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>";
+                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
+            }
             for (Attachment attachment : attachments) {
                 size--;
                 if (size == 0) {
