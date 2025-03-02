@@ -10,8 +10,6 @@ import com.java.email.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/emails")
 public class EmailController {
@@ -27,17 +25,16 @@ public class EmailController {
     public Result<UpdateTaskStatusResponse> updateEmailStatus(@RequestHeader String currentUserId, @RequestHeader int currentUserRole, @RequestBody UpdateTaskStatusRequest request) {
         try {
             // 调用服务层方法更新状态
-            List<Email> updatedEmails = emailService.updateEmailStatusForAll(currentUserId,currentUserRole,request);
-
-            // 创建响应列表
-            List<UpdateTaskStatusResponse> responseList = updatedEmails.stream()
-                    .map(email -> {
-                        UpdateTaskStatusResponse response = new UpdateTaskStatusResponse();
-                        response.setEmailTaskId(email.getEmailTaskId());
-                        response.setEmailStatus(email.getEmailStatus());
-                        return response;
-                    })
-                    .toList();
+            Email updatedEmail = emailService.updateEmailStatusForAll(currentUserId,currentUserRole,request);
+//            // 创建响应列表
+//            List<UpdateTaskStatusResponse> responseList = updatedEmails.stream()
+//                    .map(email -> {
+//                        UpdateTaskStatusResponse response = new UpdateTaskStatusResponse();
+//                        response.setEmailTaskId(email.getEmailTaskId());
+//                        response.setEmailStatus(email.getEmailStatus());
+//                        return response;
+//                    })
+//                    .toList();
             UpdateTaskStatusResponse response = new UpdateTaskStatusResponse();
             response.setEmailTaskId(request.getEmailTaskId());
             response.setEmailStatus(request.getOperateStatus());
@@ -56,17 +53,17 @@ public class EmailController {
     public Result<ResetTaskStatusResponse> resetEmailStatus(@RequestHeader String currentUserId, @RequestHeader int currentUserRole,@RequestBody ResetTaskStatusRequest request) {
         try {
             // 调用服务层方法根据 emailTaskId 更新状态为 4
-            List<Email> updatedEmails = emailService.resetEmailStatusForAll(currentUserId,currentUserRole,request);
+            Email updatedEmails = emailService.resetEmailStatusForAll(currentUserId,currentUserRole,request);
 
-            // 创建响应列表
-            List<ResetTaskStatusResponse> responseList = updatedEmails.stream()
-                    .map(email -> {
-                        ResetTaskStatusResponse response = new ResetTaskStatusResponse();
-                        response.setEmailTaskId(email.getEmailTaskId());
-                        response.setEmailStatus(String.valueOf(email.getEmailStatus()));
-                        return response;
-                    })
-                    .toList();
+//            // 创建响应列表
+//            List<ResetTaskStatusResponse> responseList = updatedEmails.stream()
+//                    .map(email -> {
+//                        ResetTaskStatusResponse response = new ResetTaskStatusResponse();
+//                        response.setEmailTaskId(email.getEmailTaskId());
+//                        response.setEmailStatus(String.valueOf(email.getEmailStatus()));
+//                        return response;
+//                    })
+//                    .toList();
 
             ResetTaskStatusResponse response = new ResetTaskStatusResponse();
             response.setEmailTaskId(request.getTaskId());

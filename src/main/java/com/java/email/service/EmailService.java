@@ -66,9 +66,27 @@ public class EmailService {
      *
      * @return 更新后的邮件实体集合
      */
-    public List<Email> updateEmailStatusForAll(String currentUserId, int currentUserRole, UpdateTaskStatusRequest request) {
+    public Email updateEmailStatusForAll(String currentUserId, int currentUserRole, UpdateTaskStatusRequest request) {
+        String emailTaskId = request.getEmailTaskId();
+
+        // 根据 emailTaskId 查找所有相关的 Email 实体
+        Email email = emailRepository.findByEmailTaskId(request.getEmailTaskId());
+
         // 根据 emailTaskId 查找 EmailTask，获取 sender_id
-        EmailTask emailTask = emailTaskRepository.findByEmailTaskId(request.getEmailTaskId());
+        EmailTask emailTask = emailTaskRepository.findByEmailTaskId(emailTaskId);
+
+        Integer emailStatus = email.getEmailStatus();
+        if (emailStatus != null && (emailStatus == 5 || emailStatus == 6)) {
+            throw new IllegalStateException("更新邮件状态失败: " +
+                    (emailStatus == 5 ? "邮件任务异常" : "邮件任务已完成"));
+        }
+
+        Integer taskType = emailTask.getTaskType();
+
+        if (taskType==2&&request.getOperateStatus()!=4){
+            throw new RuntimeException("循环邮件只允许修改重置");
+        }
+
         if (emailTask == null) {
             throw new RuntimeException("邮件任务未找到");
         }
@@ -89,31 +107,25 @@ public class EmailService {
             subordinateUserIds.add(currentUserId); // 小管理可以修改自己和下属用户的邮件
         }
 
-        // 根据 emailTaskId 查找所有相关的 Email 实体
-        List<Email> emails = emailRepository.findByEmailTaskId(request.getEmailTaskId());
-
-        if (emails.isEmpty()) {
+        if (email == null) {
             throw new RuntimeException("邮件任务未找到相关邮件");
         }
 
-        // 遍历所有邮件并更新其状态
-        for (Email email : emails) {
-            if (currentUserRole == 4 && !senderId.equals(currentUserId)) {
-                // 普通用户只能修改自己的邮件
-                throw new RuntimeException("普通用户1，无权限修改该邮件");
-            }
-
-            if (currentUserRole == 3 && !subordinateUserIds.contains(senderId)) {
-                // 小管理只能修改自己和下属的邮件
-                throw new RuntimeException("小管理，无权限修改该邮件");
-            }
-
-            // 更新邮件状态
-            email.setEmailStatus(Integer.valueOf(request.getOperateStatus()));
+        if (currentUserRole == 4 && !senderId.equals(currentUserId)) {
+            // 普通用户只能修改自己的邮件
+            throw new RuntimeException("普通用户1，无权限修改该邮件");
         }
 
+        if (currentUserRole == 3 && !subordinateUserIds.contains(senderId)) {
+            // 小管理只能修改自己和下属的邮件
+            throw new RuntimeException("小管理，无权限修改该邮件");
+        }
+
+        // 更新邮件状态
+        email.setEmailStatus(Integer.valueOf(request.getOperateStatus()));
+
         // 批量保存更新后的 Email 实体
-        return (List<Email>) emailRepository.saveAll(emails);
+        return emailRepository.save(email);
     }
 
     /**
@@ -121,7 +133,7 @@ public class EmailService {
      *
      * @return 更新后的邮件实体集合
      */
-    public List<Email> resetEmailStatusForAll(String currentUserId, int currentUserRole, ResetTaskStatusRequest request) {
+    public Email resetEmailStatusForAll(String currentUserId, int currentUserRole, ResetTaskStatusRequest request) {
 
         EmailTask byEmailTaskId = emailTaskRepository.findByEmailTaskId(request.getTaskId());
 
@@ -188,18 +200,16 @@ public class EmailService {
         redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
 
         // 根据 emailTaskId 查找所有相关的 Email 实体
-        List<Email> emails = emailRepository.findByEmailTaskId(request.getTaskId());
+        Email emails = emailRepository.findByEmailTaskId(request.getTaskId());
 
-        if (emails.isEmpty()) {
+        if (emails == null) {
             throw new RuntimeException("邮件任务未找到");
         }
 
         // 遍历所有邮件并更新其状态为 4
-        for (Email email1 : emails) {
-            email1.setEmailStatus(4);
-        }
+        emails.setEmailStatus(4);
 
         // 批量保存更新后的 Email 实体
-        return (List<Email>) emailRepository.saveAll(emails);
+        return emailRepository.save(emails);
     }
 }
