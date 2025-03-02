@@ -81,12 +81,6 @@ public class EmailService {
                     (emailStatus == 5 ? "邮件任务异常" : "邮件任务已完成"));
         }
 
-        Integer taskType = emailTask.getTaskType();
-
-        if (taskType==2&&request.getOperateStatus()!=4){
-            throw new RuntimeException("循环邮件只允许修改重置");
-        }
-
         if (emailTask == null) {
             throw new RuntimeException("邮件任务未找到");
         }
