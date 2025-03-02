@@ -735,7 +735,7 @@ public class EmailTaskService {
 
         String emailStatus = request.getEmailStatus();
 
-        if (emailStatus=="1"){
+        if (emailStatus.equals("1")){
             emailTask.setStartDate(currentTime);
         }else {
             emailTask.setEndDate(currentTime);
