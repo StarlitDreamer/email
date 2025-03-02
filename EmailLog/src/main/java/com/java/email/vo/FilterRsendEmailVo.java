@@ -13,7 +13,8 @@ public class FilterRsendEmailVo implements Serializable {
     private String emailId;
     private String emailTaskId;
     private String subject;
-    private String taskType;
+    private long task_type;
+    private String email_type_name;
     private String sender_name;
     private String sender_email;
     private String receiver_name;

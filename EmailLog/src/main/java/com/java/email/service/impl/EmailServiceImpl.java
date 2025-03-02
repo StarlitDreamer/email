@@ -243,12 +243,19 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException {
+    public EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, List<String> emailTaskIds, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException {
         try {
+            // 如果emailTaskIds为null，直接返回空结果
+            if (emailTaskIds == null || emailTaskIds.isEmpty()) {
+                EmailVo emptyResult = new EmailVo();
+                emptyResult.setEmailList(Collections.emptyList());
+                emptyResult.setTotal(0L);
+                return emptyResult;
+            }
+
             // 先获取符合条件的收件人邮箱
             Set<String> recipientEmails = params != null ?
                     emailRecipientService.findMatchingRecipientEmails(params) : null;
-
 
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
@@ -256,16 +263,20 @@ public class EmailServiceImpl implements EmailService {
                 s.size(size);
 
                 s.query(q -> q.bool(b -> {
+                    // 必须匹配指定的emailTaskIds
+                    b.must(m -> m.terms(t -> t
+                            .field("email_task_id")
+                            .terms(tt -> tt.value(emailTaskIds.stream()
+                                    .map(FieldValue::of)
+                                    .collect(Collectors.toList())))
+                    ));
 
-                    // 处理邮件状态查询
-                            // 发送失败的邮件
-                            b.should(m -> m.term(t -> t.field("error_code").value(500)));
-                            b.should(m -> m.term(t -> t.field("error_code").value(535)));
+                    // 发送失败的邮件
+                    b.should(m -> m.term(t -> t.field("error_code").value(500)));
+                    b.should(m -> m.term(t -> t.field("error_code").value(535)));
+                    b.minimumShouldMatch("1"); // 至少匹配一个错误码
 
-
-
-
-                    // 添加收件人邮箱过滤（仅当recipientEmails不为null且不为空时）
+                    // 添加收件人邮箱过滤
                     if (recipientEmails != null && !recipientEmails.isEmpty()) {
                         b.must(m -> m.terms(t -> t
                                 .field("receiver_id")
@@ -275,9 +286,10 @@ public class EmailServiceImpl implements EmailService {
                         ));
                     }
 
-
-                    Set<String> resendEmailId=params!=null?emailRecipientService.findResendDetails(params):null;
-                    if(resendEmailId!=null&&!resendEmailId.isEmpty()){
+                    // 添加重发邮件ID过滤
+                    Set<String> resendEmailId = params != null ? 
+                        emailRecipientService.findResendDetails(params) : null;
+                    if (resendEmailId != null && !resendEmailId.isEmpty()) {
                         b.must(m -> m.terms(t -> t
                                 .field("email_id")
                                 .terms(tt -> tt.value(resendEmailId.stream()
@@ -286,15 +298,12 @@ public class EmailServiceImpl implements EmailService {
                         ));
                     }
 
-
-                    // 根据用户角色添加权限过滤
+                    // 添加角色权限过滤
                     addRoleBasedFilter(b, userRole, userEmail, finalManagedUserEmails);
 
                     // 处理其他查询参数
                     if (params != null && !params.isEmpty()) {
                         addOtherQueryParams(b, params, userRole, userEmail, finalManagedUserEmails);
-                    } else {
-                        b.must(m -> m.matchAll(ma -> ma));
                     }
 
                     return b;
@@ -310,6 +319,7 @@ public class EmailServiceImpl implements EmailService {
 
                 return s;
             }, UndeliveredEmail.class);
+
             assert response.hits().total() != null;
             long totalHits = response.hits().total().value();
             EmailVo emailVo = new EmailVo();

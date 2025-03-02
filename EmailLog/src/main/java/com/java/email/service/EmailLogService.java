@@ -53,11 +53,19 @@ public class EmailLogService {
         return emailTaskService.findByEmailTasks(params, userRole, userEmail,managedUserEmails);
     }
 
+    public List<String> findByEmailTasksIds(Map<String, String> params,Integer userRole,String userEmail ,List<String> managedUserEmails) throws IOException {
+        return emailTaskService.findByEmailTasksId(params, userRole, userEmail,managedUserEmails);
+    }
+
+    public EmailTask findByEmailTaskId(String emailTaskId) throws IOException {
+        return emailTaskService.findById(emailTaskId);
+    }
+
     public String findByEmailTypeName(String emailTypeId) throws IOException {
         return emailTypeService.findByEmailTypeName(emailTypeId);
     }
 
-    public EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException {
-        return emailService.findByDynamicQueryUndeliveredEmail(params, page, size, userRole, userEmail, finalManagedUserEmails);
+    public EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params,List<String> emailTaskIds, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException {
+        return emailService.findByDynamicQueryUndeliveredEmail(params,emailTaskIds, page, size, userRole, userEmail, finalManagedUserEmails);
     }
 }

@@ -20,4 +20,6 @@ public interface EmailTaskService {
 
 
      EmailTask findByEmailTasks(Map<String, String> params, Integer userRole, String userEmail,List<String> managedUserEmails) throws IOException;
+
+     List<String> findByEmailTasksId(Map<String, String> params, Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException;
 }

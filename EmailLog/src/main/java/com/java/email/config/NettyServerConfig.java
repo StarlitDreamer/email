@@ -65,7 +65,7 @@ public class NettyServerConfig {
                                // .addLast(new QueryOneLogHandler(emailLogService,userService))
                                     .addLast(new FilterEmailTaskHandler(emailLogService,userService,emailManageService))
                                     .addLast(new FilterEmailHandler(emailLogService,userService,emailRecipientService))
-                                    .addLast(new FilterUndeliveredEmailHandler(userService,emailLogService,emailRecipientService))
+                                    .addLast(new FilterUndeliveredEmailHandler(userService,emailLogService,emailRecipientService,emailManageService))
                                     ;
 
                         }

@@ -41,11 +41,13 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final EmailLogService emailLogService;
     private final EmailRecipientService emailRecipientService;
+    private final EmailManageService emailManageService;
 
-    public FilterUndeliveredEmailHandler(UserService userService, EmailLogService emailLogService, EmailRecipientService emailRecipientService) {
+    public FilterUndeliveredEmailHandler(UserService userService, EmailLogService emailLogService, EmailRecipientService emailRecipientService, EmailManageService emailManageService) {
         this.userService = userService;
         this.emailRecipientService = emailRecipientService;
         this.emailLogService = emailLogService;
+        this.emailManageService = emailManageService;
     }
 
 
@@ -108,12 +110,13 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                 params.remove("page_size");
 
 //                // 获取所有符合条件的邮件任务
-                EmailTask emailTask = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
+                List<String> emailTaskIds = emailLogService.findByEmailTasksIds(params, userRole, userEmail, managedUserEmails);
 
                 // 收集所有邮件记录
                 List<String> finalManagedUserEmails = managedUserEmails;
                 EmailVo emailVo = emailLogService.findByDynamicQueryUndeliveredEmail(
                         params,
+                        emailTaskIds,
                         page,  // from
                         size,  // 使用请求的大小和最大限制中的较小值
                         userRole,
@@ -124,37 +127,48 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                 List<UndeliveredEmail> logList = emailVo.getEmailList();
 
                 List<FilterRsendEmailVo> Results =logList.stream().map(email -> {
-                    FilterRsendEmailVo filterEmailVo = new FilterRsendEmailVo();
-                    filterEmailVo.setSubject(emailTask.getSubject());
-                    filterEmailVo.setTaskType(emailTask.getSubject());
-                    filterEmailVo.setEmailTaskId(emailTask.getEmailTaskId());
-                    BeanUtils.copyProperties(email, filterEmailVo);
-                    Map<String, String> receiverInfo=null;
-                    if(params.containsKey("receiver_level")||params.containsKey("receiver_birth")){
-                        receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId(),params);
-                    }else {
-                        receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId());
+                    EmailTask emailTask = null;
+                    FilterRsendEmailVo filterEmailVo;
+                    try {
+                        emailTask = emailLogService.findByEmailTaskId(email.getEmailTaskId());
+                        filterEmailVo = new FilterRsendEmailVo();
+                        filterEmailVo.setSubject(emailTask.getSubject());
+                        filterEmailVo.setTask_type(emailTask.getTaskType());
+                        filterEmailVo.setEmailTaskId(emailTask.getEmailTaskId());
+
+                        filterEmailVo.setEmail_type_name(emailLogService.findByEmailTypeName(emailTask.getEmailTypeId()));
+
+                        BeanUtils.copyProperties(email, filterEmailVo);
+                        Map<String, String> receiverInfo = null;
+                        if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
+                            receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId(), params);
+                        } else {
+                            receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId());
+                        }
+
+                        filterEmailVo.setEmail_status(email.getErrorCode());
+                        filterEmailVo.setError_msg(email.getErrorMsg());
+                        filterEmailVo.setStart_date(dateTimeFormatter(email.getStartDate()));
+                        filterEmailVo.setEnd_date(dateTimeFormatter(email.getEndDate()));
+                        filterEmailVo.setReceiver_level(Long.parseLong(receiverInfo.get("level")));
+
+                        filterEmailVo.setSender_email(email.getSenderId());
+                        filterEmailVo.setSender_name(email.getSenderName());
+                        filterEmailVo.setReceiver_email(email.getReceiverId());
+                        filterEmailVo.setReceiver_name(email.getReceiverName());
+                        filterEmailVo.setReceiver_birth(receiverInfo.get("birth"));
+
+                        RsendDetails resendInfo = emailRecipientService.getResendDetails(email.getEmailId());
+                        if (resendInfo != null) {
+                            filterEmailVo.setResend_start_date(resendInfo.getStartTime());
+                            filterEmailVo.setResend_end_date(resendInfo.getEndTime());
+                            filterEmailVo.setResend_status(resendInfo.getStatus());
+                            filterEmailVo.setResend_msg(resendInfo.getErrorMsg());
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
 
-                    filterEmailVo.setEmail_status(email.getErrorCode());
-                    filterEmailVo.setError_msg(email.getErrorMsg());
-                    filterEmailVo.setStart_date(dateTimeFormatter(email.getStartDate()));
-                    filterEmailVo.setEnd_date(dateTimeFormatter(email.getEndDate()));
-                    filterEmailVo.setReceiver_level(Long.parseLong(receiverInfo.get("level")));
-
-                    filterEmailVo.setSender_email(email.getSenderId());
-                    filterEmailVo.setSender_name(email.getSenderName());
-                    filterEmailVo.setReceiver_email(email.getReceiverId());
-                    filterEmailVo.setReceiver_name(email.getReceiverName());
-                    filterEmailVo.setReceiver_birth(receiverInfo.get("birth"));
-
-                    RsendDetails resendInfo=emailRecipientService.getResendDetails(email.getEmailId());
-                    if(resendInfo!=null){
-                        filterEmailVo.setResend_start_date(resendInfo.getStartTime());
-                        filterEmailVo.setResend_end_date(resendInfo.getEndTime());
-                        filterEmailVo.setResend_status(resendInfo.getStatus());
-                        filterEmailVo.setResend_msg(resendInfo.getErrorMsg());
-                    }
 
                     return filterEmailVo;
                 }).toList();

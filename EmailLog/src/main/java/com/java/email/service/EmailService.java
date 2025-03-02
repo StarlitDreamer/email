@@ -20,5 +20,5 @@ public interface EmailService {
      Email findById(String id) throws IOException;
 
 
-     EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException;
+     EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, List<String> emailTaskIds,int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException;
 }

@@ -300,4 +300,71 @@ public class EmailTaskServiceImpl implements EmailTaskService {
         return response.hits().hits().get(0).source();
     }
 
+    public List<String> findByEmailTasksId(Map<String, String> params, Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
+        SearchResponse<EmailTask> response = esClient.search(s -> {
+            s.index(INDEX_NAME);
+
+            s.query(q -> q.bool(b -> {
+                // 根据用户角色添加基础查询条件
+                switch (userRole) {
+                    case 2: // 大管理员可以查看所有
+                        break;
+                    case 3: // 小管理员只能查看自己管理的用户的任务
+
+                        if (!managedUserEmails.isEmpty()) {
+                            b.must(m -> m.terms(t -> t
+                                    .field("sender_id")
+                                    .terms(tt -> tt.value(managedUserEmails.stream()
+                                            .map(FieldValue::of)
+                                            .collect(Collectors.toList())))
+                            ));
+                        }
+                        break;
+                    case 4: // 普通用户只能查看自己的任务
+                        b.must(m -> m.term(t -> t.field("sender_id").value(userEmail)));
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Invalid user role: " + userRole);
+                }
+
+                // 处理其他查询参数
+                if (!params.isEmpty()) {
+                    params.forEach((key, value) -> {
+                        if (value != null) {
+                            switch (key) {
+                                case "email_task_id":
+                                    b.must(m -> m.term(t -> t.field("email_task_id").value(value)));
+                                    break;
+                                case "email_type_id":
+                                    b.must(m -> m.term(t -> t.field("email_type_id").value(value)));
+                                    break;
+                                case "task_type":
+                                    b.must(m -> m.term(t -> t.field("task_type").value(value)));
+                                    break;
+                                case "subject":
+                                    b.must(m -> m.match(t -> t.field("subject").query(value)));
+                                    break;
+                                case "sender_id":
+                                    validateSenderAccess(userRole, userEmail, managedUserEmails, value);
+                                    b.must(m -> m.term(t -> t.field("sender_id").value(value)));
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    });
+                }
+                return b;
+            }));
+
+            return s;
+        }, EmailTask.class);
+
+        return response.hits().hits().stream()
+                .map(Hit::source)
+                .filter(Objects::nonNull)
+                .map(EmailTask::getEmailTaskId)
+                .collect(Collectors.toList());
+    }
+
 }
