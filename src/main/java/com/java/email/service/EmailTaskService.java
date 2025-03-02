@@ -733,6 +733,8 @@ public class EmailTaskService {
 
         long currentTime = System.currentTimeMillis() / 1000;
 
+        emailTask.setStartDate(currentTime);
+
         Email email = new Email();
         email.setEmailTaskId(tackId); // Set email_task_id
         email.setCreatedAt(currentTime);  // Set created_at
