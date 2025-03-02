@@ -66,19 +66,20 @@ public class EmailTaskService {
      * 创建普通邮件发送任务
      */
     public String createEmailTask(String currentUserId, CreateEmailTaskRequest request) {
-        // Generate UUID for email_task_id
+        // 生成uuid
         String emailTaskId = UUID.randomUUID().toString();
 
-        // 存储接受者结果的集合
+        // 存储最终收件人结果的集合
         List<String> receiverNames = new ArrayList<>();
         List<String> receiverEmails = new ArrayList<>();
 
+        //获取将要发送的邮件类型id
         String emailTypeId = request.getEmailTypeId();
 
-        //获取接受者id列表
+        //获取客户id列表
         List<String> customerId = request.getCustomerId();
 
-        // 假设 customers 是存储 Customer 对象的列表
+        // 根据客户id列表获取客户实体列表
         List<Customer> customers = customerRepository.findByCustomerIdIn(customerId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
@@ -104,8 +105,10 @@ public class EmailTaskService {
             }
         }
 
+        //获取供应商id列表
         List<String> receiverSupplierId = request.getReceiverSupplierId();
 
+        // 根据供应商id列表获取供应商实体列表
         List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(receiverSupplierId);
 
 // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
@@ -131,16 +134,14 @@ public class EmailTaskService {
             }
         }
 
-        //redis中的key
-        String receiverKey = request.getReceiverKey();
-        String receiverSupplierKey = request.getReceiverSupplierKey();
-
-        //获取redis中接受者id列表
-        List<String> receiverKeyId = new ArrayList<>();
-        List<String> receiverKeySupplierId = new ArrayList<>();
-
         // 根据 receiverKey 从 Redis 中取出存储的值
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
+
+        //redis中的key
+        String receiverKey = request.getReceiverKey();
+
+        //获取redis中客户id列表
+        List<String> receiverKeyId = new ArrayList<>();
 
         if (receiverKey != null) {
             Object cachedReceiverList = operations.get(receiverKey);
@@ -156,6 +157,12 @@ public class EmailTaskService {
                 }
             }
         }
+
+        //redis中的key
+        String receiverSupplierKey = request.getReceiverSupplierKey();
+
+        //获取redis中供应商id列表
+        List<String> receiverKeySupplierId = new ArrayList<>();
 
         if (receiverSupplierKey != null) {
             Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
@@ -173,7 +180,7 @@ public class EmailTaskService {
         List<Customer> customersKey = customerRepository.findByCustomerIdIn(receiverKeyId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
-        List<String> receiverIdKey = customers.stream()
+        List<String> receiverIdKey = customersKey.stream()
                 .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
                 .map(Customer::getCustomerId)
                 .collect(Collectors.toList());
@@ -184,7 +191,7 @@ public class EmailTaskService {
         List<Supplier> suppliersKey = supplierRepository.findBySupplierIdIn(receiverKeySupplierId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
-        List<String> receiverSupplierIdsKey = suppliers.stream()
+        List<String> receiverSupplierIdsKey = suppliersKey.stream()
                 .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
                 .map(Supplier::getSupplierId)
                 .collect(Collectors.toList());
@@ -249,7 +256,6 @@ public class EmailTaskService {
 
         // 获取最终的 emailContent
         emailContent = emailContentBuilder.toString();
-
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
