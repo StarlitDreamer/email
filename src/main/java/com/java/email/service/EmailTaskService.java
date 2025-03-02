@@ -733,7 +733,13 @@ public class EmailTaskService {
 
         long currentTime = System.currentTimeMillis() / 1000;
 
-        emailTask.setStartDate(currentTime);
+        String emailStatus = request.getEmailStatus();
+
+        if (emailStatus=="1"){
+            emailTask.setStartDate(currentTime);
+        }else {
+            emailTask.setEndDate(currentTime);
+        }
 
         Email email = new Email();
         email.setEmailTaskId(tackId); // Set email_task_id
