@@ -111,7 +111,7 @@ public class EmailTaskService {
         // 根据供应商id列表获取供应商实体列表
         List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(receiverSupplierId);
 
-// 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
+        // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
         List<String> receiverSupplierIds = suppliers.stream()
                 .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
                 .map(Supplier::getSupplierId)
@@ -187,7 +187,6 @@ public class EmailTaskService {
 
         List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverIdKey);
 
-
         List<Supplier> suppliersKey = supplierRepository.findBySupplierIdIn(receiverKeySupplierId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
@@ -237,6 +236,10 @@ public class EmailTaskService {
             StringBuilder attachmentInfoBuilder = new StringBuilder();
             List<Attachment> attachments = request.getAttachment();
             int size = attachments.size();
+            if (size==0){
+                String attachmentInfo = "<p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>";
+                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
+            }
             for (Attachment attachment : attachments) {
                 size--;
                 if (size == 0) {
@@ -434,6 +437,10 @@ public class EmailTaskService {
             StringBuilder attachmentInfoBuilder = new StringBuilder();
             List<Attachment> attachments = request.getAttachment();
             int size = attachments.size();
+            if (size==0){
+                String attachmentInfo = "<p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>";
+                attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
+            }
             for (Attachment attachment : attachments) {
                 size--;
                 if (size == 0) {
