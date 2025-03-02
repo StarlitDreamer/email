@@ -34,7 +34,7 @@ public class EmailController {
                     .map(email -> {
                         UpdateTaskStatusResponse response = new UpdateTaskStatusResponse();
                         response.setEmailTaskId(email.getEmailTaskId());
-                        response.setEmailStatus(String.valueOf(email.getEmailStatus()));
+                        response.setEmailStatus(email.getEmailStatus());
                         return response;
                     })
                     .toList();

@@ -6,10 +6,7 @@ import com.java.email.model.request.CreateEmailTaskRequest;
 import com.java.email.model.request.UpdateBirthEmailTaskRequest;
 import com.java.email.model.response.GetEmailsByCustomerIdsResponse;
 import com.java.email.model.response.GetEmailsBySupplierIdsResponse;
-import com.java.email.repository.CustomerRepository;
-import com.java.email.repository.EmailRepository;
-import com.java.email.repository.EmailTaskRepository;
-import com.java.email.repository.SupplierRepository;
+import com.java.email.repository.*;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -44,6 +41,9 @@ public class EmailTaskService {
 
     @Autowired
     private SupplierService supplierService;
+
+    @Autowired
+    private EmailReportRepository emailReportRepository;
 
     @Autowired
     private UserService userService;
@@ -236,7 +236,7 @@ public class EmailTaskService {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
                             ", 附件URL: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
-                }else {
+                } else {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
                             ", 附件URL: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
@@ -285,6 +285,12 @@ public class EmailTaskService {
 
         // Save Email to Elasticsearch
         emailRepository.save(email);
+
+        EmailReport emailReport = new EmailReport();
+        emailReport.setEmailTaskId(emailTaskId);
+        emailReport.setEmailTotal((long) receiverEmails.size());
+
+        emailReportRepository.save(emailReport);
 
         redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
 
@@ -428,7 +434,7 @@ public class EmailTaskService {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
                             ", 附件URL: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
-                }else {
+                } else {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
                             ", 附件URL: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
@@ -494,6 +500,12 @@ public class EmailTaskService {
 
         // Save Email to Elasticsearch
         emailRepository.save(email);
+
+        EmailReport emailReport = new EmailReport();
+        emailReport.setEmailTaskId(emailTaskId);
+        emailReport.setEmailTotal((long) receiverEmails.size());
+
+        emailReportRepository.save(emailReport);
 
         // Save email_task_id to Redis
         redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
@@ -638,7 +650,7 @@ public class EmailTaskService {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
                             ", 附件URL: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
-                }else {
+                } else {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
                             ", 附件URL: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
@@ -690,6 +702,12 @@ public class EmailTaskService {
 
         // Save Email to Elasticsearch
         emailRepository.save(email);
+
+        EmailReport emailReport = new EmailReport();
+        emailReport.setEmailTaskId(emailTaskId);
+        emailReport.setEmailTotal((long) receiverEmails.size());
+
+        emailReportRepository.save(emailReport);
 
         // Save email_task_id to Redis
         redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);

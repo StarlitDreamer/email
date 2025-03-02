@@ -9,5 +9,5 @@ public class UpdateTaskStatusRequest {
     private String emailTaskId;
 
     @JsonProperty("operate_status")
-    private String OperateStatus;
+    private Integer OperateStatus;
 }

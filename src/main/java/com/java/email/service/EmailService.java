@@ -1,19 +1,16 @@
 package com.java.email.service;
 
-import com.java.email.model.entity.Customer;
-import com.java.email.model.entity.Email;
-import com.java.email.model.entity.EmailTask;
-import com.java.email.model.entity.Supplier;
+import com.java.email.model.entity.*;
 import com.java.email.model.request.ResetTaskStatusRequest;
 import com.java.email.model.request.UpdateTaskStatusRequest;
-import com.java.email.repository.CustomerRepository;
-import com.java.email.repository.EmailRepository;
-import com.java.email.repository.EmailTaskRepository;
-import com.java.email.repository.SupplierRepository;
+import com.java.email.repository.*;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class EmailService {
@@ -31,7 +28,16 @@ public class EmailService {
     private CustomerRepository customerRepository;
 
     @Autowired
+    private EmailReportRepository emailReportRepository;
+
+    @Autowired
     private SupplierRepository supplierRepository;
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
+
+    private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
+
 
     /**
      * 根据邮箱查找客户或供应商
@@ -110,29 +116,60 @@ public class EmailService {
         return (List<Email>) emailRepository.saveAll(emails);
     }
 
-//    public List<Email> updateEmailStatusForAll(String currentUserId, int currentUserRole,UpdateTaskStatusRequest request) {
-//        // 根据 emailTaskId 查找所有相关的 Email 实体
-//        List<Email> emails = emailRepository.findByEmailTaskId(request.getEmailTaskId());
-//
-//        if (emails.isEmpty()) {
-//            throw new RuntimeException("邮件任务未找到");
-//        }
-//
-//        // 遍历所有邮件并更新其状态
-//        for (Email email : emails) {
-//            email.setEmailStatus(Integer.valueOf(request.getOperateStatus()));
-//        }
-//
-//        // 批量保存更新后的 Email 实体
-//        return (List<Email>) emailRepository.saveAll(emails);
-//    }
-
     /**
      * 根据 email_task_id 更新所有相关 email 的状态为 4
      *
      * @return 更新后的邮件实体集合
      */
     public List<Email> resetEmailStatusForAll(ResetTaskStatusRequest request) {
+
+        EmailTask byEmailTaskId = emailTaskRepository.findByEmailTaskId(request.getTaskId());
+
+        String emailTaskId = UUID.randomUUID().toString();
+
+        EmailTask emailTask = new EmailTask();
+        emailTask.setEmailTaskId(emailTaskId);
+        emailTask.setEmailId(emailTaskId);
+        emailTask.setSubject(byEmailTaskId.getSubject());
+        emailTask.setEmailTypeId(byEmailTaskId.getEmailTypeId());
+        emailTask.setEmailContent(byEmailTaskId.getEmailContent());
+        emailTask.setSenderId(byEmailTaskId.getSenderId());
+        emailTask.setSenderName(byEmailTaskId.getSenderName());
+        emailTask.setReceiverId(byEmailTaskId.getReceiverId());
+        emailTask.setReceiverName(byEmailTaskId.getReceiverName());
+        emailTask.setAttachment(byEmailTaskId.getAttachment());
+        emailTask.setIndex(0L);
+        emailTask.setTaskType(2);
+
+        long currentTime = System.currentTimeMillis() / 1000;
+        emailTask.setCreatedAt(currentTime);
+
+        emailTask.setStartDate(currentTime);
+
+        emailTask.setEndDate(byEmailTaskId.getIntervalDate()*byEmailTaskId.getReceiverId().size());
+
+        emailTaskRepository.save(emailTask);
+
+        // Create Email object for the "email" index
+        Email email = new Email();
+        email.setEmailTaskId(emailTaskId); // Set email_task_id
+        email.setEmailId(emailTaskId);
+        email.setCreatedAt(currentTime);  // Set created_at
+        email.setUpdateAt(currentTime);   // Set update_at
+        email.setEmailStatus(1);          // Set email_status to 1 (开始状态)
+
+        // Save Email to Elasticsearch
+        emailRepository.save(email);
+
+        EmailReport emailReport = new EmailReport();
+        emailReport.setEmailTaskId(emailTaskId);
+        emailReport.setEmailTotal((long) byEmailTaskId.getReceiverId().size());
+
+        emailReportRepository.save(emailReport);
+
+        // Save email_task_id to Redis
+        redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
+
         // 根据 emailTaskId 查找所有相关的 Email 实体
         List<Email> emails = emailRepository.findByEmailTaskId(request.getTaskId());
 
@@ -141,44 +178,11 @@ public class EmailService {
         }
 
         // 遍历所有邮件并更新其状态为 4
-        for (Email email : emails) {
-            email.setEmailStatus(4);
+        for (Email email1 : emails) {
+            email1.setEmailStatus(4);
         }
 
         // 批量保存更新后的 Email 实体
         return (List<Email>) emailRepository.saveAll(emails);
     }
-//    /**
-//     * 根据emailTaskId更新emailStatus
-//     *
-//     * @return 更新后的邮件实体
-//     */
-//    public Email updateEmailStatus(UpdateTaskStatusRequest request) {
-//        // 根据emailTaskId查找Email实体
-//        Email email = emailRepository.findByEmailTaskId(request.getTaskId())
-//                .orElseThrow(() -> new RuntimeException("邮件任务未找到"));
-//
-//        // 更新邮件状态
-//        email.setEmailStatus(Integer.valueOf(request.getOperateStatus()));
-//
-//        // 保存更新后的Email实体
-//        return emailRepository.save(email);
-//    }
-//
-//    /**
-//     * 根据email_task_id更新emailStatus为4
-//     *
-//     * @return 更新后的邮件实体
-//     */
-//    public Email resetEmailStatus(ResetTaskStatusRequest request) {
-//        // 根据email_task_id查找Email实体
-//        Email email = emailRepository.findByEmailTaskId(request.getTaskId())
-//                .orElseThrow(() -> new RuntimeException("邮件任务未找到"));
-//
-//        // 更新邮件状态为4
-//        email.setEmailStatus(4);
-//
-//        // 保存更新后的Email实体
-//        return emailRepository.save(email);
-//    }
 }
