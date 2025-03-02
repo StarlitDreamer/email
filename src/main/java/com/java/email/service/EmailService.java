@@ -138,6 +138,7 @@ public class EmailService {
         emailTask.setReceiverId(byEmailTaskId.getReceiverId());
         emailTask.setReceiverName(byEmailTaskId.getReceiverName());
         emailTask.setAttachment(byEmailTaskId.getAttachment());
+        emailTask.setTaskCycle(byEmailTaskId.getTaskCycle());
         emailTask.setIndex(0L);
         emailTask.setTaskType(2);
 
@@ -146,7 +147,7 @@ public class EmailService {
 
         emailTask.setStartDate(currentTime);
 
-        emailTask.setEndDate(byEmailTaskId.getIntervalDate()*byEmailTaskId.getReceiverId().size());
+        emailTask.setEndDate(currentTime + byEmailTaskId.getTaskCycle() * 24 * 60 * 60);
 
         emailTaskRepository.save(emailTask);
 

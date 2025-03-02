@@ -456,6 +456,7 @@ public class EmailTaskService {
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setEmailContent(templateContentById);
+        emailTask.setTaskCycle(Long.valueOf(request.getSendCycle()));
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
         emailTask.setSenderName(userService.getUserNameByUserId(currentUserId));
         emailTask.setReceiverName(receiverNames);
