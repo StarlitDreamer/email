@@ -36,10 +36,10 @@ public class EmailService {
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
-    private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
     @Autowired
     private UserRepository userRepository;
 
+    private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
 
     /**
      * 根据邮箱查找客户或供应商
