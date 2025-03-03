@@ -22,7 +22,7 @@ public class CreateFestivalEmailTaskRequest {
     private  Integer startDate;
 
     @JsonProperty("receiver_id")
-    private List<String> receiverId;      // 收件人ID列表
+    private List<String> customerId;      // 收件人ID列表
 
     @JsonProperty("receiver_supplier_id")
     private List<String> receiverSupplierId;  // 收件人供应商ID列表

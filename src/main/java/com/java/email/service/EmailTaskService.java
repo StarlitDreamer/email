@@ -600,11 +600,17 @@ public class EmailTaskService {
         String emailTypeId = request.getEmailTypeId();
 
 
-
-
         //获取接受者id列表
-        List<String> receiverId = request.getReceiverId();
-        List<String> receiverSupplierId = request.getReceiverSupplierId();
+        List<String> customerId = request.getCustomerId();
+
+        // 根据客户id列表获取客户实体列表
+        List<Customer> customers = customerRepository.findByCustomerIdIn(customerId);
+
+        // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
+        List<String> receiverId = customers.stream()
+                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
+                .map(Customer::getCustomerId)
+                .collect(Collectors.toList());
 
         if (receiverId != null && !receiverId.isEmpty()) {
             // List 不为空
@@ -623,9 +629,20 @@ public class EmailTaskService {
             }
         }
 
-        if (receiverSupplierId != null && !receiverSupplierId.isEmpty()) {
+        List<String> receiverSupplierId = request.getReceiverSupplierId();
+
+        // 根据供应商id列表获取供应商实体列表
+        List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(receiverSupplierId);
+
+        // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
+        List<String> receiverSupplierIds = suppliers.stream()
+                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
+                .map(Supplier::getSupplierId)
+                .collect(Collectors.toList());
+
+        if (receiverSupplierIds != null && !receiverSupplierIds.isEmpty()) {
             // List 不为空
-            List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierId);
+            List<GetEmailsBySupplierIdsResponse> supplierEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierIds);
 
             for (GetEmailsBySupplierIdsResponse response : supplierEmailsAndNames) {
                 String supplierName = response.getSupplierName();
@@ -639,16 +656,14 @@ public class EmailTaskService {
             }
         }
 
+        // 根据 receiverKey 从 Redis 中取出存储的值
+        ValueOperations<String, Object> operations = redisTemplate.opsForValue();
+
         //redis中的key
         String receiverKey = request.getReceiverKey();
-        String receiverSupplierKey = request.getReceiverSupplierKey();
 
         //获取redis中接受者id列表
         List<String> receiverKeyId = new ArrayList<>();
-        List<String> receiverKeySupplierId = new ArrayList<>();
-
-        // 根据 receiverKey 从 Redis 中取出存储的值
-        ValueOperations<String, Object> operations = redisTemplate.opsForValue();
 
         if (receiverKey != null) {
             Object cachedReceiverList = operations.get(receiverKey);
@@ -665,6 +680,33 @@ public class EmailTaskService {
             }
         }
 
+        // 假设 customers 是存储 Customer 对象的列表
+        List<Customer> customersKey = customerRepository.findByCustomerIdIn(receiverKeyId);
+
+        // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
+        List<String> receiverIdKey = customersKey.stream()
+                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
+                .map(Customer::getCustomerId)
+                .collect(Collectors.toList());
+
+
+        List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverKeyId);
+
+        for (GetEmailsByCustomerIdsResponse response : customerKeyEmailsAndNames) {
+            String customerName = response.getCustomerName();
+            List<String> emails = response.getCustomerEmails();
+
+            // 将 customerName 添加多次
+            for (int i = 0; i < emails.size(); i++) {
+                receiverNames.add(customerName);
+                receiverEmails.add(emails.get(i));
+            }
+        }
+
+        String receiverSupplierKey = request.getReceiverSupplierKey();
+
+        List<String> receiverKeySupplierId = new ArrayList<>();
+
         if (receiverSupplierKey != null) {
             Object cachedReceiverSupplierList = operations.get(receiverSupplierKey);
 
@@ -677,20 +719,15 @@ public class EmailTaskService {
             }
         }
 
-        List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverKeyId);
+        List<Supplier> suppliersKey = supplierRepository.findBySupplierIdIn(receiverKeySupplierId);
+
+        // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
+        List<String> receiverSupplierIdsKey = suppliersKey.stream()
+                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
+                .map(Supplier::getSupplierId)
+                .collect(Collectors.toList());
 
         List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverKeySupplierId);
-
-        for (GetEmailsByCustomerIdsResponse response : customerKeyEmailsAndNames) {
-            String customerName = response.getCustomerName();
-            List<String> emails = response.getCustomerEmails();
-
-            // 将 customerName 添加多次
-            for (int i = 0; i < emails.size(); i++) {
-                receiverNames.add(customerName);
-                receiverEmails.add(emails.get(i));
-            }
-        }
 
         for (GetEmailsBySupplierIdsResponse response : supplierKeyEmailsAndNames) {
             String supplierName = response.getSupplierName();
@@ -710,9 +747,6 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
         emailContentBuilder.append("http://localhost:8080/email-report/unsubscribe?");
-
-
-
 
         // 找到 </body> 标签的位置
         int bodyEndIndex = templateContentById.indexOf("</body>");
