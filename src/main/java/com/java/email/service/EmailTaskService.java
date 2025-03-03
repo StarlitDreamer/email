@@ -3,6 +3,7 @@ package com.java.email.service;
 import com.java.email.model.entity.*;
 import com.java.email.model.request.CreateCycleEmailTaskRequest;
 import com.java.email.model.request.CreateEmailTaskRequest;
+import com.java.email.model.request.CreateFestivalEmailTaskRequest;
 import com.java.email.model.request.UpdateBirthEmailTaskRequest;
 import com.java.email.model.response.GetEmailsByCustomerIdsResponse;
 import com.java.email.model.response.GetEmailsBySupplierIdsResponse;
@@ -586,13 +587,20 @@ public class EmailTaskService {
     /**
      * 创建节日邮件发送任务
      */
-    public String createFestivalEmailTask(String currentUserId, EmailTask request) {
+    public String createFestivalEmailTask(String currentUserId, CreateFestivalEmailTaskRequest request) {
         // Generate UUID for email_task_id
         String emailTaskId = UUID.randomUUID().toString();
 
-        // 存储接受者结果的集合
+        // 存储最终收件人name的集合
         List<String> receiverNames = new ArrayList<>();
+        // 存储最终收件人邮箱的集合
         List<String> receiverEmails = new ArrayList<>();
+
+        //获取将要发送的邮件类型id
+        String emailTypeId = request.getEmailTypeId();
+
+
+
 
         //获取接受者id列表
         List<String> receiverId = request.getReceiverId();
@@ -756,7 +764,7 @@ public class EmailTaskService {
         emailTask.setSenderName(userService.getUserNameByUserId(currentUserId));
         emailTask.setAttachment(request.getAttachment());
         emailTask.setTaskType(3);
-        emailTask.setStartDate(request.getStartDate());
+        emailTask.setStartDate(Long.valueOf(request.getStartDate()));
 
         // Set created_at timestamp
         long currentTime = System.currentTimeMillis() / 1000;
