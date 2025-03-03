@@ -35,39 +35,36 @@ public class EmailReportController {
      * @param emailTaskId 邮件任务ID
      * @return 返回更新结果
      */
-    @PutMapping("/unsubscribe")
+    @PostMapping("/unsubscribe")
     public Result updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
         String emailTypeId = emailTaskService.getEmailTypeId(emailTaskId);
 
         Customer customer = customerRepository.findByEmails(receiverEmail);
 
-        if (customer == null) {
-            return Result.error("未找到对应的客户");
+        if (customer != null) {
+
+            // 将emailTypeId添加到noAcceptEmailTypeId
+            if (customer.getNoAcceptEmailTypeId() == null) {
+                customer.setNoAcceptEmailTypeId(new ArrayList<>()); // 如果noAcceptEmailTypeId为空，初始化为空列表
+            }
+
+            customer.getNoAcceptEmailTypeId().add(emailTypeId);
+
+            customerRepository.save(customer);  // 保存更新后的Customer实体
         }
-
-        // 将emailTypeId添加到noAcceptEmailTypeId
-        if (customer.getNoAcceptEmailTypeId() == null) {
-            customer.setNoAcceptEmailTypeId(new ArrayList<>()); // 如果noAcceptEmailTypeId为空，初始化为空列表
-        }
-
-        customer.getNoAcceptEmailTypeId().add(emailTypeId);
-
-        customerRepository.save(customer);  // 保存更新后的Customer实体
 
         Supplier supplier = supplierRepository.findByEmails(receiverEmail);
 
-        if (supplier == null) {
-            return Result.error("未找到对应的供应商");
+        if (supplier != null) {
+            // 将emailTypeId添加到noAcceptEmailTypeId
+            if (supplier.getNoAcceptEmailTypeId() == null) {
+                supplier.setNoAcceptEmailTypeId(new ArrayList<>()); // 如果noAcceptEmailTypeId为空，初始化为空列表
+            }
+
+            supplier.getNoAcceptEmailTypeId().add(emailTypeId);
+
+            supplierRepository.save(supplier);  // 保存更新后的supplier实体
         }
-
-        // 将emailTypeId添加到noAcceptEmailTypeId
-        if (supplier.getNoAcceptEmailTypeId() == null) {
-            supplier.setNoAcceptEmailTypeId(new ArrayList<>()); // 如果noAcceptEmailTypeId为空，初始化为空列表
-        }
-
-        supplier.getNoAcceptEmailTypeId().add(emailTypeId);
-
-        supplierRepository.save(supplier);  // 保存更新后的Customer实体
 
         try {
             EmailReport updatedEmailReport = emailReportService.updateUnsubscribeAmount(emailTaskId);
