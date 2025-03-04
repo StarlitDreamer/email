@@ -7,9 +7,7 @@ import com.java.email.repository.*;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -54,7 +52,7 @@ public class EmailService {
         Email byEmailTaskId = emailRepository.findByEmailTaskId(emailTaskId);
 
         if (byEmailTaskId == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Email task not found");
+            throw new RuntimeException("邮件任务未找到");
         }else {
             email.setEmailStatus(operateStatus);
         }
@@ -69,21 +67,21 @@ public class EmailService {
         Optional<EmailPaused> emailPausedOptional = emailPausedRepository.findById(emailTaskId);
 
         if (emailPausedOptional.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "没有暂停该任务");
+            throw new RuntimeException("没有暂停该任务");
         }
 
         EmailPaused emailPaused = emailPausedOptional.get();
         emailPausedRepository.delete(emailPaused);
 
-
         Email email = emailRepository.findByEmailTaskId(emailTaskId);
 
         if (email == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Email task not found");
+            throw new RuntimeException("邮件任务状态未找到");
         }else {
             email.setEmailStatus(operateStatus);
         }
         emailRepository.save(email);
+
         redisTemplate.opsForValue().set(emailTaskId, emailTaskId);
 
         return "Email task resumed and stored in Redis";
