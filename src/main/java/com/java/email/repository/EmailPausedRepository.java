@@ -6,5 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EmailPausedRepository extends ElasticsearchRepository<EmailPaused, String> {
+    EmailPaused findByEmailTaskId(String emailTaskId);
 }
 

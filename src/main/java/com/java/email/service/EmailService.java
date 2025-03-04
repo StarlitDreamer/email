@@ -10,7 +10,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -64,14 +63,13 @@ public class EmailService {
         String emailTaskId = request.getEmailTaskId();
         Integer operateStatus = request.getOperateStatus();
 
-        Optional<EmailPaused> emailPausedOptional = emailPausedRepository.findById(emailTaskId);
+        EmailPaused byEmailTaskId = emailPausedRepository.findByEmailTaskId(emailTaskId);
 
-        if (emailPausedOptional.isEmpty()) {
+        if (byEmailTaskId==null) {
             throw new RuntimeException("没有暂停该任务");
         }
 
-        EmailPaused emailPaused = emailPausedOptional.get();
-        emailPausedRepository.delete(emailPaused);
+        emailPausedRepository.delete(byEmailTaskId);
 
         Email email = emailRepository.findByEmailTaskId(emailTaskId);
 
