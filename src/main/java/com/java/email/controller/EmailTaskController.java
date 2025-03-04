@@ -1,9 +1,9 @@
 package com.java.email.controller;
 
 import com.java.email.common.Result;
-import com.java.email.model.entity.EmailTask;
 import com.java.email.model.request.CreateCycleEmailTaskRequest;
 import com.java.email.model.request.CreateEmailTaskRequest;
+import com.java.email.model.request.CreateFestivalEmailTaskRequest;
 import com.java.email.model.request.UpdateBirthEmailTaskRequest;
 import com.java.email.service.EmailTaskService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +54,7 @@ public class EmailTaskController {
      * 创建节日邮件任务
      */
     @PostMapping("createFestival")
-    public Result createFestivalEmailTask(@RequestHeader String currentUserId,@RequestBody EmailTask request) {
+    public Result createFestivalEmailTask(@RequestHeader String currentUserId,@RequestBody CreateFestivalEmailTaskRequest request) {
         try {
             return Result.success(emailTaskService.createFestivalEmailTask(currentUserId,request));
         } catch (Exception e) {
