@@ -75,10 +75,10 @@ public class EmailService {
         EmailPaused emailPaused = emailPausedOptional.get();
         emailPausedRepository.delete(emailPaused);
 
-        Email email = new Email();
-        Email byEmailTaskId = emailRepository.findByEmailTaskId(emailTaskId);
 
-        if (byEmailTaskId == null) {
+        Email email = emailRepository.findByEmailTaskId(emailTaskId);
+
+        if (email == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Email task not found");
         }else {
             email.setEmailStatus(operateStatus);
