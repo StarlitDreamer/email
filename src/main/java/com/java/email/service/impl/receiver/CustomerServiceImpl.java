@@ -629,20 +629,20 @@ public class CustomerServiceImpl implements CustomerService {
                 // 邮箱条件
                 if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
                     mainQuery.must(m -> m
-                            .match(t -> t
+                            .term(t -> t
                                     .field("emails")
-                                    .query(request.getEmail().trim())
+                                    .value(request.getEmail().trim())
                             )
                     );
                 }
                 
                 // 邮件类型条件
-                if (request.getAcceptEmailTypeId() != null && !request.getAcceptEmailTypeId().isEmpty()) {
+                if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
-                    for (String emailTypeId : request.getAcceptEmailTypeId()) {
+                    for (String emailTypeId : request.getNoAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("accept_email_type_id")
+                                        .field("no_accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -860,20 +860,20 @@ public class CustomerServiceImpl implements CustomerService {
                 // 邮箱条件
                 if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
                     mainQuery.must(m -> m
-                            .match(t -> t
+                            .term(t -> t
                                     .field("emails")
-                                    .query(request.getEmail().trim())
+                                    .value(request.getEmail().trim())
                             )
                     );
                 }
 
                 // 邮件类型条件
-                if (request.getAcceptEmailTypeId() != null && !request.getAcceptEmailTypeId().isEmpty()) {
+                if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
-                    for (String emailTypeId : request.getAcceptEmailTypeId()) {
+                    for (String emailTypeId : request.getNoAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("accept_email_type_id")
+                                        .field("no_accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1114,20 +1114,20 @@ public class CustomerServiceImpl implements CustomerService {
                 // 邮箱条件
                 if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
                     mainQuery.must(m -> m
-                            .match(t -> t
+                            .term(t -> t
                                     .field("emails")
-                                    .query(request.getEmail().trim())
+                                    .value(request.getEmail().trim())
                             )
                     );
                 }
 
                 // 邮件类型条件
-                if (request.getAcceptEmailTypeId() != null && !request.getAcceptEmailTypeId().isEmpty()) {
+                if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
-                    for (String emailTypeId : request.getAcceptEmailTypeId()) {
+                    for (String emailTypeId : request.getNoAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("accept_email_type_id")
+                                        .field("no_accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );
@@ -1279,20 +1279,20 @@ public class CustomerServiceImpl implements CustomerService {
                 // 邮箱条件
                 if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
                     mainQuery.must(m -> m
-                            .match(t -> t
+                            .term(t -> t
                                     .field("emails")
-                                    .query(request.getEmail().trim())
+                                    .value(request.getEmail().trim())
                             )
                     );
                 }
 
                 // 邮件类型条件
-                if (request.getAcceptEmailTypeId() != null && !request.getAcceptEmailTypeId().isEmpty()) {
+                if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
-                    for (String emailTypeId : request.getAcceptEmailTypeId()) {
+                    for (String emailTypeId : request.getNoAcceptEmailTypeId()) {
                         emailTypeQuery.should(s -> s
                                 .term(t -> t
-                                        .field("accept_email_type_id")
+                                        .field("no_accept_email_type_id")
                                         .value(emailTypeId)
                                 )
                         );

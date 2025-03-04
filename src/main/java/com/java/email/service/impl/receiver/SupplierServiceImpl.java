@@ -656,9 +656,9 @@ public class SupplierServiceImpl implements SupplierService {
                 // 邮箱条件
                 if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
                     mainQuery.must(m -> m
-                            .match(t -> t
+                            .term(t -> t
                                     .field("emails")
-                                    .query(request.getEmail().trim())
+                                    .value(request.getEmail().trim())
                             )
                     );
                 }
@@ -889,9 +889,9 @@ public class SupplierServiceImpl implements SupplierService {
                 // 邮箱条件
                 if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
                     mainQuery.must(m -> m
-                            .match(t -> t
+                            .term(t -> t
                                     .field("emails")
-                                    .query(request.getEmail().trim())
+                                    .value(request.getEmail().trim())
                             )
                     );
                 }
@@ -1145,9 +1145,9 @@ public class SupplierServiceImpl implements SupplierService {
                 // 邮箱条件
                 if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
                     mainQuery.must(m -> m
-                            .match(t -> t
+                            .term(t -> t
                                     .field("emails")
-                                    .query(request.getEmail().trim())
+                                    .value(request.getEmail().trim())
                             )
                     );
                 }
@@ -1311,9 +1311,9 @@ public class SupplierServiceImpl implements SupplierService {
                 // 邮箱条件
                 if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
                     mainQuery.must(m -> m
-                            .match(t -> t
+                            .term(t -> t
                                     .field("emails")
-                                    .query(request.getEmail().trim())
+                                    .value(request.getEmail().trim())
                             )
                     );
                 }
