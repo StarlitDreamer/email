@@ -7,9 +7,12 @@ import com.java.email.repository.*;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -39,7 +42,32 @@ public class EmailService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private EmailPausedRepository emailPausedRepository;
+
     private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
+
+    public String pauseEmailTask(UpdateTaskStatusRequest request) {
+        EmailPaused emailPaused = new EmailPaused();
+        emailPaused.setEmailTaskId(request.getEmailTaskId());
+        emailPausedRepository.save(emailPaused);
+        return "Email task paused successfully";
+    }
+
+    public String beginEmailTask(UpdateTaskStatusRequest request) {
+        String emailTaskId = request.getEmailTaskId();
+        Optional<EmailPaused> emailPausedOptional = emailPausedRepository.findById(emailTaskId);
+
+        if (emailPausedOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "没有暂停该任务");
+        }
+
+        EmailPaused emailPaused = emailPausedOptional.get();
+        emailPausedRepository.delete(emailPaused);
+        redisTemplate.opsForValue().set("email_paused:" + emailTaskId, emailTaskId);
+
+        return "Email task resumed and stored in Redis";
+    }
 
     /**
      * 根据邮箱查找客户或供应商
