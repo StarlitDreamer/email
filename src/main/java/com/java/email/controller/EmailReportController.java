@@ -89,5 +89,4 @@ public class EmailReportController {
             return Result.error("更新打开数量失败: " + e.getMessage());
         }
     }
-
 }
