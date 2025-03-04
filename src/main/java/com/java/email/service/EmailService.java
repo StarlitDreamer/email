@@ -48,14 +48,24 @@ public class EmailService {
     private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
 
     public String pauseEmailTask(UpdateTaskStatusRequest request) {
-        EmailPaused emailPaused = new EmailPaused();
-        emailPaused.setEmailTaskId(request.getEmailTaskId());
-        emailPausedRepository.save(emailPaused);
+        Email email = new Email();
+        String emailTaskId = request.getEmailTaskId();
+        Integer operateStatus = request.getOperateStatus();
+        Email byEmailTaskId = emailRepository.findByEmailTaskId(emailTaskId);
+
+        if (byEmailTaskId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Email task not found");
+        }else {
+            email.setEmailStatus(operateStatus);
+        }
+        emailRepository.save(email);
         return "Email task paused successfully";
     }
 
     public String beginEmailTask(UpdateTaskStatusRequest request) {
         String emailTaskId = request.getEmailTaskId();
+        Integer operateStatus = request.getOperateStatus();
+
         Optional<EmailPaused> emailPausedOptional = emailPausedRepository.findById(emailTaskId);
 
         if (emailPausedOptional.isEmpty()) {
@@ -64,6 +74,16 @@ public class EmailService {
 
         EmailPaused emailPaused = emailPausedOptional.get();
         emailPausedRepository.delete(emailPaused);
+
+        Email email = new Email();
+        Email byEmailTaskId = emailRepository.findByEmailTaskId(emailTaskId);
+
+        if (byEmailTaskId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Email task not found");
+        }else {
+            email.setEmailStatus(operateStatus);
+        }
+        emailRepository.save(email);
         redisTemplate.opsForValue().set(emailTaskId, emailTaskId);
 
         return "Email task resumed and stored in Redis";
