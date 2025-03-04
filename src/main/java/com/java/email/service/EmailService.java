@@ -63,13 +63,13 @@ public class EmailService {
         String emailTaskId = request.getEmailTaskId();
         Integer operateStatus = request.getOperateStatus();
 
-        EmailPaused byEmailTaskId = emailPausedRepository.findByEmailTaskId(emailTaskId);
-
-        if (byEmailTaskId==null) {
-            throw new RuntimeException("没有暂停该任务");
-        }
-
-        emailPausedRepository.delete(byEmailTaskId);
+//        EmailPaused byEmailTaskId = emailPausedRepository.findByEmailTaskId(emailTaskId);
+//
+//        if (byEmailTaskId==null) {
+//            throw new RuntimeException("没有暂停该任务");
+//        }
+//
+//        emailPausedRepository.delete(byEmailTaskId);
 
         Email email = emailRepository.findByEmailTaskId(emailTaskId);
 
