@@ -2,15 +2,20 @@ package com.java.email.controller;
 
 import com.java.email.common.Result;
 import com.java.email.model.entity.Email;
-import com.java.email.model.request.ResendEmailRequest;
-import com.java.email.model.request.ResetTaskStatusRequest;
-import com.java.email.model.request.UpdateTaskStatusRequest;
+import com.java.email.model.entity.EmailPaused;
+import com.java.email.model.request.*;
 import com.java.email.model.response.ResetTaskStatusResponse;
 import com.java.email.model.response.UpdateTaskStatusResponse;
+import com.java.email.repository.EmailPausedRepository;
 import com.java.email.service.EmailService;
 import com.java.email.service.ResendDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/emails")
@@ -20,6 +25,12 @@ public class EmailController {
 
     @Autowired
     private ResendDetailsService resendDetailsService;
+
+    @Autowired
+    private EmailPausedRepository emailPausedRepository;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
 
     @PostMapping("/resend")
     public Result<String> resendEmail(@RequestBody ResendEmailRequest request) {
@@ -33,6 +44,31 @@ public class EmailController {
         return Result.success(emailResendId);
     }
 
+    @PostMapping("/pause")
+    public Result pauseEmailTask(@RequestBody EmailPausedRequest request) {
+        EmailPaused emailPaused = new EmailPaused();
+        emailPaused.setEmailTaskId(request.getEmailTaskId());
+
+        emailPausedRepository.save(emailPaused);
+        return Result.success("Email task paused successfully");
+    }
+
+    @PostMapping("/begin")
+    public Result beginEmailTask(@RequestBody EmailBeginRequest request) {
+        String emailTaskId = request.getEmailTaskId();
+        Optional<EmailPaused> emailPausedOptional = emailPausedRepository.findById(emailTaskId);
+
+        if (emailPausedOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "没有暂停该任务");
+        }
+
+        EmailPaused emailPaused = emailPausedOptional.get();
+        emailPausedRepository.delete(emailPaused);
+        redisTemplate.opsForValue().set("email_paused:" + emailTaskId, emailTaskId);
+
+        return Result.success("Email task resumed and stored in Redis");
+    }
+
     /**
      * 根据 emailTaskId 更新所有相关 email 的状态
      *
@@ -42,7 +78,7 @@ public class EmailController {
     public Result<UpdateTaskStatusResponse> updateEmailStatus(@RequestHeader String currentUserId, @RequestHeader int currentUserRole, @RequestBody UpdateTaskStatusRequest request) {
         try {
             // 调用服务层方法更新状态
-            Email updatedEmail = emailService.updateEmailStatusForAll(currentUserId,currentUserRole,request);
+            Email updatedEmail = emailService.updateEmailStatusForAll(currentUserId, currentUserRole, request);
 //            // 创建响应列表
 //            List<UpdateTaskStatusResponse> responseList = updatedEmails.stream()
 //                    .map(email -> {
@@ -67,10 +103,10 @@ public class EmailController {
      * @return 更新后的邮件实体集合
      */
     @PutMapping("/reset-status")
-    public Result<ResetTaskStatusResponse> resetEmailStatus(@RequestHeader String currentUserId, @RequestHeader int currentUserRole,@RequestBody ResetTaskStatusRequest request) {
+    public Result<ResetTaskStatusResponse> resetEmailStatus(@RequestHeader String currentUserId, @RequestHeader int currentUserRole, @RequestBody ResetTaskStatusRequest request) {
         try {
             // 调用服务层方法根据 emailTaskId 更新状态为 4
-            Email updatedEmails = emailService.resetEmailStatusForAll(currentUserId,currentUserRole,request);
+            Email updatedEmails = emailService.resetEmailStatusForAll(currentUserId, currentUserRole, request);
 
 //            // 创建响应列表
 //            List<ResetTaskStatusResponse> responseList = updatedEmails.stream()
