@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 
 /**
@@ -16,6 +17,10 @@ import org.springframework.data.elasticsearch.annotations.Document;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Document(indexName = "email_paused")
 public class EmailPaused {
+    @Id
+    @JsonProperty("id")
+    private String id;
+
     @JsonProperty("email_task_id")
     private String emailTaskId;          // 邮件任务ID，使用UUID，不分词
 }
