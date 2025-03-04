@@ -35,7 +35,7 @@ public class EmailReportController {
      * @param emailTaskId 邮件任务ID
      * @return 返回更新结果
      */
-    @PostMapping("/unsubscribe")
+    @GetMapping("/unsubscribe")
     public Result updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
         String emailTypeId = emailTaskService.getEmailTypeId(emailTaskId);
 

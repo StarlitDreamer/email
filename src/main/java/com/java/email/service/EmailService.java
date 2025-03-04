@@ -64,7 +64,7 @@ public class EmailService {
 
         EmailPaused emailPaused = emailPausedOptional.get();
         emailPausedRepository.delete(emailPaused);
-        redisTemplate.opsForValue().set("email_paused:" + emailTaskId, emailTaskId);
+        redisTemplate.opsForValue().set(emailTaskId, emailTaskId);
 
         return "Email task resumed and stored in Redis";
     }
