@@ -107,11 +107,15 @@ public class EmailDetailService {
             // 统计 error_code 为 500 的数量
             long failedCount = countEmailIdsByErrorCode(emailTaskId, 500);
 
+            Optional<EmailReport> byEmailTaskId = emailReportRepository.findByEmailTaskId(emailTaskId);
+
             // 创建 EmailReport 对象
             EmailReport emailReport = new EmailReport();
             emailReport.setEmailTaskId(emailTaskId);
             emailReport.setDeliveryAmount(successCount);  // 送达数量
             emailReport.setBounceAmount(failedCount);     // 退信数量
+            emailReport.setUnsubscribeAmount(byEmailTaskId.get().getUnsubscribeAmount());
+            emailReport.setOpenAmount(byEmailTaskId.get().getOpenAmount());
             emailReport.setEmailTotal((long) emailIds.size());   // 邮件总数
 
             // 打印日志，确认任务执行
