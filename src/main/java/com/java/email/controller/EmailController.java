@@ -7,11 +7,9 @@ import com.java.email.model.request.ResetTaskStatusRequest;
 import com.java.email.model.request.UpdateTaskStatusRequest;
 import com.java.email.model.response.ResetTaskStatusResponse;
 import com.java.email.model.response.UpdateTaskStatusResponse;
-import com.java.email.repository.EmailPausedRepository;
 import com.java.email.service.EmailService;
 import com.java.email.service.ResendDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,16 +21,10 @@ public class EmailController {
     @Autowired
     private ResendDetailsService resendDetailsService;
 
-    @Autowired
-    private EmailPausedRepository emailPausedRepository;
-
-    @Autowired
-    private StringRedisTemplate redisTemplate;
-
     @PostMapping("/resend")
     public Result<String> resendEmail(@RequestBody ResendEmailRequest request) {
         // 拼接 "resend_" 字符串
-        String emailResendId = "resend_" + request.getEmailId();
+        String emailResendId = "resend|" + request.getEmailId();
 
         // 将拼接后的 emailResendId 存入 Redis
         resendDetailsService.saveEmailResendId(emailResendId);
@@ -40,31 +32,6 @@ public class EmailController {
         // 返回响应，包含拼接后的 emailResendId
         return Result.success(emailResendId);
     }
-
-//    @PostMapping("/pause")
-//    public Result pauseEmailTask(@RequestBody EmailPausedRequest request) {
-//        EmailPaused emailPaused = new EmailPaused();
-//        emailPaused.setEmailTaskId(request.getEmailTaskId());
-//
-//        emailPausedRepository.save(emailPaused);
-//        return Result.success("Email task paused successfully");
-//    }
-//
-//    @PostMapping("/begin")
-//    public Result beginEmailTask(@RequestBody EmailBeginRequest request) {
-//        String emailTaskId = request.getEmailTaskId();
-//        Optional<EmailPaused> emailPausedOptional = emailPausedRepository.findById(emailTaskId);
-//
-//        if (emailPausedOptional.isEmpty()) {
-//            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "没有暂停该任务");
-//        }
-//
-//        EmailPaused emailPaused = emailPausedOptional.get();
-//        emailPausedRepository.delete(emailPaused);
-//        redisTemplate.opsForValue().set("email_paused:" + emailTaskId, emailTaskId);
-//
-//        return Result.success("Email task resumed and stored in Redis");
-//    }
 
     /**
      * 根据 emailTaskId 更新所有相关 email 的状态
@@ -84,15 +51,6 @@ public class EmailController {
         try {
             // 调用服务层方法更新状态
             Email updatedEmail = emailService.updateEmailStatusForAll(currentUserId, currentUserRole, request);
-//            // 创建响应列表
-//            List<UpdateTaskStatusResponse> responseList = updatedEmails.stream()
-//                    .map(email -> {
-//                        UpdateTaskStatusResponse response = new UpdateTaskStatusResponse();
-//                        response.setEmailTaskId(email.getEmailTaskId());
-//                        response.setEmailStatus(email.getEmailStatus());
-//                        return response;
-//                    })
-//                    .toList();
             UpdateTaskStatusResponse response = new UpdateTaskStatusResponse();
             response.setEmailTaskId(request.getEmailTaskId());
             response.setEmailStatus(request.getOperateStatus());
@@ -112,17 +70,6 @@ public class EmailController {
         try {
             // 调用服务层方法根据 emailTaskId 更新状态为 4
             Email updatedEmails = emailService.resetEmailStatusForAll(currentUserId, currentUserRole, request);
-
-//            // 创建响应列表
-//            List<ResetTaskStatusResponse> responseList = updatedEmails.stream()
-//                    .map(email -> {
-//                        ResetTaskStatusResponse response = new ResetTaskStatusResponse();
-//                        response.setEmailTaskId(email.getEmailTaskId());
-//                        response.setEmailStatus(String.valueOf(email.getEmailStatus()));
-//                        return response;
-//                    })
-//                    .toList();
-
             ResetTaskStatusResponse response = new ResetTaskStatusResponse();
             response.setEmailTaskId(request.getTaskId());
             response.setEmailStatus(String.valueOf(4));

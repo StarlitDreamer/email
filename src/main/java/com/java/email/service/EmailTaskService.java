@@ -247,11 +247,11 @@ public class EmailTaskService {
                 size--;
                 if (size == 0) {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件URL: " + attachment.getAttachmentUrl();
-                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
+                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>如要下载附件，请复制链接至浏览器即可。");  // 每个附件信息包裹在 <p> 标签中
                 } else {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件URL: " + attachment.getAttachmentUrl();
+                            ", 附件下载链接: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 }
             }
@@ -498,11 +498,11 @@ public class EmailTaskService {
                 size--;
                 if (size == 0) {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件URL: " + attachment.getAttachmentUrl();
-                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
+                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>如要下载附件，请复制链接至浏览器即可。");  // 每个附件信息包裹在 <p> 标签中
                 } else {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件URL: " + attachment.getAttachmentUrl();
+                            ", 附件下载链接: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 }
             }
@@ -768,11 +768,11 @@ public class EmailTaskService {
                 size--;
                 if (size == 0) {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件URL: " + attachment.getAttachmentUrl();
-                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p><p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>");  // 每个附件信息包裹在 <p> 标签中
+                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>如要下载附件，请复制链接至浏览器即可。");  // 每个附件信息包裹在 <p> 标签中
                 } else {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件URL: " + attachment.getAttachmentUrl();
+                            ", 附件下载链接: " + attachment.getAttachmentUrl();
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 }
             }
