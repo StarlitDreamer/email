@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
@@ -139,7 +140,7 @@ public class CustomerServiceImpl implements CustomerService {
                 logUtil.error("邮箱不能为空");
                 return new Result(ResultCode.R_ParamError);
             }
-            
+
             // 检查数组内部是否有重复
             for (String email : customerDocument.getEmails()) {
                 if (email == null || email.trim().isEmpty()) {
@@ -157,33 +158,51 @@ public class CustomerServiceImpl implements CustomerService {
                     logUtil.error("邮箱不能重复: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
-                
-                // 检查数据库中是否已存在该邮箱
-                NativeQuery searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q
-                        .bool(b -> b
-                            .must(m -> m
-                                .term(t -> t
-                                    .field("emails")
-                                    .value(email)
+
+                // 检查客户、供应商数据库中是否已存在该邮箱
+                NativeQuery searchCustomerQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .term(t -> t
+                                                        .field("emails")
+                                                        .value(email)
+                                                )
+                                        )
                                 )
-                            )
                         )
-                    )
-                    .build();
-                
-                SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(
-                    searchQuery,
-                    CustomerDocument.class
+                        .build();
+
+                SearchHits<CustomerDocument> searchCustomerHits = elasticsearchOperations.search(
+                        searchCustomerQuery,
+                        CustomerDocument.class
                 );
-                
-                if (searchHits.getTotalHits() > 0) {
-                    logUtil.error("邮箱已存在: " + email);
+
+                NativeQuery searchSupplierQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .term(t -> t
+                                                        .field("emails")
+                                                        .value(email)
+                                                )
+                                        )
+                                )
+                        )
+                        .build();
+
+                SearchHits<SupplierDocument> searchSupplierHits = elasticsearchOperations.search(
+                        searchSupplierQuery,
+                        SupplierDocument.class
+                );
+
+                if (searchCustomerHits.getTotalHits() > 0 || searchSupplierHits.getTotalHits() > 0) {
+                    logUtil.error("客户或供应商邮箱已存在: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
             }
         }
-        
+
         if (customerDocument.getCustomerLevel() == null || customerDocument.getCustomerLevel() < ReceiverConstData.CUSTOMER_LEVEL_LOW || customerDocument.getCustomerLevel() > ReceiverConstData.CUSTOMER_LEVEL_HIGH) {
             logUtil.error("客户等级必须在1-3之间");
             return new Result(ResultCode.R_ParamError);
@@ -206,34 +225,34 @@ public class CustomerServiceImpl implements CustomerService {
             CommodityDocument commodityDoc = commodityRepository.findById(commodityId).orElse(null);
             if (commodityDoc == null) {
                 logUtil.error("商品不存在: " + commodityId);
-                return new Result(ResultCode.R_CommodityNotFound); 
+                return new Result(ResultCode.R_CommodityNotFound);
             }
         }
-        if(customerDocument.getCustomerCountryId() == null || customerDocument.getCustomerCountryId().trim().isEmpty()){
+        if (customerDocument.getCustomerCountryId() == null || customerDocument.getCustomerCountryId().trim().isEmpty()) {
             logUtil.error("客户国家ID不能为空");
             return new Result(ResultCode.R_ParamError);
         }
         CountryDocument countryDoc = countryRepository.findById(customerDocument.getCustomerCountryId()).orElse(null);
         if (countryDoc == null) {
             logUtil.error("国家不存在: " + customerDocument.getCustomerCountryId());
-            return new Result(ResultCode.R_CountryNotFound); 
+            return new Result(ResultCode.R_CountryNotFound);
         }
 
         // 获取用户ID
         String userId = ThreadLocalUtil.getUserId();
-        Integer userRole =  ThreadLocalUtil.getUserRole();
-        if(userId == null || userRole == null){
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (userId == null || userRole == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
-        
+
         try {
             // Save the customer document
             String customerId = UUID.randomUUID().toString();
             customerDocument.setCustomerId("customer_" + customerId);
             // 普通用户默认已分配
-            if(userRole == 4){
+            if (userRole == 4) {
                 customerDocument.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
-            }else{
+            } else {
                 customerDocument.setStatus(MagicMathConstData.CUSTOMER_STATUS_UNASSIGNED);
             }
             customerDocument.setBelongUserId(userId);
@@ -252,7 +271,7 @@ public class CustomerServiceImpl implements CustomerService {
             if (savedCustomer == null) {
                 return new Result(ResultCode.R_Fail);
             }
-            return new Result(ResultCode.R_Ok); 
+            return new Result(ResultCode.R_Ok);
         } catch (Exception e) {
             logUtil.error("Error saving customer: " + e.getMessage());
             return new Result(ResultCode.R_Error);
@@ -279,12 +298,12 @@ public class CustomerServiceImpl implements CustomerService {
 
         // 获取用户ID
         String userId = ThreadLocalUtil.getUserId();
-        Integer userRole =  ThreadLocalUtil.getUserRole();
-        if(userId == null || userRole == null){
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (userId == null || userRole == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
         // 权限校验
-        if(userRole == 3){
+        if (userRole == 3) {
             // 验证客户当前所属用户是否包含自己或下属
             if (!subordinateValidation.isSubordinateOrSelf(existingCustomer.getBelongUserId(), userId)) {
                 logUtil.error("无权修改非本人或下属所属的客户");
@@ -351,44 +370,62 @@ public class CustomerServiceImpl implements CustomerService {
                     logUtil.error("邮箱不能重复: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
-                
-                // 检查数据库中是否已存在该邮箱
-                NativeQuery searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q
-                        .bool(b -> b
-                            .must(m -> m
-                                .term(t -> t
-                                    .field("emails")
-                                    .value(email)
+
+                // 检查客户、供应商数据库中是否已存在该邮箱
+                NativeQuery searchCustomerQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .term(t -> t
+                                                        .field("emails")
+                                                        .value(email)
+                                                )
+                                        )
                                 )
-                            )
                         )
-                    )
-                    .build();
-                
-                SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(
-                    searchQuery,
-                    CustomerDocument.class
+                        .build();
+
+                SearchHits<CustomerDocument> searchCustomerHits = elasticsearchOperations.search(
+                        searchCustomerQuery,
+                        CustomerDocument.class
                 );
-                
-                if (searchHits.getTotalHits() > 0) {
-                    logUtil.error("邮箱已存在: " + email);
+
+                NativeQuery searchSupplierQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .term(t -> t
+                                                        .field("emails")
+                                                        .value(email)
+                                                )
+                                        )
+                                )
+                        )
+                        .build();
+
+                SearchHits<SupplierDocument> searchSupplierHits = elasticsearchOperations.search(
+                        searchSupplierQuery,
+                        SupplierDocument.class
+                );
+
+                if (searchCustomerHits.getTotalHits() > 0 || searchSupplierHits.getTotalHits() > 0) {
+                    logUtil.error("客户或供应商邮箱已存在: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
             }
             existingCustomer.setEmails(customerDocument.getEmails());
         }
         if (customerDocument.getCustomerLevel() != null && customerDocument.getCustomerLevel() != 0) {
-            if (customerDocument.getCustomerLevel() < ReceiverConstData.CUSTOMER_LEVEL_LOW || 
-                customerDocument.getCustomerLevel() > ReceiverConstData.CUSTOMER_LEVEL_HIGH) {
+            if (customerDocument.getCustomerLevel() < ReceiverConstData.CUSTOMER_LEVEL_LOW ||
+                    customerDocument.getCustomerLevel() > ReceiverConstData.CUSTOMER_LEVEL_HIGH) {
                 logUtil.error("客户等级必须在1-3之间");
                 return new Result(ResultCode.R_ParamError);
             }
             existingCustomer.setCustomerLevel(customerDocument.getCustomerLevel());
         }
         if (customerDocument.getTradeType() != null && customerDocument.getTradeType() != 0) {
-            if (!(customerDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || 
-                  customerDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
+            if (!(customerDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) ||
+                    customerDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                 logUtil.error("贸易类型必须在1-2之间");
                 return new Result(ResultCode.R_ParamError);
             }
@@ -404,7 +441,7 @@ public class CustomerServiceImpl implements CustomerService {
                 CommodityDocument commodityDoc = commodityRepository.findById(commodityId).orElse(null);
                 if (commodityDoc == null) {
                     logUtil.error("商品不存在: " + commodityId);
-                    return new Result(ResultCode.R_CommodityNotFound); 
+                    return new Result(ResultCode.R_CommodityNotFound);
                 }
             }
             existingCustomer.setCommodityId(customerDocument.getCommodityId());
@@ -413,7 +450,7 @@ public class CustomerServiceImpl implements CustomerService {
             CountryDocument countryDoc = countryRepository.findById(customerDocument.getCustomerCountryId()).orElse(null);
             if (countryDoc == null) {
                 logUtil.error("国家不存在: " + customerDocument.getCustomerCountryId());
-                return new Result(ResultCode.R_CountryNotFound); 
+                return new Result(ResultCode.R_CountryNotFound);
             }
             existingCustomer.setCustomerCountryId(customerDocument.getCustomerCountryId());
         }
@@ -423,18 +460,18 @@ public class CustomerServiceImpl implements CustomerService {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
             String currentTime = LocalDateTime.now().format(formatter);
             existingCustomer.setUpdatedAt(currentTime);
-            
+
             CustomerDocument savedCustomer = customerRepository.save(existingCustomer);
             if (savedCustomer == null) {
                 return new Result(ResultCode.R_Fail);
             }
-            return new Result(ResultCode.R_Ok); 
+            return new Result(ResultCode.R_Ok);
         } catch (Exception e) {
             logUtil.error("Error updating customer: " + e.getMessage());
             return new Result(ResultCode.R_Error);
         }
     }
-    
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result deleteCustomer(CustomerDocument customerDocument) {
@@ -460,18 +497,18 @@ public class CustomerServiceImpl implements CustomerService {
         // 如果是小管理（角色为3），需要验证权限
         if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
             // 检查创建人是否为下属或自己
-            if(!subordinateValidation.isSubordinateOrSelf(existingCustomer.getCreatorId(), userId)){
+            if (!subordinateValidation.isSubordinateOrSelf(existingCustomer.getCreatorId(), userId)) {
                 logUtil.error("无权删除非本人或下属创建的客户");
                 return new Result(ResultCode.R_NoAuth);
             }
             // // 检查是否为创建人
             // boolean isCreator = userId.equals(existingCustomer.getCreatorId());
-            
+
             // // 检查创建人和所属用户是否都是下属
             // ValidationResult creatorValidation = subordinateValidation.isSubordinate(userId, existingCustomer.getCreatorId());
             // ValidationResult belongValidation = subordinateValidation.isSubordinate(userId, existingCustomer.getBelongUserId());
             // boolean hasSubordinate = belongValidation.isValid() && creatorValidation.isValid();
-            
+
             // // 如果既不是创建人，也不是下属，则无权删除
             // if (!isCreator && !hasSubordinate) {
             //     return new Result(ResultCode.R_NoAuth);
@@ -508,19 +545,19 @@ public class CustomerServiceImpl implements CustomerService {
             return new Result(ResultCode.R_UserNotFound);
         }
         String currentUserName = ThreadLocalUtil.getUserName();
-        if(currentUserName == null){
+        if (currentUserName == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
 
         String belongUserName = request.getBelongUserName();
-        if(belongUserName != null && !belongUserName.trim().isEmpty()){
+        if (belongUserName != null && !belongUserName.trim().isEmpty()) {
             belongUserName = belongUserName.trim();
         }
         try {
             // 创建分页对象
             Pageable pageable = PageRequest.of(
-                request.getPageNum() - 1,
-                request.getPageSize()
+                    request.getPageNum() - 1,
+                    request.getPageSize()
             );
 
             // 创建查询构建器
@@ -528,7 +565,7 @@ public class CustomerServiceImpl implements CustomerService {
             NativeQuery searchQuery = null;
 
             // 所属用户为公司，则直接查询所有与公司相关的客户
-            if(belongUserName != null && belongUserName.equals(UserConstData.COMPANY_USER_NAME)) {
+            if (belongUserName != null && belongUserName.equals(UserConstData.COMPANY_USER_NAME)) {
                 mainQuery.must(m -> m.term(t -> t.field("belong_user_id").value(UserConstData.COMPANY_USER_ID)));
                 // 创建人条件
                 if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
@@ -635,7 +672,7 @@ public class CustomerServiceImpl implements CustomerService {
                             )
                     );
                 }
-                
+
                 // 邮件类型条件
                 if (request.getNoAcceptEmailTypeId() != null && !request.getNoAcceptEmailTypeId().isEmpty()) {
                     BoolQuery.Builder emailTypeQuery = new BoolQuery.Builder();
@@ -688,30 +725,30 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
-                    .withPageable(pageable)
-                    .build();
+                        .withQuery(q -> q.bool(mainQuery.build()))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
+                        .withPageable(pageable)
+                        .build();
 
                 // 执行查询
                 SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(searchQuery, CustomerDocument.class);
-                
+
                 // 获取当前页的数据
                 List<CustomerDocument> customers = searchHits.getSearchHits().stream()
-                    .map(SearchHit::getContent)
-                    .collect(Collectors.toList());
+                        .map(SearchHit::getContent)
+                        .collect(Collectors.toList());
 
                 return new Result(
-                    ResultCode.R_Ok, 
-                    new PageResponse<>(
-                        searchHits.getTotalHits(),
-                        request.getPageNum(),
-                        request.getPageSize(),
-                        convertToResponseFormat(customers)
-                    )
+                        ResultCode.R_Ok,
+                        new PageResponse<>(
+                                searchHits.getTotalHits(),
+                                request.getPageNum(),
+                                request.getPageSize(),
+                                convertToResponseFormat(customers)
+                        )
                 );
             }
-            if(userRole.equals(UserConstData.ROLE_ADMIN_LARGE)){
+            if (userRole.equals(UserConstData.ROLE_ADMIN_LARGE)) {
                 // 创建人条件
                 if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
                     List<UserDocument> creators = userRepository.findByUserNameLike(request.getCreatorName().trim());
@@ -893,20 +930,20 @@ public class CustomerServiceImpl implements CustomerService {
 
                 // 构建查询
                 searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
-                    .withPageable(pageable)
-                    .build();
+                        .withQuery(q -> q.bool(mainQuery.build()))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
+                        .withPageable(pageable)
+                        .build();
             }
 
-            if(userRole.equals(UserConstData.ROLE_ADMIN_SMALL)){
+            if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
                 // 添加必要的权限过滤
                 BoolQuery.Builder accessQuery = new BoolQuery.Builder();
                 boolean hasCreator = false;
                 boolean hasBelong = false;
 
                 // 验证创建人是否为自己或下属
-                if(request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()){
+                if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
                     hasCreator = true;
                     ValidationResult creatorValidation = subordinateValidation.findSubordinatesAndSelfByName(
                             request.getCreatorName().trim(),
@@ -928,9 +965,9 @@ public class CustomerServiceImpl implements CustomerService {
                     }
                     mainQuery.must(m -> m.bool(creatorQuery.build()));
                 }
-                
+
                 // 验证所属用户是否为自己或下属
-                if(request.getBelongUserName() != null && !request.getBelongUserName().trim().isEmpty()){
+                if (request.getBelongUserName() != null && !request.getBelongUserName().trim().isEmpty()) {
                     hasBelong = true;
                     ValidationResult belongValidation = subordinateValidation.findSubordinatesAndSelfByName(
                             request.getBelongUserName().trim(),
@@ -1147,24 +1184,24 @@ public class CustomerServiceImpl implements CustomerService {
 
                 // 构建查询
                 searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
-                    .withPageable(pageable)
-                    .build();
+                        .withQuery(q -> q.bool(mainQuery.build()))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
+                        .withPageable(pageable)
+                        .build();
             }
 
-            if(userRole.equals(UserConstData.ROLE_USER)){
+            if (userRole.equals(UserConstData.ROLE_USER)) {
                 // 普通用户必须查询自己的客户
                 BoolQuery.Builder belongQuery = new BoolQuery.Builder();
                 belongQuery.should(s -> s
-                            .term(t -> t
+                        .term(t -> t
                                 .field("belong_user_id")
                                 .value(currentUserId)
-                            )
-                        );
+                        )
+                );
                 // 添加所属用户条件
                 mainQuery.must(m -> m.bool(belongQuery.build()));
-                
+
                 // 客户名称条件
                 if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
                     mainQuery.must(m -> m
@@ -1302,27 +1339,27 @@ public class CustomerServiceImpl implements CustomerService {
 
                 // 构建查询
                 searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
-                    .withPageable(pageable)
-                    .build();
+                        .withQuery(q -> q.bool(mainQuery.build()))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
+                        .withPageable(pageable)
+                        .build();
             }
             // 执行查询
             SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(searchQuery, CustomerDocument.class);
-            
+
             // 获取当前页的数据
             List<CustomerDocument> customers = searchHits.getSearchHits().stream()
-                .map(SearchHit::getContent)
-                .collect(Collectors.toList());
+                    .map(SearchHit::getContent)
+                    .collect(Collectors.toList());
 
             return new Result(
-                ResultCode.R_Ok, 
-                new PageResponse<>(
-                    searchHits.getTotalHits(),
-                    request.getPageNum(),
-                    request.getPageSize(),
-                    convertToResponseFormat(customers)
-                )
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            searchHits.getTotalHits(),
+                            request.getPageNum(),
+                            request.getPageSize(),
+                            convertToResponseFormat(customers)
+                    )
             );
         } catch (Exception e) {
             logUtil.error("Error filtering customers: " + e.getMessage());
@@ -1334,11 +1371,11 @@ public class CustomerServiceImpl implements CustomerService {
     @Transactional(rollbackFor = Exception.class)
     public Result assignCustomer(CustomerDocument customerDocument) {
         // 参数校验
-        if (customerDocument == null || 
-            customerDocument.getCustomerId() == null || 
-            customerDocument.getCustomerId().trim().isEmpty() ||
-            customerDocument.getBelongUserId() == null || 
-            customerDocument.getBelongUserId().trim().isEmpty()) {
+        if (customerDocument == null ||
+                customerDocument.getCustomerId() == null ||
+                customerDocument.getCustomerId().trim().isEmpty() ||
+                customerDocument.getBelongUserId() == null ||
+                customerDocument.getBelongUserId().trim().isEmpty()) {
             return new Result(ResultCode.R_ParamError);
         }
 
@@ -1381,7 +1418,7 @@ public class CustomerServiceImpl implements CustomerService {
                         return new Result(ResultCode.R_NoAuth);
                     }
                     // 检查所属用户是否为下属或自己
-                    if(!subordinateValidation.isSubordinateOrSelf(existingCustomer.getBelongUserId(), currentUserId)){
+                    if (!subordinateValidation.isSubordinateOrSelf(existingCustomer.getBelongUserId(), currentUserId)) {
                         logUtil.error("无权分配非本人或下属创建的客户");
                         return new Result(ResultCode.R_NoAuth);
                     }
@@ -1395,7 +1432,7 @@ public class CustomerServiceImpl implements CustomerService {
             // 更新客户信息
             existingCustomer.setBelongUserId(customerDocument.getBelongUserId());
             existingCustomer.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
-            
+
             // 更新时间
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
             String currentTime = LocalDateTime.now().format(formatter);
@@ -1438,10 +1475,10 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public Result assignCustomerDetails(Map<String, Object> params) {
         // 参数校验
-        if (params == null || 
-            params.get("customer_id") == null || 
-            params.get("page_num") == null || 
-            params.get("page_size") == null) {
+        if (params == null ||
+                params.get("customer_id") == null ||
+                params.get("page_num") == null ||
+                params.get("page_size") == null) {
             return new Result(ResultCode.R_ParamError);
         }
 
@@ -1456,7 +1493,6 @@ public class CustomerServiceImpl implements CustomerService {
             return new Result(ResultCode.R_ParamError);
         }
 
-        
 
         // 获取当前用户信息
         String currentUserId = ThreadLocalUtil.getUserId();
@@ -1494,13 +1530,13 @@ public class CustomerServiceImpl implements CustomerService {
 
             // 返回分页数据
             return new Result(
-                ResultCode.R_Ok, 
-                new PageResponse<>(
-                    total,
-                    pageNum,
-                    pageSize,
-                    pageData
-                )
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            total,
+                            pageNum,
+                            pageSize,
+                            pageData
+                    )
             );
 
         } catch (NumberFormatException e) {
@@ -1516,9 +1552,9 @@ public class CustomerServiceImpl implements CustomerService {
     @Transactional(rollbackFor = Exception.class)
     public Result allAssignCustomer(Map<String, Object> params) {
         // 参数校验
-        if (params == null || 
-            params.get("customer_id") == null || 
-            params.get("belong_user_id") == null) {
+        if (params == null ||
+                params.get("customer_id") == null ||
+                params.get("belong_user_id") == null) {
             return new Result(ResultCode.R_ParamError);
         }
 
@@ -1559,9 +1595,9 @@ public class CustomerServiceImpl implements CustomerService {
 
             // 权限检查
             if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
-                if(!belongUserId.equals(UserConstData.COMPANY_USER_ID)){
+                if (!belongUserId.equals(UserConstData.COMPANY_USER_ID)) {
                     // 小管理员只能分配给自己或下属
-                    if(!subordinateValidation.isSubordinateOrSelf(belongUserId, currentUserId)){
+                    if (!subordinateValidation.isSubordinateOrSelf(belongUserId, currentUserId)) {
                         logUtil.error("无权分配给非下属用户");
                         return new Result(ResultCode.R_NoAuth);
                     }
@@ -1587,8 +1623,8 @@ public class CustomerServiceImpl implements CustomerService {
                 }
 
                 // 小管理检查所属用户是否为下属或自己
-                if(userRole.equals(UserConstData.ROLE_ADMIN_SMALL)){
-                    if(!subordinateValidation.isSubordinateOrSelf(existingCustomer.getBelongUserId(), currentUserId)){
+                if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
+                    if (!subordinateValidation.isSubordinateOrSelf(existingCustomer.getBelongUserId(), currentUserId)) {
                         logUtil.error("无权分配非本人或下属的客户");
                         continue;
                     }
@@ -1640,7 +1676,7 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         if (!file.getOriginalFilename().endsWith(".csv")) {
-            return new Result(ResultCode.R_ParamError); 
+            return new Result(ResultCode.R_ParamError);
         }
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
@@ -1648,17 +1684,17 @@ public class CustomerServiceImpl implements CustomerService {
             String headerLine = reader.readLine();
             String line;
             List<CustomerDocument> customers = new ArrayList<>();
-            
+
             while ((line = reader.readLine()) != null) {
                 String[] data = line.split(",");
                 CustomerDocument customer = new CustomerDocument();
-                
+
                 // 设置基本信息
                 customer.setCustomerName(data[0]);
                 customer.setContactPerson(data[1]);
                 customer.setContactWay(data[2]);
                 customer.setCustomerLevel(Integer.parseInt(data[3]));
-                
+
                 // 通过国家名称查询国家ID
                 String countryName = data[4];
                 CountryDocument country = countryRepository.findByCountryName(countryName);
@@ -1669,9 +1705,9 @@ public class CustomerServiceImpl implements CustomerService {
                     logUtil.error("国家不存在: " + countryName);
                     continue;
                 }
-                
+
                 customer.setTradeType(Integer.parseInt(data[5]));
-                
+
                 // 处理商品名称数组，转换为商品ID
                 String[] commodityNames = data[6].split(";");
                 List<String> commodityIds = new ArrayList<>();
@@ -1683,19 +1719,19 @@ public class CustomerServiceImpl implements CustomerService {
                     commodityIds.add(commodity.getCommodityId());
                 }
                 customer.setCommodityId(commodityIds);
-                
+
                 customer.setSex(data[7]);
-                
+
                 // 处理birth日期，转换为ISO格式
                 String birthDate = data[8];
                 if (birthDate != null && !birthDate.isEmpty()) {
                     try {
                         // 支持多种日期格式: yyyy/MM/dd, yyyy-MM-dd, 包括单位数的月日
                         DateTimeFormatter[] formatters = {
-                            DateTimeFormatter.ofPattern("yyyy/MM/dd"),
-                            DateTimeFormatter.ofPattern("yyyy/M/d"),
-                            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-                            DateTimeFormatter.ofPattern("yyyy-M-d")
+                                DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                                DateTimeFormatter.ofPattern("yyyy/M/d"),
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                                DateTimeFormatter.ofPattern("yyyy-M-d")
                         };
 
                         LocalDate date = null;
@@ -1721,7 +1757,7 @@ public class CustomerServiceImpl implements CustomerService {
                         continue;
                     }
                 }
-                
+
                 // 处理邮箱列表
                 String[] emails = data[9].split(";");
                 // 检查数组内是否有重复
@@ -1742,28 +1778,46 @@ public class CustomerServiceImpl implements CustomerService {
                         logUtil.error("邮箱不能重复: " + email);
                         continue;
                     }
-                    
-                    // 检查数据库中是否已存在该邮箱
-                    NativeQuery searchQuery = NativeQuery.builder()
-                        .withQuery(q -> q
-                            .bool(b -> b
-                                .must(m -> m
-                                    .term(t -> t
-                                        .field("emails")
-                                        .value(email)
+
+                    // 检查客户、供应商数据库中是否已存在该邮箱
+                    NativeQuery searchCustomerQuery = NativeQuery.builder()
+                            .withQuery(q -> q
+                                    .bool(b -> b
+                                            .must(m -> m
+                                                    .term(t -> t
+                                                            .field("emails")
+                                                            .value(email)
+                                                    )
+                                            )
                                     )
-                                )
                             )
-                        )
-                        .build();
-                    
-                    SearchHits<CustomerDocument> searchHits = elasticsearchOperations.search(
-                        searchQuery,
-                        CustomerDocument.class
+                            .build();
+
+                    SearchHits<CustomerDocument> searchCustomerHits = elasticsearchOperations.search(
+                            searchCustomerQuery,
+                            CustomerDocument.class
                     );
-                    
-                    if (searchHits.getTotalHits() > 0) {
-                        logUtil.error("邮箱已存在: " + email);
+
+                    NativeQuery searchSupplierQuery = NativeQuery.builder()
+                            .withQuery(q -> q
+                                    .bool(b -> b
+                                            .must(m -> m
+                                                    .term(t -> t
+                                                            .field("emails")
+                                                            .value(email)
+                                                    )
+                                            )
+                                    )
+                            )
+                            .build();
+
+                    SearchHits<SupplierDocument> searchSupplierHits = elasticsearchOperations.search(
+                            searchSupplierQuery,
+                            SupplierDocument.class
+                    );
+
+                    if (searchCustomerHits.getTotalHits() > 0 || searchSupplierHits.getTotalHits() > 0) {
+                        logUtil.error("客户或供应商邮箱已存在: " + email);
                         continue;
                     }
                     emailList.add(email);
@@ -1772,7 +1826,7 @@ public class CustomerServiceImpl implements CustomerService {
                     logUtil.error("邮箱验证全部重复");
                     continue;
                 }
-                customer.setEmails(emailList);                
+                customer.setEmails(emailList);
                 // 设置接受的邮件类型ID列表
                 // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
                 //         .map(EmailTypeDocument::getEmailTypeId)
@@ -1802,15 +1856,15 @@ public class CustomerServiceImpl implements CustomerService {
                 String currentTime = LocalDateTime.now().format(formatter);
                 customer.setCreatedAt(currentTime);
                 customer.setUpdatedAt(currentTime);
-                
+
                 customers.add(customer);
             }
-            
+
             // 批量保存到ES
             customerRepository.saveAll(customers);
-            
+
             return new Result(ResultCode.R_Ok, customers.size());
-            
+
         } catch (IOException e) {
             logUtil.error("CSV文件读取失败", e);
             return new Result(ResultCode.R_Error, "文件处理失败：" + e.getMessage());
@@ -1820,7 +1874,7 @@ public class CustomerServiceImpl implements CustomerService {
         }
     }
 
-    
+
     private List<Map<String, Object>> convertToResponseFormat(List<CustomerDocument> customers) {
         if (customers == null || customers.isEmpty()) {
             return new ArrayList<>();
@@ -1831,24 +1885,24 @@ public class CustomerServiceImpl implements CustomerService {
                     Map<String, Object> map = new HashMap<>();
                     map.put("customer_id", customer.getCustomerId());
                     map.put("customer_name", customer.getCustomerName());
-                    
+
                     // Get creator name from creator id
                     UserDocument creator = userRepository.findById(customer.getCreatorId()).orElse(null);
                     map.put("creator_name", creator != null ? creator.getUserName() : "");
-                    
+
                     // Get belong user name from belong user id
                     UserDocument belongUser = userRepository.findById(customer.getBelongUserId()).orElse(null);
                     map.put("belong_user_name", belongUser != null ? belongUser.getUserName() : "");
-                    
+
                     map.put("contact_person", customer.getContactPerson());
                     map.put("contact_way", customer.getContactWay());
                     map.put("customer_level", customer.getCustomerLevel());
                     map.put("trade_type", customer.getTradeType());
-                    
+
                     // Get country name from country id
                     CountryDocument country = countryRepository.findById(customer.getCustomerCountryId()).orElse(null);
                     map.put("customer_country_name", country != null ? country.getCountryName() : "");
-                    
+
                     // Get commodity names from commodity ids
                     List<String> commodityNames = new ArrayList<>();
                     if (customer.getCommodityId() != null) {
@@ -1860,11 +1914,11 @@ public class CustomerServiceImpl implements CustomerService {
                         }
                     }
                     map.put("commodity_name", commodityNames);
-                    
+
                     map.put("sex", customer.getSex());
                     map.put("birth", customer.getBirth());
                     map.put("emails", customer.getEmails());
-                    
+
                     // Get email type names from email type ids
                     List<String> emailTypeNames = new ArrayList<>();
                     if (customer.getNoAcceptEmailTypeId() != null) {
@@ -1876,11 +1930,11 @@ public class CustomerServiceImpl implements CustomerService {
                         }
                     }
                     map.put("no_accept_email_type_name", emailTypeNames);
-                    
+
                     map.put("status", customer.getStatus());
                     map.put("created_at", customer.getCreatedAt());
                     map.put("updated_at", customer.getUpdatedAt());
-                    
+
                     return map;
                 })
                 .collect(Collectors.toList());

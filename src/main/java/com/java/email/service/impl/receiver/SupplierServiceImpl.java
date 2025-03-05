@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import java.util.Map;
 import java.util.HashMap;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -46,6 +47,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.java.email.model.dto.request.SupplierFilterRequest;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -152,7 +154,7 @@ public class SupplierServiceImpl implements SupplierService {
                 logUtil.error("邮箱不能为空");
                 return new Result(ResultCode.R_ParamError);
             }
-            
+
             // 检查数组内部是否有重复
             for (String email : supplierDocument.getEmails()) {
                 if (email == null || email.trim().isEmpty()) {
@@ -170,35 +172,53 @@ public class SupplierServiceImpl implements SupplierService {
                     logUtil.error("邮箱不能重复: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
-                
-                // 检查数据库中是否已存在该邮箱
-                NativeQuery searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q
-                        .bool(b -> b
-                            .must(m -> m
-                                .term(t -> t
-                                    .field("emails")
-                                    .value(email)
+
+                // 检查客户、供应商数据库中是否已存在该邮箱
+                NativeQuery searchCustomerQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .term(t -> t
+                                                        .field("emails")
+                                                        .value(email)
+                                                )
+                                        )
                                 )
-                            )
                         )
-                    )
-                    .build();
-                
-                SearchHits<SupplierDocument> searchHits = elasticsearchOperations.search(
-                    searchQuery,
-                    SupplierDocument.class
+                        .build();
+
+                SearchHits<CustomerDocument> searchCustomerHits = elasticsearchOperations.search(
+                        searchCustomerQuery,
+                        CustomerDocument.class
                 );
-                
-                if (searchHits.getTotalHits() > 0) {
-                    logUtil.error("邮箱已存在: " + email);
+
+                NativeQuery searchSupplierQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .term(t -> t
+                                                        .field("emails")
+                                                        .value(email)
+                                                )
+                                        )
+                                )
+                        )
+                        .build();
+
+                SearchHits<SupplierDocument> searchSupplierHits = elasticsearchOperations.search(
+                        searchSupplierQuery,
+                        SupplierDocument.class
+                );
+
+                if (searchCustomerHits.getTotalHits() > 0 || searchSupplierHits.getTotalHits() > 0) {
+                    logUtil.error("客户或供应商邮箱已存在: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
             }
         }
-        
+
         if (supplierDocument.getSupplierLevel() != null) {
-            if (supplierDocument.getSupplierLevel() < ReceiverConstData.SUPPLIER_LEVEL_LOW   || supplierDocument.getSupplierLevel() > ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
+            if (supplierDocument.getSupplierLevel() < ReceiverConstData.SUPPLIER_LEVEL_LOW || supplierDocument.getSupplierLevel() > ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
                 logUtil.error("供应商等级必须在1-3之间");
                 return new Result(ResultCode.R_ParamError);
             }
@@ -223,7 +243,7 @@ public class SupplierServiceImpl implements SupplierService {
                 CommodityDocument commodityDoc = commodityRepository.findById(commodityId).orElse(null);
                 if (commodityDoc == null) {
                     logUtil.error("商品不存在: " + commodityId);
-                    return new Result(ResultCode.R_CommodityNotFound); 
+                    return new Result(ResultCode.R_CommodityNotFound);
                 }
             }
         }
@@ -235,26 +255,26 @@ public class SupplierServiceImpl implements SupplierService {
             CountryDocument countryDoc = countryRepository.findById(supplierDocument.getSupplierCountryId()).orElse(null);
             if (countryDoc == null) {
                 logUtil.error("国家不存在: " + supplierDocument.getSupplierCountryId());
-                return new Result(ResultCode.R_CountryNotFound); 
+                return new Result(ResultCode.R_CountryNotFound);
             }
         }
 
         // 获取用户ID
         String userId = ThreadLocalUtil.getUserId();
-        Integer userRole =  ThreadLocalUtil.getUserRole();
-        if(userId == null || userRole == null){
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (userId == null || userRole == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
-        
+
 
         try {
             // Save the supplier document
             String supplierId = UUID.randomUUID().toString();
             supplierDocument.setSupplierId("supplier_" + supplierId);
             // 普通用户默认已分配
-            if(userRole == 4){
+            if (userRole == 4) {
                 supplierDocument.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
-            }else{
+            } else {
                 supplierDocument.setStatus(MagicMathConstData.SUPPLIER_STATUS_UNASSIGNED);
             }
             supplierDocument.setBelongUserId(userId);
@@ -274,7 +294,7 @@ public class SupplierServiceImpl implements SupplierService {
             if (savedSupplier == null) {
                 return new Result(ResultCode.R_Fail);
             }
-            return new Result(ResultCode.R_Ok); 
+            return new Result(ResultCode.R_Ok);
         } catch (Exception e) {
             logUtil.error("Error saving supplier: " + e.getMessage());
             return new Result(ResultCode.R_Error);
@@ -300,12 +320,12 @@ public class SupplierServiceImpl implements SupplierService {
         }
         // 获取用户ID
         String userId = ThreadLocalUtil.getUserId();
-        Integer userRole =  ThreadLocalUtil.getUserRole();
-        if(userId == null || userRole == null){
+        Integer userRole = ThreadLocalUtil.getUserRole();
+        if (userId == null || userRole == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
         // 权限校验
-        if(userRole == 3){
+        if (userRole == 3) {
             // 验证供应商当前所属用户是否包含自己或下属
             if (!subordinateValidation.isSubordinateOrSelf(existingSupplier.getBelongUserId(), userId)) {
                 logUtil.error("无权修改非本人或下属所属的供应商");
@@ -373,44 +393,62 @@ public class SupplierServiceImpl implements SupplierService {
                     logUtil.error("邮箱不能重复: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
-                
-                // 检查数据库中是否已存在该邮箱
-                NativeQuery searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q
-                        .bool(b -> b
-                            .must(m -> m
-                                .term(t -> t
-                                    .field("emails")
-                                    .value(email)
+
+                // 检查客户、供应商数据库中是否已存在该邮箱
+                NativeQuery searchCustomerQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .term(t -> t
+                                                        .field("emails")
+                                                        .value(email)
+                                                )
+                                        )
                                 )
-                            )
                         )
-                    )
-                    .build();
-                
-                SearchHits<SupplierDocument> searchHits = elasticsearchOperations.search(
-                    searchQuery,
-                    SupplierDocument.class
+                        .build();
+
+                SearchHits<CustomerDocument> searchCustomerHits = elasticsearchOperations.search(
+                        searchCustomerQuery,
+                        CustomerDocument.class
                 );
-                
-                if (searchHits.getTotalHits() > 0) {
-                    logUtil.error("邮箱已存在: " + email);
+
+                NativeQuery searchSupplierQuery = NativeQuery.builder()
+                        .withQuery(q -> q
+                                .bool(b -> b
+                                        .must(m -> m
+                                                .term(t -> t
+                                                        .field("emails")
+                                                        .value(email)
+                                                )
+                                        )
+                                )
+                        )
+                        .build();
+
+                SearchHits<SupplierDocument> searchSupplierHits = elasticsearchOperations.search(
+                        searchSupplierQuery,
+                        SupplierDocument.class
+                );
+
+                if (searchCustomerHits.getTotalHits() > 0 || searchSupplierHits.getTotalHits() > 0) {
+                    logUtil.error("客户或供应商邮箱已存在: " + email);
                     return new Result(ResultCode.R_ParamError);
                 }
             }
             existingSupplier.setEmails(supplierDocument.getEmails());
         }
         if (supplierDocument.getSupplierLevel() != null && supplierDocument.getSupplierLevel() != 0) {
-            if (supplierDocument.getSupplierLevel() < ReceiverConstData.SUPPLIER_LEVEL_LOW || 
-                supplierDocument.getSupplierLevel() > ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
+            if (supplierDocument.getSupplierLevel() < ReceiverConstData.SUPPLIER_LEVEL_LOW ||
+                    supplierDocument.getSupplierLevel() > ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
                 logUtil.error("供应商等级必须在1-3之间");
                 return new Result(ResultCode.R_ParamError);
             }
             existingSupplier.setSupplierLevel(supplierDocument.getSupplierLevel());
         }
         if (supplierDocument.getTradeType() != null && supplierDocument.getTradeType() != 0) {
-            if (!(supplierDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || 
-                  supplierDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
+            if (!(supplierDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) ||
+                    supplierDocument.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                 logUtil.error("贸易类型必须在1-2之间");
                 return new Result(ResultCode.R_ParamError);
             }
@@ -426,7 +464,7 @@ public class SupplierServiceImpl implements SupplierService {
                 CommodityDocument commodityDoc = commodityRepository.findById(commodityId).orElse(null);
                 if (commodityDoc == null) {
                     logUtil.error("商品不存在: " + commodityId);
-                    return new Result(ResultCode.R_CommodityNotFound); 
+                    return new Result(ResultCode.R_CommodityNotFound);
                 }
             }
             existingSupplier.setCommodityId(supplierDocument.getCommodityId());
@@ -435,7 +473,7 @@ public class SupplierServiceImpl implements SupplierService {
             CountryDocument countryDoc = countryRepository.findById(supplierDocument.getSupplierCountryId()).orElse(null);
             if (countryDoc == null) {
                 logUtil.error("国家不存在: " + supplierDocument.getSupplierCountryId());
-                return new Result(ResultCode.R_CountryNotFound); 
+                return new Result(ResultCode.R_CountryNotFound);
             }
             existingSupplier.setSupplierCountryId(supplierDocument.getSupplierCountryId());
         }
@@ -445,12 +483,12 @@ public class SupplierServiceImpl implements SupplierService {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
             String currentTime = LocalDateTime.now().format(formatter);
             existingSupplier.setUpdatedAt(currentTime);
-            
+
             SupplierDocument savedSupplier = supplierRepository.save(existingSupplier);
             if (savedSupplier == null) {
                 return new Result(ResultCode.R_Fail);
             }
-            return new Result(ResultCode.R_Ok); 
+            return new Result(ResultCode.R_Ok);
         } catch (Exception e) {
             logUtil.error("Error updating supplier: " + e.getMessage());
             return new Result(ResultCode.R_Error);
@@ -485,18 +523,18 @@ public class SupplierServiceImpl implements SupplierService {
         // 如果是主管（角色为3），需要验证权限
         if (userRole == 3) {
             // 检查创建人是否为下属或自己
-            if(!subordinateValidation.isSubordinateOrSelf(existingSupplier.getCreatorId(), userId)){
+            if (!subordinateValidation.isSubordinateOrSelf(existingSupplier.getCreatorId(), userId)) {
                 logUtil.error("无权删除非本人或下属创建的供应商");
                 return new Result(ResultCode.R_NoAuth);
             }
             // // 检查是否为创建人
             // boolean isCreator = userId.equals(existingSupplier.getCreatorId());
-            
+
             // // 检查创建人和所属用户是否都是下属
             // ValidationResult creatorValidation = subordinateValidation.isSubordinate(userId, existingSupplier.getCreatorId());
             // ValidationResult belongValidation = subordinateValidation.isSubordinate(userId, existingSupplier.getBelongUserId());
             // boolean hasSubordinate = belongValidation.isValid() && creatorValidation.isValid();
-            
+
             // // 如果既不是创建人，也不是下属，则无权删除
             // if (!isCreator && !hasSubordinate) {
             //     return new Result(ResultCode.R_NoAuth);
@@ -533,7 +571,7 @@ public class SupplierServiceImpl implements SupplierService {
             return new Result(ResultCode.R_UserNotFound);
         }
         String currentUserName = ThreadLocalUtil.getUserName();
-        if(currentUserName == null){
+        if (currentUserName == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
 
@@ -543,10 +581,10 @@ public class SupplierServiceImpl implements SupplierService {
         }
 
         String belongUserName = request.getBelongUserName();
-        if(belongUserName != null && !belongUserName.trim().isEmpty()){
+        if (belongUserName != null && !belongUserName.trim().isEmpty()) {
             belongUserName = belongUserName.trim();
         }
-        
+
         try {
             // 构建分页
             Pageable pageable = PageRequest.of(request.getPageNum() - 1, request.getPageSize());
@@ -555,7 +593,7 @@ public class SupplierServiceImpl implements SupplierService {
             BoolQuery.Builder mainQuery = new BoolQuery.Builder();
 
             // 所属用户为公司，则直接查询所有与公司相关的供应商
-            if(belongUserName != null && belongUserName.equals(UserConstData.COMPANY_USER_NAME)) {
+            if (belongUserName != null && belongUserName.equals(UserConstData.COMPANY_USER_NAME)) {
                 mainQuery.must(m -> m.term(t -> t.field("belong_user_id").value(UserConstData.COMPANY_USER_ID)));
                 // 创建人条件
                 if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
@@ -715,33 +753,33 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
-                    .withPageable(pageable)
-                    .build();
+                        .withQuery(q -> q.bool(mainQuery.build()))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
+                        .withPageable(pageable)
+                        .build();
 
                 // 执行查询
                 SearchHits<SupplierDocument> searchHits = elasticsearchOperations.search(searchQuery, SupplierDocument.class);
-                
+
                 // 获取当前页的数据
                 List<SupplierDocument> suppliers = searchHits.getSearchHits().stream()
-                    .map(SearchHit::getContent)
-                    .collect(Collectors.toList());
+                        .map(SearchHit::getContent)
+                        .collect(Collectors.toList());
 
                 return new Result(
-                    ResultCode.R_Ok, 
-                    new PageResponse<>(
-                        searchHits.getTotalHits(),
-                        request.getPageNum(),
-                        request.getPageSize(),
-                        convertToResponseFormat(suppliers)
-                    )
+                        ResultCode.R_Ok,
+                        new PageResponse<>(
+                                searchHits.getTotalHits(),
+                                request.getPageNum(),
+                                request.getPageSize(),
+                                convertToResponseFormat(suppliers)
+                        )
                 );
             }
-            
-            if(userRole.equals(UserConstData.ROLE_ADMIN_LARGE)){
+
+            if (userRole.equals(UserConstData.ROLE_ADMIN_LARGE)) {
                 // 创建人条件
-                if(request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()){
+                if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
                     List<UserDocument> creators = userRepository.findByUserNameLike(request.getCreatorName().trim());
                     if (!creators.isEmpty()) {
                         BoolQuery.Builder creatorQuery = new BoolQuery.Builder();
@@ -758,7 +796,7 @@ public class SupplierServiceImpl implements SupplierService {
                 }
 
                 // 所属用户条件
-                if(request.getBelongUserName() != null && !request.getBelongUserName().trim().isEmpty()){
+                if (request.getBelongUserName() != null && !request.getBelongUserName().trim().isEmpty()) {
                     List<UserDocument> belongUsers = userRepository.findByUserNameLike(request.getBelongUserName().trim());
                     if (!belongUsers.isEmpty()) {
                         BoolQuery.Builder belongQuery = new BoolQuery.Builder();
@@ -773,7 +811,7 @@ public class SupplierServiceImpl implements SupplierService {
                         mainQuery.must(m -> m.bool(belongQuery.build()));
                     }
                 }
-                
+
                 // 供应商名称条件
                 if (request.getSupplierName() != null && !request.getSupplierName().trim().isEmpty()) {
                     mainQuery.must(m -> m
@@ -922,20 +960,20 @@ public class SupplierServiceImpl implements SupplierService {
 
                 // 构建查询
                 searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
-                    .withPageable(pageable)
-                    .build();
+                        .withQuery(q -> q.bool(mainQuery.build()))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
+                        .withPageable(pageable)
+                        .build();
             }
-            
-            if(userRole.equals(UserConstData.ROLE_ADMIN_SMALL)){
+
+            if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
                 // 添加必要的权限过滤
                 BoolQuery.Builder accessQuery = new BoolQuery.Builder();
                 boolean hasCreator = false;
                 boolean hasBelong = false;
 
                 // 验证创建人是否为自己或下属
-                if(request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()){
+                if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
                     hasCreator = true;
                     ValidationResult creatorValidation = subordinateValidation.findSubordinatesAndSelfByName(
                             request.getCreatorName().trim(),
@@ -957,9 +995,9 @@ public class SupplierServiceImpl implements SupplierService {
                     }
                     mainQuery.must(m -> m.bool(creatorQuery.build()));
                 }
-                
+
                 // 验证所属用户是否为自己或下属
-                if(request.getBelongUserName() != null && !request.getBelongUserName().trim().isEmpty()){
+                if (request.getBelongUserName() != null && !request.getBelongUserName().trim().isEmpty()) {
                     hasBelong = true;
                     ValidationResult belongValidation = subordinateValidation.findSubordinatesAndSelfByName(
                             request.getBelongUserName().trim(),
@@ -980,8 +1018,8 @@ public class SupplierServiceImpl implements SupplierService {
                         );
                     }
                     mainQuery.must(m -> m.bool(belongQuery.build()));
-                } 
-                
+                }
+
                 // 如果创建者和所属用户都没有指定，则添加必要查询条件
                 if (!hasCreator && !hasBelong) {
                     // 创建者是自己或下属
@@ -1028,7 +1066,7 @@ public class SupplierServiceImpl implements SupplierService {
                     accessQuery.minimumShouldMatch("1");
                     mainQuery.must(m -> m.bool(accessQuery.build()));
                 }
-                
+
                 // 供应商名称条件
                 if (request.getSupplierName() != null && !request.getSupplierName().trim().isEmpty()) {
                     mainQuery.must(m -> m
@@ -1058,7 +1096,7 @@ public class SupplierServiceImpl implements SupplierService {
                             )
                     );
                 }
-                
+
                 // 供应商等级条件
                 if (request.getSupplierLevel() != null && request.getSupplierLevel() >= ReceiverConstData.SUPPLIER_LEVEL_LOW && request.getSupplierLevel() <= ReceiverConstData.SUPPLIER_LEVEL_HIGH) {
                     mainQuery.must(m -> m
@@ -1069,7 +1107,7 @@ public class SupplierServiceImpl implements SupplierService {
                     );
                 }
 
-                
+
                 // 贸易类型条件
                 if (request.getTradeType() != null && (request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_FACTORY) || request.getTradeType().equals(ReceiverConstData.TRADE_TYPE_TRADER))) {
                     mainQuery.must(m -> m
@@ -1184,18 +1222,18 @@ public class SupplierServiceImpl implements SupplierService {
 
             }
 
-            if(userRole.equals(UserConstData.ROLE_USER)){
+            if (userRole.equals(UserConstData.ROLE_USER)) {
                 // 普通用户必须查询自己的供应商
                 BoolQuery.Builder belongQuery = new BoolQuery.Builder();
                 belongQuery.should(s -> s
-                            .term(t -> t
+                        .term(t -> t
                                 .field("belong_user_id")
                                 .value(currentUserId)
-                            )
-                        );
+                        )
+                );
                 // 添加所属用户条件
                 mainQuery.must(m -> m.bool(belongQuery.build()));
-                
+
                 // 供应商名称条件
                 if (request.getSupplierName() != null && !request.getSupplierName().trim().isEmpty()) {
                     mainQuery.must(m -> m
@@ -1335,29 +1373,29 @@ public class SupplierServiceImpl implements SupplierService {
 
                 // 构建查询
                 searchQuery = NativeQuery.builder()
-                    .withQuery(q -> q.bool(mainQuery.build()))
-                    .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
-                    .withPageable(pageable)
-                    .build();
+                        .withQuery(q -> q.bool(mainQuery.build()))
+                        .withSort(Sort.by(Sort.Direction.DESC, "updated_at"))
+                        .withPageable(pageable)
+                        .build();
 
             }
-            
+
             // 执行查询
             SearchHits<SupplierDocument> searchHits = elasticsearchOperations.search(searchQuery, SupplierDocument.class);
-            
+
             // 获取当前页的数据
             List<SupplierDocument> suppliers = searchHits.getSearchHits().stream()
-                .map(SearchHit::getContent)
-                .collect(Collectors.toList());
+                    .map(SearchHit::getContent)
+                    .collect(Collectors.toList());
 
             return new Result(
-                ResultCode.R_Ok, 
-                new PageResponse<>(
-                    searchHits.getTotalHits(),
-                    request.getPageNum(),
-                    request.getPageSize(),
-                    convertToResponseFormat(suppliers)
-                )
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            searchHits.getTotalHits(),
+                            request.getPageNum(),
+                            request.getPageSize(),
+                            convertToResponseFormat(suppliers)
+                    )
             );
         } catch (Exception e) {
             logUtil.error("Error filtering suppliers: " + e.getMessage());
@@ -1369,11 +1407,11 @@ public class SupplierServiceImpl implements SupplierService {
     @Transactional(rollbackFor = Exception.class)
     public Result assignSupplier(SupplierDocument supplierDocument) {
         // 参数校验
-        if (supplierDocument == null || 
-            supplierDocument.getSupplierId() == null || 
-            supplierDocument.getSupplierId().trim().isEmpty() ||
-            supplierDocument.getBelongUserId() == null || 
-            supplierDocument.getBelongUserId().trim().isEmpty()) {
+        if (supplierDocument == null ||
+                supplierDocument.getSupplierId() == null ||
+                supplierDocument.getSupplierId().trim().isEmpty() ||
+                supplierDocument.getBelongUserId() == null ||
+                supplierDocument.getBelongUserId().trim().isEmpty()) {
             return new Result(ResultCode.R_ParamError);
         }
 
@@ -1415,7 +1453,7 @@ public class SupplierServiceImpl implements SupplierService {
                     return new Result(ResultCode.R_NoAuth);
                 }
                 // 检查所属用户是否为下属或自己
-                if(!subordinateValidation.isSubordinateOrSelf(existingSupplier.getBelongUserId(), currentUserId)){
+                if (!subordinateValidation.isSubordinateOrSelf(existingSupplier.getBelongUserId(), currentUserId)) {
                     logUtil.error("无权分配非本人或下属创建的供应商");
                     return new Result(ResultCode.R_NoAuth);
                 }
@@ -1428,7 +1466,7 @@ public class SupplierServiceImpl implements SupplierService {
             // 更新供应商信息
             existingSupplier.setBelongUserId(supplierDocument.getBelongUserId());
             existingSupplier.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
-            
+
             // 更新时间
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
             String currentTime = LocalDateTime.now().format(formatter);
@@ -1470,10 +1508,10 @@ public class SupplierServiceImpl implements SupplierService {
     @Override
     public Result assignSupplierDetails(Map<String, Object> params) {
         // 参数校验
-        if (params == null || 
-            params.get("supplier_id") == null || 
-            params.get("page_num") == null || 
-            params.get("page_size") == null) {
+        if (params == null ||
+                params.get("supplier_id") == null ||
+                params.get("page_num") == null ||
+                params.get("page_size") == null) {
             return new Result(ResultCode.R_ParamError);
         }
 
@@ -1524,13 +1562,13 @@ public class SupplierServiceImpl implements SupplierService {
 
             // 返回分页数据
             return new Result(
-                ResultCode.R_Ok, 
-                new PageResponse<>(
-                    total,
-                    pageNum,
-                    pageSize,
-                    pageData
-                )
+                    ResultCode.R_Ok,
+                    new PageResponse<>(
+                            total,
+                            pageNum,
+                            pageSize,
+                            pageData
+                    )
             );
 
         } catch (NumberFormatException e) {
@@ -1546,9 +1584,9 @@ public class SupplierServiceImpl implements SupplierService {
     @Transactional(rollbackFor = Exception.class)
     public Result allAssignSupplier(Map<String, Object> params) {
         // 参数校验
-        if (params == null || 
-            params.get("supplier_id") == null || 
-            params.get("belong_user_id") == null) {
+        if (params == null ||
+                params.get("supplier_id") == null ||
+                params.get("belong_user_id") == null) {
             return new Result(ResultCode.R_ParamError);
         }
 
@@ -1589,9 +1627,9 @@ public class SupplierServiceImpl implements SupplierService {
 
             // 权限检查
             if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
-                if(!belongUserId.equals(UserConstData.COMPANY_USER_ID)){
+                if (!belongUserId.equals(UserConstData.COMPANY_USER_ID)) {
                     // 小管理员只能分配给自己或下属
-                    if(!subordinateValidation.isSubordinateOrSelf(belongUserId, currentUserId)){
+                    if (!subordinateValidation.isSubordinateOrSelf(belongUserId, currentUserId)) {
                         logUtil.error("无权分配给非下属用户");
                         return new Result(ResultCode.R_NoAuth);
                     }
@@ -1616,8 +1654,8 @@ public class SupplierServiceImpl implements SupplierService {
                     continue;
                 }
                 // 小管理检查所属用户是否为下属或自己
-                if(userRole.equals(UserConstData.ROLE_ADMIN_SMALL)){
-                    if(!subordinateValidation.isSubordinateOrSelf(existingSupplier.getBelongUserId(), currentUserId)){
+                if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
+                    if (!subordinateValidation.isSubordinateOrSelf(existingSupplier.getBelongUserId(), currentUserId)) {
                         logUtil.error("无权分配非本人或下属的供应商");
                         continue;
                     }
@@ -1669,40 +1707,40 @@ public class SupplierServiceImpl implements SupplierService {
         return suppliers.stream()
                 .map(supplier -> {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("supplier_id", supplier.getSupplierId() );
+                    map.put("supplier_id", supplier.getSupplierId());
                     map.put("supplier_name", supplier.getSupplierName());
-                    
+
                     // Get creator name from creator id
                     UserDocument creator = userRepository.findById(supplier.getCreatorId()).orElse(null);
                     map.put("creator_name", creator != null ? creator.getUserName() : "");
-                    
+
                     map.put("contact_person", supplier.getContactPerson());
                     map.put("contact_way", supplier.getContactWay());
                     map.put("supplier_level", supplier.getSupplierLevel());
-                    
+
                     // Get country name from country id
                     CountryDocument country = countryRepository.findByCountryId(supplier.getSupplierCountryId()).orElse(null);
                     map.put("supplier_country_name", country != null ? country.getCountryName() : "");
-                    
+
                     map.put("trade_type", supplier.getTradeType());
-                    
+
                     // Get commodity names from commodity ids
                     List<String> commodityNames = supplier.getCommodityId().stream()
                             .map(id -> commodityRepository.findById(id)
                                     .map(CommodityDocument::getCommodityName)
-                            .orElse(""))
+                                    .orElse(""))
                             .collect(Collectors.toList());
                     map.put("commodity_name", commodityNames);
-                    
+
                     map.put("sex", supplier.getSex());
                     map.put("birth", supplier.getBirth());
                     map.put("emails", supplier.getEmails());
                     map.put("status", supplier.getStatus());
-                    
+
                     // Get belong user name from belong user id
                     UserDocument belongUser = userRepository.findById(supplier.getBelongUserId()).orElse(null);
                     map.put("belong_user_name", belongUser != null ? belongUser.getUserName() : "");
-                    
+
                     // Get email type names from email type ids
                     List<String> emailTypeNames = new ArrayList<>();
                     if (supplier.getNoAcceptEmailTypeId() != null) {
@@ -1717,7 +1755,7 @@ public class SupplierServiceImpl implements SupplierService {
                     map.put("status", supplier.getStatus());
                     map.put("created_at", supplier.getCreatedAt());
                     map.put("updated_at", supplier.getUpdatedAt());
-                    
+
                     return map;
                 })
                 .collect(Collectors.toList());
@@ -1738,17 +1776,17 @@ public class SupplierServiceImpl implements SupplierService {
             String headerLine = reader.readLine();
             String line;
             List<SupplierDocument> suppliers = new ArrayList<>();
-            
+
             while ((line = reader.readLine()) != null) {
                 String[] data = line.split(",");
                 SupplierDocument supplier = new SupplierDocument();
-                
+
                 // 设置基本信息
                 supplier.setSupplierName(data[0]);
                 supplier.setContactPerson(data[1]);
                 supplier.setContactWay(data[2]);
                 supplier.setSupplierLevel(Integer.parseInt(data[3]));
-                
+
                 // 通过国家名称查询国家ID
                 String countryName = data[4];
                 CountryDocument country = countryRepository.findByCountryName(countryName);
@@ -1759,9 +1797,9 @@ public class SupplierServiceImpl implements SupplierService {
                     logUtil.error("国家不存在: " + countryName);
                     continue;
                 }
-                
+
                 supplier.setTradeType(Integer.parseInt(data[5]));
-                
+
                 // 处理商品名称数组，转换为商品ID
                 String[] commodityNames = data[6].split(";");
                 List<String> commodityIds = new ArrayList<>();
@@ -1773,19 +1811,19 @@ public class SupplierServiceImpl implements SupplierService {
                     commodityIds.add(commodity.getCommodityId());
                 }
                 supplier.setCommodityId(commodityIds);
-                
+
                 supplier.setSex(data[7]);
-                
+
                 // 处理birth日期，转换为ISO格式
                 String birthDate = data[8];
                 if (birthDate != null && !birthDate.isEmpty()) {
                     try {
                         // 支持多种日期格式: yyyy/MM/dd, yyyy-MM-dd, 包括单位数的月日
                         DateTimeFormatter[] formatters = {
-                            DateTimeFormatter.ofPattern("yyyy/MM/dd"),
-                            DateTimeFormatter.ofPattern("yyyy/M/d"),
-                            DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-                            DateTimeFormatter.ofPattern("yyyy-M-d")
+                                DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                                DateTimeFormatter.ofPattern("yyyy/M/d"),
+                                DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                                DateTimeFormatter.ofPattern("yyyy-M-d")
                         };
 
                         LocalDate date = null;
@@ -1811,7 +1849,7 @@ public class SupplierServiceImpl implements SupplierService {
                         continue;
                     }
                 }
-                
+
                 // 处理邮箱列表
                 String[] emails = data[9].split(";");
                 // 检查数组内是否有重复
@@ -1832,28 +1870,46 @@ public class SupplierServiceImpl implements SupplierService {
                         logUtil.error("邮箱不能重复: " + email);
                         continue;
                     }
-                    
-                    // 检查数据库中是否已存在该邮箱
-                    NativeQuery searchQuery = NativeQuery.builder()
-                        .withQuery(q -> q
-                            .bool(b -> b
-                                .must(m -> m
-                                    .term(t -> t
-                                        .field("emails")
-                                        .value(email)
+
+                    // 检查客户、供应商数据库中是否已存在该邮箱
+                    NativeQuery searchCustomerQuery = NativeQuery.builder()
+                            .withQuery(q -> q
+                                    .bool(b -> b
+                                            .must(m -> m
+                                                    .term(t -> t
+                                                            .field("emails")
+                                                            .value(email)
+                                                    )
+                                            )
                                     )
-                                )
                             )
-                        )
-                        .build();
-                    
-                    SearchHits<SupplierDocument> searchHits = elasticsearchOperations.search(
-                        searchQuery,
-                        SupplierDocument.class
+                            .build();
+
+                    SearchHits<CustomerDocument> searchCustomerHits = elasticsearchOperations.search(
+                            searchCustomerQuery,
+                            CustomerDocument.class
                     );
-                    
-                    if (searchHits.getTotalHits() > 0) {
-                        logUtil.error("邮箱已存在: " + email);
+
+                    NativeQuery searchSupplierQuery = NativeQuery.builder()
+                            .withQuery(q -> q
+                                    .bool(b -> b
+                                            .must(m -> m
+                                                    .term(t -> t
+                                                            .field("emails")
+                                                            .value(email)
+                                                    )
+                                            )
+                                    )
+                            )
+                            .build();
+
+                    SearchHits<SupplierDocument> searchSupplierHits = elasticsearchOperations.search(
+                            searchSupplierQuery,
+                            SupplierDocument.class
+                    );
+
+                    if (searchCustomerHits.getTotalHits() > 0 || searchSupplierHits.getTotalHits() > 0) {
+                        logUtil.error("客户或供应商邮箱已存在: " + email);
                         continue;
                     }
                     emailList.add(email);
@@ -1893,15 +1949,15 @@ public class SupplierServiceImpl implements SupplierService {
                 String currentTime = LocalDateTime.now().format(formatter);
                 supplier.setCreatedAt(currentTime);
                 supplier.setUpdatedAt(currentTime);
-                
+
                 suppliers.add(supplier);
             }
-            
+
             // 批量保存到ES
             supplierRepository.saveAll(suppliers);
-            
+
             return new Result(ResultCode.R_Ok, suppliers.size());
-            
+
         } catch (IOException e) {
             logUtil.error("CSV文件读取失败", e);
             return new Result(ResultCode.R_Error, "文件处理失败：" + e.getMessage());
