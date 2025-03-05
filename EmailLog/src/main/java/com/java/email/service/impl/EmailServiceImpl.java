@@ -331,7 +331,7 @@ public class EmailServiceImpl implements EmailService {
                     addRoleBasedFilter(b, userRole, userEmail, finalManagedUserEmails);
 
                     // 处理其他查询参数
-                    if (params != null && !params.isEmpty()) {
+                    if (!params.isEmpty()) {
                         addOtherQueryParams(b, params, userRole, userEmail, finalManagedUserEmails);
                     }
 
