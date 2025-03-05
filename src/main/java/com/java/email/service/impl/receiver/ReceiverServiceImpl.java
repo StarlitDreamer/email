@@ -125,7 +125,7 @@ public class ReceiverServiceImpl implements ReceiverService {
             
             // 查询所属用户名称
             String belongUserId = user.getBelongUserId();
-            if (belongUserId != null) {
+            if (belongUserId != null && !belongUserId.trim().isEmpty()) {
                 UserDocument belongUser = userRepository.findById(belongUserId).orElse(null);
                 if (belongUser != null) {
                     userMap.put("belong_user_name", belongUser.getUserName());
