@@ -30,7 +30,7 @@ public class EmailController {
         // 拼接 "resend_" 字符串
         String emailResendId = "resend|" + request.getEmailId();
 
-        redisTemplate.opsForZSet().add(redisQueueName, emailResendId, (double) System.currentTimeMillis());
+        redisTemplate.opsForZSet().add(redisQueueName, emailResendId, System.currentTimeMillis()/1000);
 
         // 返回响应，包含拼接后的 emailResendId
         return Result.success(emailResendId);
