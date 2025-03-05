@@ -371,7 +371,7 @@ public class CustomerService {
         }
         String receiver_key = "receiver_list:" + IdUtil.fastUUID();
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
-        operations.set(receiver_key, receiverList, 1, TimeUnit.DAYS);
+        operations.set(receiver_key, receiverList, 1, TimeUnit.HOURS);
         return new FilterAllReceiverResponse(receiverList.size(), receiver_key);
     }
 }

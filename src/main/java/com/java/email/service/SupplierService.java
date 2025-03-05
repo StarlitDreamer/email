@@ -348,7 +348,7 @@ public class SupplierService {
         }
         String supplier_key = "supplier_list:" + IdUtil.fastUUID();
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
-        operations.set(supplier_key, receiverList, 1, TimeUnit.DAYS);
+        operations.set(supplier_key, receiverList, 1, TimeUnit.HOURS);
         System.out.println(receiverList);
         belongUserIds.clear();
         return new FilterAllReceiverResponse(receiverList.size(), supplier_key);

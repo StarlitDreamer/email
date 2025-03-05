@@ -2,7 +2,6 @@ package com.java.email.service;
 
 import com.java.email.model.entity.EmailDetail;
 import com.java.email.model.entity.EmailReport;
-import com.java.email.model.request.OpenRequest;
 import com.java.email.repository.EmailDetailRepository;
 import com.java.email.repository.EmailReportRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,11 +40,10 @@ public class EmailReportService {
     /**
      * 根据email_task_id更新打开数量
      *
-     * @param request 邮件任务ID
+     * @param emailId 邮件任务ID
      * @return 更新后的EmailReport实体
      */
-    public EmailReport updateOpenAmount(OpenRequest request) {
-        String emailId = request.getEmailId();
+    public EmailReport updateOpenAmount(String emailId) {
         EmailDetail emailDetail = emailDetailRepository.findByEmailId(emailId);
         String emailTaskId = emailDetail.getEmailTaskId();
         EmailReport emailReport = emailReportRepository.findByEmailTaskId(emailTaskId);

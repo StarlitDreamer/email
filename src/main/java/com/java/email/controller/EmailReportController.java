@@ -5,7 +5,6 @@ import com.java.email.common.Result;
 import com.java.email.model.entity.Customer;
 import com.java.email.model.entity.EmailReport;
 import com.java.email.model.entity.Supplier;
-import com.java.email.model.request.OpenRequest;
 import com.java.email.repository.CustomerRepository;
 import com.java.email.repository.SupplierRepository;
 import com.java.email.service.EmailReportService;
@@ -72,13 +71,13 @@ public class EmailReportController {
     /**
      * 根据email_task_id更新打开数量
      *
-     * @param request 邮件任务ID
+     * @param emailId 邮件任务ID
      * @return 更新后的EmailReport实体
      */
     @PutMapping("/open-email")
-    public Result updateOpenAmount(@RequestBody OpenRequest request) {
+    public Result updateOpenAmount(@RequestParam String emailId) {
         try {
-            EmailReport updatedEmailReport = emailReportService.updateOpenAmount(request);
+            EmailReport updatedEmailReport = emailReportService.updateOpenAmount(emailId);
             return Result.success(updatedEmailReport);
         } catch (Exception e) {
             return Result.error("更新打开数量失败: " + e.getMessage());
