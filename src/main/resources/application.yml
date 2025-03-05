@@ -23,6 +23,8 @@ elasticsearch:
  host: es
  port: 9200
  scheme: http
+ username: elastic
+ password: M9VhXO063NGdy=X8IQpV 
 server:
    tomcat:
      max-swallow-size: -1
