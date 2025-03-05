@@ -24,6 +24,8 @@ spring:
 elasticsearch:
   host: 112.35.176.43
   port: 9201
+  username: elastic
+  password: M9VhXO063NGdy=X8IQpV
 #elasticsearch:
 #  host: es
 #  port: 9200

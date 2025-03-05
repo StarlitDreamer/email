@@ -29,12 +29,24 @@ public class ElasticsearchConfig {
     @Value("${elasticsearch.port}")
     private int port;
 
+    @Value("${elasticsearch.username}")
+    private String username;
+
+    @Value("${elasticsearch.password}")
+    private String password;
 
     @Bean
     public ElasticsearchClient elasticsearchClient() {
+        CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+        credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
+
         RestClient restClient = RestClient.builder(
                 new HttpHost(host, port)
-        ).setRequestConfigCallback(requestConfigBuilder ->
+        )
+        .setHttpClientConfigCallback(httpClientBuilder -> 
+                httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider)
+        )
+        .setRequestConfigCallback(requestConfigBuilder ->
                 requestConfigBuilder
                         .setConnectTimeout(10000)
                         .setSocketTimeout(60000)
