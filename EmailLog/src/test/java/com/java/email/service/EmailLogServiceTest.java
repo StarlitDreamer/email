@@ -45,15 +45,15 @@ class EmailLogServiceTest {
 
         // 2. 准备token数据
         Map<String, Object> claims = new HashMap<>();
-        claims.put("id","a1cf38f5-da06-4b46-b0bb-666164021a09");
+        claims.put("id","e168af20-8cc4-49e4-a9ca-81eeb298c40a");
         claims.put("role", 3);
-        claims.put("name", "ads5");
+        claims.put("name", "ads3");
 
         // 3. 生成token
         String token = JwtUtil.genToken(claims);
 
         // 4. 存储到Redis（用于token验证）
-        String redisKey = RedisConstData.USER_LOGIN_TOKEN + "a1cf38f5-da06-4b46-b0bb-666164021a09";
+        String redisKey = RedisConstData.USER_LOGIN_TOKEN + "e168af20-8cc4-49e4-a9ca-81eeb298c40a";
         redisService.set(redisKey, token);
         System.out.println("token: " + token);
 

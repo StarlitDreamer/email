@@ -10,7 +10,7 @@ import java.util.Set;
 
 public interface EmailRecipientService {
 
-    
+
     /**
      * 获取收件人详情
      * @param email 邮箱
@@ -31,5 +31,5 @@ public interface EmailRecipientService {
     RsendDetailsVo findResendDetails (Map<String, String> params);
 
 
-    RsendDetails getResendDetails(String emailTaskId,String emailId);
-} 
+    RsendDetails getResendDetails(String emailId);
+}

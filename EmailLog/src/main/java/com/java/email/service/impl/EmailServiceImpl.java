@@ -261,8 +261,9 @@ public class EmailServiceImpl implements EmailService {
             Set<String> recipientEmails = params != null ?
                     emailRecipientService.findMatchingRecipientEmails(params) : null;
 
-            Set<String> resendEmails;
+            Set<String> resendEmails = null;
             Set<String> resendEmailTaskIdSet = null;
+            Set<String> resendEmailsIdSet;
 
             // 检查是否有 resend_status 参数
             if (params.containsKey("resend_status") || params.containsKey("resend_start_date") || params.containsKey("resend_end_date")) {
@@ -272,9 +273,11 @@ public class EmailServiceImpl implements EmailService {
                         new HashSet<>(resendEmail.getResendTaskIds()) : null;
                 resendEmails = resendEmail != null ?
                         resendEmail.getRecipientEmails() : null;
+                resendEmailsIdSet = resendEmail != null ?
+                        new HashSet<>(resendEmail.getResendEmailIds()) : null;
 
             } else {
-                resendEmails = null;
+                resendEmailsIdSet = null;
             }
 
             // 找到 emailTaskIds 和 resendEmailTaskIdSet 中的交集
@@ -288,6 +291,8 @@ public class EmailServiceImpl implements EmailService {
             // 添加收件人邮箱过滤
             if (recipientEmails != null && resendEmails != null) {
                 recipientEmails.retainAll(resendEmails);
+            }else {
+                recipientEmails = resendEmails;
             }
             if ((params.containsKey("receiver_level") || params.containsKey("receiver_birth")) &&
                 (recipientEmails == null || recipientEmails.isEmpty())) {
@@ -298,6 +303,7 @@ public class EmailServiceImpl implements EmailService {
                 return emptyResult;
             }
 
+            Set<String> recipientEmailss=recipientEmails;
             // 继续执行查询
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
@@ -305,10 +311,18 @@ public class EmailServiceImpl implements EmailService {
                 s.size(size);
 
                 s.query(q -> q.bool(b -> {
-                    if (recipientEmails != null && !recipientEmails.isEmpty()) {
+                    if(resendEmailsIdSet!=null&& !resendEmailsIdSet.isEmpty()){
+                        b.must(m -> m.terms(t -> t
+                                .field("email_id")
+                                .terms(tt -> tt.value(resendEmailsIdSet.stream()
+                                        .map(FieldValue::of)
+                                        .toList()))
+                        ));
+                    }
+                    if (recipientEmailss != null && !recipientEmailss.isEmpty()) {
                         b.must(m -> m.terms(t -> t
                                 .field("receiver_id")
-                                .terms(tt -> tt.value(recipientEmails.stream()
+                                .terms(tt -> tt.value(recipientEmailss.stream()
                                         .map(FieldValue::of)
                                         .toList()))
                         ));

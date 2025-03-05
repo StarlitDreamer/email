@@ -71,11 +71,11 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
 
                     // 打印查询结果
                     if (response != null) {
-                        log.info("Customer search response: total={}, hits={}", 
+                        log.info("Customer search response: total={}, hits={}",
                             response.hits().total().value(),
                             response.hits().hits().size()
                         );
-                        
+
                         if (response.hits().total().value() > 0) {
                             Customer customer = response.hits().hits().get(0).source();
                             log.info("Found customer: {}", customer);
@@ -384,6 +384,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
 
         Set<String> emailTasks = new HashSet<>();
         Set<String> resendEmails = new HashSet<>();
+        Set<String> resendEmailIds = new HashSet<>();
         try {
             // 如果没有查询条件，返回null表示不需要邮箱过滤
             if (params == null || params.isEmpty() ||
@@ -450,6 +451,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                     if (rsendDetails != null && rsendDetails.getEmailResendId() != null) {
                         emailTasks.add(rsendDetails.getEmailTaskId());
                         resendEmails.add(rsendDetails.getAccepterEmail());
+                        resendEmailIds.add(rsendDetails.getEmailResendId());
                     }
                 }
             }
@@ -457,6 +459,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
             RsendDetailsVo rsendDetailsVo = new RsendDetailsVo();
             rsendDetailsVo.setRecipientEmails(resendEmails);
             rsendDetailsVo.setResendTaskIds(emailTasks);
+            rsendDetailsVo.setResendEmailIds(resendEmailIds);
 
             return rsendDetailsVo;
 
@@ -468,7 +471,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     }
 
     @Override
-    public RsendDetails getResendDetails(String emailTaskId, String emailId) {
+    public RsendDetails getResendDetails(String emailId) {
         try {
 
             CompletableFuture<SearchResponse<RsendDetails>> reSendrFuture = CompletableFuture.supplyAsync(() -> {
@@ -477,13 +480,10 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                     Query boolQuery = BoolQuery.of(b -> b
                             .must(
                                     TermQuery.of(t -> t
-                                            .field("accepter_email")
+                                            .field("email_resend_id.keyword")
                                             .value(emailId)
-                                    )._toQuery(),
-                                    TermQuery.of(t -> t
-                                            .field("email_task_id")
-                                            .value(emailTaskId)
                                     )._toQuery()
+
                             )
                     )._toQuery();
 
@@ -507,11 +507,11 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                 return customerResponse.hits().hits().get(0).source();
             }
 
-            log.info("未找到收件人信息: emailTaskId={}, email={}", emailTaskId, emailId);
+            log.info("未找到收件人信息: , email={}", emailId);
             return null;
 
         } catch (Exception e) {
-            log.error("获取收件人详细信息失败: emailTaskId={}, email={}, error={}", emailTaskId, emailId, e.getMessage(), e);
+            log.error("获取收件人详细信息失败: , email={}, error={}",emailId, e.getMessage(), e);
             return null;
         }
     }

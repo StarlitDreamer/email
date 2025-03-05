@@ -16,11 +16,11 @@ spring:
   #      host: 112.35.176.43
   #      port: 9500
   #      database: 0
-  data:
-    redis:
-      host: email-redis
-      port: 6379
-      database: 0
+#  data:
+#    redis:
+#      host: email-redis
+#      port: 6379
+#      database: 0
 elasticsearch:
   host: 112.35.176.43
   port: 9201

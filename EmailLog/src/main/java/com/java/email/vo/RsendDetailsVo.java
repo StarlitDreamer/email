@@ -7,4 +7,5 @@ import java.util.Set;
 public class RsendDetailsVo {
     private Set<String> recipientEmails;
     private Set<String> resendTaskIds;
+    private Set<String> resendEmailIds;
 }
