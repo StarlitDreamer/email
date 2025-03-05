@@ -8,8 +8,9 @@ import com.java.email.model.request.UpdateTaskStatusRequest;
 import com.java.email.model.response.ResetTaskStatusResponse;
 import com.java.email.model.response.UpdateTaskStatusResponse;
 import com.java.email.service.EmailService;
-import com.java.email.service.ResendDetailsService;
+import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,16 +19,18 @@ public class EmailController {
     @Autowired
     private EmailService emailService;
 
-    @Autowired
-    private ResendDetailsService resendDetailsService;
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
+
+    private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
+
 
     @PostMapping("/resend")
     public Result<String> resendEmail(@RequestBody ResendEmailRequest request) {
         // 拼接 "resend_" 字符串
         String emailResendId = "resend|" + request.getEmailId();
 
-        // 将拼接后的 emailResendId 存入 Redis
-        resendDetailsService.saveEmailResendId(emailResendId);
+        redisTemplate.opsForZSet().add(redisQueueName, emailResendId, (double) System.currentTimeMillis());
 
         // 返回响应，包含拼接后的 emailResendId
         return Result.success(emailResendId);
