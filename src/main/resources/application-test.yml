@@ -1,7 +1,8 @@
 spring:
   elasticsearch:
-    uris: http://112.35.176.43:9201
-
+    uris: http://112.35.176.43:9200
+    username: elastic
+    password: M9VhXO063NGdy=X8IQpV 
   data:
     redis:
       host: 112.35.176.43
