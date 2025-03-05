@@ -25,6 +25,11 @@ public class EmailController {
     private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
 
 
+    /**
+     * 根据 emailId 将邮件重新放入定时器队列中
+     * @param request emailId
+     * @return emailResendId
+     */
     @PostMapping("/resend")
     public Result<String> resendEmail(@RequestBody ResendEmailRequest request) {
         // 拼接 "resend_" 字符串

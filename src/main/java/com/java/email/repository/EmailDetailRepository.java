@@ -15,5 +15,5 @@ public interface EmailDetailRepository extends ElasticsearchRepository<EmailDeta
     List<EmailDetail> findByEmailTaskIdAndErrorCode(String emailTaskId, Integer errorCode);
 
     // 根据 emailTaskId 查询所有 EmailDetail 列表
-    List<EmailDetail> findByEmailTaskId(String emailTaskId);
+    EmailDetail findByEmailId(String emailId);
 }

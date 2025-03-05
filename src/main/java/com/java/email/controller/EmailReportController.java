@@ -1,9 +1,11 @@
 package com.java.email.controller;
 
+
 import com.java.email.common.Result;
 import com.java.email.model.entity.Customer;
 import com.java.email.model.entity.EmailReport;
 import com.java.email.model.entity.Supplier;
+import com.java.email.model.request.OpenRequest;
 import com.java.email.repository.CustomerRepository;
 import com.java.email.repository.SupplierRepository;
 import com.java.email.service.EmailReportService;
@@ -18,17 +20,16 @@ import java.util.ArrayList;
 public class EmailReportController {
 
     @Autowired
-    private CustomerRepository customerRepository;
-
-    @Autowired
-    private SupplierRepository supplierRepository;
-
-    @Autowired
     private EmailReportService emailReportService;
+
+    @Autowired
+    private CustomerRepository customerRepository;
 
     @Autowired
     private EmailTaskService emailTaskService;
 
+    @Autowired
+    private SupplierRepository supplierRepository;
     /**
      * 用户点击退订链接，根据email_task_id增加退订数量。
      *
@@ -38,18 +39,14 @@ public class EmailReportController {
     @GetMapping("/unsubscribe")
     public Result updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
         String emailTypeId = emailTaskService.getEmailTypeId(emailTaskId);
-
         Customer customer = customerRepository.findByEmails(receiverEmail);
 
         if (customer != null) {
-
             // 将emailTypeId添加到noAcceptEmailTypeId
             if (customer.getNoAcceptEmailTypeId() == null) {
                 customer.setNoAcceptEmailTypeId(new ArrayList<>()); // 如果noAcceptEmailTypeId为空，初始化为空列表
             }
-
             customer.getNoAcceptEmailTypeId().add(emailTypeId);
-
             customerRepository.save(customer);  // 保存更新后的Customer实体
         }
 
@@ -60,9 +57,7 @@ public class EmailReportController {
             if (supplier.getNoAcceptEmailTypeId() == null) {
                 supplier.setNoAcceptEmailTypeId(new ArrayList<>()); // 如果noAcceptEmailTypeId为空，初始化为空列表
             }
-
             supplier.getNoAcceptEmailTypeId().add(emailTypeId);
-
             supplierRepository.save(supplier);  // 保存更新后的supplier实体
         }
 
@@ -77,13 +72,13 @@ public class EmailReportController {
     /**
      * 根据email_task_id更新打开数量
      *
-     * @param emailTaskId 邮件任务ID
+     * @param request 邮件任务ID
      * @return 更新后的EmailReport实体
      */
-    @PutMapping("/open-email/{emailTaskId}")
-    public Result updateOpenAmount(@PathVariable String emailTaskId) {
+    @PutMapping("/open-email")
+    public Result updateOpenAmount(@RequestBody OpenRequest request) {
         try {
-            EmailReport updatedEmailReport = emailReportService.updateOpenAmount(emailTaskId);
+            EmailReport updatedEmailReport = emailReportService.updateOpenAmount(request);
             return Result.success(updatedEmailReport);
         } catch (Exception e) {
             return Result.error("更新打开数量失败: " + e.getMessage());

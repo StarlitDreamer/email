@@ -60,4 +60,8 @@ public class EmailDetail {
     @JsonProperty("empty")
     @Field(name = "empty", type = FieldType.Keyword)
     private String empty;  // 空字段，不分词
+
+    @JsonProperty("opened")
+    @Field(name = "opened", type = FieldType.Integer)
+    private Integer opened;
 }
