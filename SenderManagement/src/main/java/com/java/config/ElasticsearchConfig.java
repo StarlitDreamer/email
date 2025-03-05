@@ -1,38 +1,3 @@
-// package com.java.config;
-//
-// import co.elastic.clients.elasticsearch.ElasticsearchClient;
-// import co.elastic.clients.json.jackson.JacksonJsonpMapper;
-// import co.elastic.clients.transport.ElasticsearchTransport;
-// import co.elastic.clients.transport.rest_client.RestClientTransport;
-// import org.apache.http.HttpHost;
-// import org.elasticsearch.client.RestClient;
-// import org.springframework.context.annotation.Bean;
-// import org.springframework.context.annotation.Configuration;
-// import org.springframework.context.annotation.Primary;
-//
-// @Configuration
-// public class ElasticsearchConfig {
-//
-// @Bean
-// @Primary
-// public ElasticsearchClient elasticsearchClient() {
-//     RestClient restClient = RestClient.builder(
-//             new HttpHost("112.35.176.43", 9201)
-//     ).setRequestConfigCallback(requestConfigBuilder ->
-//             requestConfigBuilder
-//                     .setConnectTimeout(100000)
-//                     .setSocketTimeout(600000)
-//     ).build();
-//
-//     ElasticsearchTransport transport = new RestClientTransport(
-//             restClient,
-//             new JacksonJsonpMapper()
-//     );
-//
-//     return new ElasticsearchClient(transport);
-// }
-// }
-
 package com.java.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -41,6 +6,9 @@ import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpHost;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.elasticsearch.client.RestClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -54,17 +22,38 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 @Configuration
 public class ElasticsearchConfig {
 
+    @Value("${spring.elasticsearch.uris}")
+    private String elasticsearchUrl;
+
+    @Value("${spring.elasticsearch.username}")
+    private String username;
+
+    @Value("${spring.elasticsearch.password}")
+    private String password;
+
     @Bean
     @Primary
     public ElasticsearchClient elasticsearchClient() {
-        // 创建 RestClient
+        // 解析 URL 获取 host 和 port
+        String url = elasticsearchUrl.replace("http://", "");
+        String host = url.split(":")[0];
+        int port = Integer.parseInt(url.split(":")[1]);
+
+        // 创建认证信息
+        final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+        credentialsProvider.setCredentials(AuthScope.ANY,
+                new UsernamePasswordCredentials(username, password));
+
+        // 创建 RestClient，添加认证和超时配置
         RestClient restClient = RestClient.builder(
-                new HttpHost("112.35.176.43", 9201)
-        ).setRequestConfigCallback(requestConfigBuilder ->
-                requestConfigBuilder
+                new HttpHost(host, port))
+                .setHttpClientConfigCallback(httpClientBuilder -> 
+                    httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider))
+                .setRequestConfigCallback(requestConfigBuilder ->
+                    requestConfigBuilder
                         .setConnectTimeout(100000)
-                        .setSocketTimeout(600000)
-        ).build();
+                        .setSocketTimeout(600000))
+                .build();
 
         // 配置 ObjectMapper
         ObjectMapper objectMapper = new ObjectMapper()
@@ -73,7 +62,7 @@ public class ElasticsearchConfig {
         // 创建 Transport
         ElasticsearchTransport transport = new RestClientTransport(
                 restClient,
-                new JacksonJsonpMapper(objectMapper)  // 使用配置好的 ObjectMapper
+                new JacksonJsonpMapper(objectMapper)
         );
 
         return new ElasticsearchClient(transport);

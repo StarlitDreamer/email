@@ -4,21 +4,23 @@ spring:
     activate:
       on-profile: test
   elasticsearch:
-#    uris: http://es:9200
-    uris: http://112.35.176.43:9201
+    uris: http://es:9200
+#    uris: http://112.35.176.43:9200
+    username: elastic
+    password: M9VhXO063NGdy=X8IQpV
     connection-timeout: 50000
     socket-timeout: 50000
   data:
     redis:
-#      host: email-redis
-#      port: 6379
-      host: 112.35.176.43
-      port: 9500
+      host: email-redis
+      port: 6379
+#      host: 112.35.176.43
+#      port: 9500
       database: 0
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 20MB
+      max-request-size: 20MB
   main:
     allow-bean-definition-overriding: true
   autoconfigure:
