@@ -852,7 +852,7 @@ public class EmailTaskService {
             emailTask.setTemplateId(request.getTemplateId());
             emailTask.setAttachment(request.getAttachment());
             emailTask.setEmailContent(templateContentById);
-            emailTask.setSenderId(currentUserId);
+            emailTask.setSenderId(byUserId.getUserEmail());
             emailTask.setSenderName(byUserId.getUserName());
             emailTask.setTaskType(4);
 
