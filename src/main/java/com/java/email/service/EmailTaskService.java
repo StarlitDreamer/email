@@ -226,15 +226,11 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(emailContent);
 
-        String trackingImg = "<img src=http://localhost:8080/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=display: none>";
+        String trackingImg = "<img src=http://localhost:8080/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
-
 
         // 找到 </body> 标签的位置
         int bodyEndIndex = emailContent.indexOf("</body>");
-
-        // 准备附件信息
-//        StringBuilder attachmentInfoBuilder = new StringBuilder();
 
         // 确保 <body> 标签结束的位置正确
         if (bodyEndIndex != -1) {
@@ -248,7 +244,7 @@ public class EmailTaskService {
                 if (size == 0) {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
                             ", 附件下载链接: " + attachment.getAttachmentUrl();
-                    emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>如要下载附件，请复制链接至浏览器即可。");  // 每个附件信息包裹在 <p> 标签中
+                    emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 } else {
                     String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
                             ", 附件下载链接: " + attachment.getAttachmentUrl();
@@ -257,15 +253,14 @@ public class EmailTaskService {
             }
         }
 
-
-
-        String attachmentInfo = "邮件退订地址:" + "<p>http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
+        String attachmentInfo = "<p>邮件退订地址:" + "http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
         emailContentBuilder.append(attachmentInfo);
+
+        String s="如要下载附件或退订，请复制对应链接至浏览器即可。";
+        emailContentBuilder.append(s);
 
         // 获取最终的 emailContent
         emailContent = emailContentBuilder.toString();
-
-
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
