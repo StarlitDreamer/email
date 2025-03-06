@@ -55,10 +55,10 @@ public class EmailReportService {
         if (emailReport == null) {
             emailReport = new EmailReport();
             emailReport.setEmailTaskId(emailTaskId);
-            emailReport.setUnsubscribeAmount(1L);
+            emailReport.setOpenAmount(1L);
             emailReportRepository.save(emailReport);
         } else {
-            emailReport.setUnsubscribeAmount(emailReport.getUnsubscribeAmount() + 1);
+            emailReport.setOpenAmount(emailReport.getOpenAmount() + 1);
             emailReportRepository.save(emailReport);
         }
 
