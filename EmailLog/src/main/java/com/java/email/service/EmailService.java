@@ -15,7 +15,10 @@ public interface EmailService {
      void saveEmailTask(UndeliveredEmail emailTask) throws IOException;
 
      EmailVo findByDynamicQueryEmail(Map<String, String> params, int page, int size,
+
                                      Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException;
+
+
 
      Email findById(String id) throws IOException;
 

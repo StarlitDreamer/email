@@ -72,21 +72,21 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
 
 
         if (userRole == null || userEmail == null) {
-            sendResponse(ctx, HttpResponseStatus.FORBIDDEN, 
+            sendResponse(ctx, HttpResponseStatus.FORBIDDEN,
                 objectMapper.writeValueAsString(Result.fail("无法获取用户信息")));
             return;
         }
 
         // 获取管理的用户邮箱列表
-        List<String> managedUserEmails = userRole == 3 ? 
+        List<String> managedUserEmails = userRole == 3 ?
             userService.findManagedUserEmails((String) userInfo.get("id")) : Collections.emptyList();
 
         // 参数验证
         String startTime = getRequiredParameter(decoder, "start_date");
         String endTime = getRequiredParameter(decoder, "end_date");
-        
+
         if (startTime == null || endTime == null) {
-            sendResponse(ctx, HttpResponseStatus.BAD_REQUEST, 
+            sendResponse(ctx, HttpResponseStatus.BAD_REQUEST,
                 objectMapper.writeValueAsString(Result.fail("缺少必要的参数: startTime 或 endTime")));
             return;
         }
@@ -96,11 +96,10 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         params.put("end_date", endTime);
 
         // 获取时间范围内的所有手动发送任务
-        EmailTaskVo emailTaskVo = emailLogService.findByDynamicQueryEmailTask(
-            params, 1, MAX_PAGE_SIZE, userRole, userEmail, managedUserEmails);
+        List<String> emailTasks = emailLogService.findByEmailTasksIds(
+            params, userRole, userEmail, managedUserEmails);
         params.remove("start_date");
         params.remove("end_date");
-        List<EmailTask> emailTasks = emailTaskVo.getEmailTask();
         // 汇总统计数据
         long totalEmailCount = 0;
         long totalSendNum = 0;
@@ -109,19 +108,19 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         long totalUnsubscribeAmount = 0;
 
         // 遍历所有任务并汇总数据
-        for (EmailTask emailTask : emailTasks) {
-            EmailReport emailReport=emailReportService.getEmailReport(emailTask.getEmailTaskId());
-            
+        for (String emailTaskId : emailTasks) {
+            EmailReport emailReport=emailReportService.getEmailReport(emailTaskId);
+
             totalEmailCount += emailReport.getEmailTotal();
             totalSendNum += emailReport.getDeliveryAmount();
             openAmount += emailReport.getOpenAmount();
-            totalBounceAmount += emailTask.getBounceAmount();
-            totalUnsubscribeAmount += emailTask.getUnsubscribeAmount();
+            totalBounceAmount += emailReport.getBounceAmount();
+            totalUnsubscribeAmount += emailReport.getUnsubscribeAmount();
         }
 
         // 构建报表数据
         ReportVo reportVo = new ReportVo();
-        
+
         // 设置投递率
         ReportVo.Delivery delivery = new ReportVo.Delivery();
         delivery.setRate(calculateRate(totalSendNum, totalEmailCount));
@@ -134,14 +133,14 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         open.setOpenAmount(formatAmount(openAmount));
         open.setTotal(totalEmailCount);
         reportVo.setOpen(open);
-        
+
         // 设置退信率
         ReportVo.Bounce bounce = new ReportVo.Bounce();
         bounce.setRate(calculateRate(totalBounceAmount, totalEmailCount));
         bounce.setBounceAmount(formatAmount(totalBounceAmount));
         bounce.setTotal(totalEmailCount);
         reportVo.setBounce(bounce);
-        
+
         // 设置退订率
         ReportVo.Unsubscribe unsubscribe = new ReportVo.Unsubscribe();
         unsubscribe.setRate(calculateRate(totalUnsubscribeAmount, totalEmailCount));
@@ -183,4 +182,4 @@ public class ManualReportHandler extends SimpleChannelInboundHandler<FullHttpReq
         sendResponse(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, "Internal Server Error");
         ctx.close();
     }
-} 
+}

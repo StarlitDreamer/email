@@ -54,17 +54,14 @@ public class NettyServerConfig {
                         @Override
                         protected void initChannel(SocketChannel ch) {
                             ch.pipeline()
-                                .addLast(new HttpServerCodec())
-                                .addLast(new HttpObjectAggregator(65536))
+                                    .addLast(new HttpServerCodec())
+                                    .addLast(new HttpObjectAggregator(65536))
                                     .addLast(new TokenCheckHandler(redisService))
-                                //.addLast(new EmailLogHandler(emailLogService))
-                                //.addLast(new QueryLogHandler(emailLogService,userService))
-                                //.addLast(new FailLogHandler(emailLogService,userService))
-                                .addLast(new ReportHandler(emailLogService,emailReportService,userService))
+                                    .addLast(new ReportHandler(emailLogService,emailReportService,userService))
                                     .addLast(new ManualReportHandler(emailLogService,emailReportService,userService))
-                               // .addLast(new QueryOneLogHandler(emailLogService,userService))
                                     .addLast(new FilterEmailTaskHandler(emailLogService,userService,emailManageService))
                                     .addLast(new FilterEmailHandler(emailLogService,userService,emailRecipientService))
+                                    .addLast(new FilterBirthEmailHandler(emailLogService,userService,emailRecipientService))
                                     .addLast(new FilterUndeliveredEmailHandler(userService,emailLogService,emailRecipientService,emailManageService))
                                     ;
 
@@ -86,4 +83,4 @@ public class NettyServerConfig {
         workerGroup.shutdownGracefully();
         log.info("Netty server shutdown");
     }
-} 
+}

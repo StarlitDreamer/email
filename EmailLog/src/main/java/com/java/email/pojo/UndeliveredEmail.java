@@ -18,45 +18,45 @@ public class UndeliveredEmail {
      */
     @JsonProperty("email_id")
     private String emailId;
-    
+
     /**
      * 邮件任务id，使用uuid
      */
     @JsonProperty("email_task_id")
     private String emailTaskId;
-    
+
     /**
      * 发件人id数组，为了支持假用户功能
      * 当前版本数组内只需插入当前用户的id
      */
     @JsonProperty("sender_id")
     private String senderId;
-    
+
     /**
      * 收件人id数组
      */
     @JsonProperty("receiver_id")
     private String receiverId;
-    
+
     /**
      * 错误代码，status为2或3时填写
      */
     @JsonProperty("error_code")
     private Integer errorCode;
-    
+
     /**
      * 错误信息，status为2或3时填写
      */
     @JsonProperty("error_msg")
     private String errorMsg;
 
-    
+
     /**
      * 开始时间，秒级时间戳
      */
     @JsonProperty("start_date")
     private long startDate;
-    
+
     /**
      * 结束时间，秒级时间戳
      */
@@ -72,6 +72,9 @@ public class UndeliveredEmail {
      */
     @JsonProperty("sender_name")
     private String senderName;
+
+    @JsonProperty("subject")
+    private String subject;
 
     // 定义索引映射
     public static TypeMapping createMapping() {
@@ -91,4 +94,4 @@ public class UndeliveredEmail {
                 .fields("keyword", f -> f.keyword(k -> k)))))
             .build();
     }
-} 
+}

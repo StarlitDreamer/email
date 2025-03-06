@@ -80,9 +80,22 @@ public class EmailServiceImpl implements EmailService {
     public EmailVo findByDynamicQueryEmail(Map<String, String> params, int page, int size,
                                            Integer userRole, String userEmail, List<String> managedUserEmails) throws IOException {
         try {
-            // 先获取符合条件的收件人邮箱
-            Set<String> recipientEmails = params != null ?
-                    emailRecipientService.findMatchingRecipientEmails(params) : null;
+            Set<String> recipientEmails;
+            if(params.containsKey("receiver_level") ||params.containsKey("receiver_birth")){
+                // 先获取符合条件的收件人邮箱
+                recipientEmails= emailRecipientService.findMatchingRecipientEmails(params);/**/
+                if(recipientEmails==null|| recipientEmails.isEmpty()){
+                    EmailVo emailVo=new EmailVo();
+                    emailVo.setTotal(0L);
+                    emailVo.setEmailList(Collections.emptyList());
+                    return emailVo;
+                }
+            } else {
+                recipientEmails = null;
+            }
+
+
+
 
 
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
@@ -92,7 +105,7 @@ public class EmailServiceImpl implements EmailService {
 
                 s.query(q -> q.bool(b -> {
                     // 处理邮件状态查询
-                    if (params != null && params.containsKey("email_status")) {
+                    if (params.containsKey("email_status")) {
                         String status = params.get("email_status");
                         if ("200".equals(status)) {
                             // 发送成功的邮件
@@ -108,7 +121,7 @@ public class EmailServiceImpl implements EmailService {
                     }
 
                     // 添加收件人邮箱过滤（仅当recipientEmails不为null且不为空时）
-                    if (recipientEmails != null && !recipientEmails.isEmpty()) {
+                    if (!recipientEmails.isEmpty()) {
                         b.must(m -> m.terms(t -> t
                                 .field("receiver_id")
                                 .terms(tt -> tt.value(recipientEmails.stream()
@@ -121,7 +134,7 @@ public class EmailServiceImpl implements EmailService {
                     addRoleBasedFilter(b, userRole, userEmail, managedUserEmails);
 
                     // 处理其他查询参数
-                    if (params != null && !params.isEmpty()) {
+                    if (!params.isEmpty()) {
                         addOtherQueryParams(b, params, userRole, userEmail, managedUserEmails);
                     } else {
                         b.must(m -> m.matchAll(ma -> ma));
@@ -156,6 +169,8 @@ public class EmailServiceImpl implements EmailService {
             throw e;
         }
     }
+
+
 
 
     private void addRoleBasedFilter(BoolQuery.Builder b, Integer userRole,
@@ -193,6 +208,9 @@ public class EmailServiceImpl implements EmailService {
             if (value != null && !value.isEmpty() &&
                     !Arrays.asList("email_status", "receiver_level", "receiver_birth").contains(key)) {
                 switch (key) {
+                    case "subject":
+                        b.must(m -> m.match(t -> t.field("subject").query(value)));
+                        break;
                     case "email_id":
                         b.must(m -> m.term(t -> t.field("email_id").value(value)));
                         break;
@@ -329,12 +347,15 @@ public class EmailServiceImpl implements EmailService {
                     }
 
                     // 必须匹配指定的 emailTaskIds
-                    b.must(m -> m.terms(t -> t
-                            .field("email_task_id")
-                            .terms(tt -> tt.value(finalEmailTaskIds.stream()
-                                    .map(FieldValue::of)
-                                    .collect(Collectors.toList())))
-                    ));
+                    if(!finalEmailTaskIds.isEmpty()){
+                        b.must(m -> m.terms(t -> t
+                                .field("email_task_id")
+                                .terms(tt -> tt.value(finalEmailTaskIds.stream()
+                                        .map(FieldValue::of)
+                                        .collect(Collectors.toList())))
+                        ));
+                    }
+
 
                     // 发送失败的邮件
                     b.should(m -> m.term(t -> t.field("error_code").value(500)));

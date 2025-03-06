@@ -47,8 +47,6 @@ public class EmailLogService {
         return emailService.findByDynamicQueryEmail(params, page, size, userRole, userEmail, managedUserEmails);
     }
 
-
-
     public EmailTask findByEmailTasks(Map<String, String> params,Integer userRole,String userEmail ,List<String> managedUserEmails) throws IOException {
         return emailTaskService.findByEmailTasks(params, userRole, userEmail,managedUserEmails);
     }
