@@ -223,7 +223,7 @@ public class EmailTaskService {
         }
 
         String emailContent = request.getEmailContent();
-        String trackingImg = "<img src=http://localhost:8080/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}>";
+        String trackingImg = "<img src=http://localhost:8080/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=display: none>";
         emailContent += trackingImg;
 
         // 使用 StringBuilder 进行字符串拼接
