@@ -164,7 +164,8 @@ public class UserAssignServiceImpl implements UserAssignService {
                 user.setCreatedAt(UserServiceImpl.getTimestampWithTimezone());
                 user.setUpdatedAt(UserServiceImpl.getTimestampWithTimezone());
                 String[] parts = csvUser.getUserEmail().split("@");
-                user.setUserHost(parts[1]);
+                String userHost = "smtp."+parts[1];
+                user.setUserHost(userHost);
                 users.add(user);
                 // 创建用户分配记录
                 AssignProcess assignProcess = new AssignProcess(
