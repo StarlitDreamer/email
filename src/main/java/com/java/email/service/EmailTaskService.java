@@ -837,25 +837,30 @@ public class EmailTaskService {
      * 改变生日任务状态
      */
     public String updateBirthEmailTask(String tackId, UpdateBirthEmailTaskRequest request) {
-        String templateId = request.getTemplateId();
-        String templateContentById = templateService.getTemplateContentById(templateId);
-
-        EmailTask emailTask = new EmailTask();
-        emailTask.setEmailTaskId(tackId);
-        emailTask.setSubject(request.getSubject());
-        emailTask.setTemplateId(request.getTemplateId());
-        emailTask.setAttachment(request.getAttachment());
-        emailTask.setEmailContent(templateContentById);
-        emailTask.setTaskType(4);
-
         long currentTime = System.currentTimeMillis() / 1000;
+        String status = request.getEmailStatus();
 
-        String emailStatus = request.getEmailStatus();
+        if (status.equals("1")) {
+            String templateId = request.getTemplateId();
+            String templateContentById = templateService.getTemplateContentById(templateId);
 
-        if (emailStatus.equals("1")) {
-            emailTask.setStartDate(currentTime);
-        } else {
-            emailTask.setEndDate(currentTime);
+            EmailTask emailTask = new EmailTask();
+            emailTask.setEmailTaskId(tackId);
+            emailTask.setSubject(request.getSubject());
+            emailTask.setTemplateId(request.getTemplateId());
+            emailTask.setAttachment(request.getAttachment());
+            emailTask.setEmailContent(templateContentById);
+            emailTask.setTaskType(4);
+
+            String emailStatus = request.getEmailStatus();
+
+            if (emailStatus.equals("1")) {
+                emailTask.setStartDate(currentTime);
+            } else {
+                emailTask.setEndDate(currentTime);
+            }
+
+            emailTaskRepository.save(emailTask);
         }
 
         Email email = new Email();
@@ -864,7 +869,6 @@ public class EmailTaskService {
         email.setUpdateAt(currentTime);   // Set update_at
         email.setEmailStatus(Integer.valueOf(request.getEmailStatus()));          // Set email_status to 1 (开始状态)
 
-        emailTaskRepository.save(emailTask);
 
         emailRepository.save(email);
         return "Email task updated";
