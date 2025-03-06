@@ -36,7 +36,7 @@ public class EmailReportController {
      * @return 返回更新结果
      */
     @GetMapping("/unsubscribe")
-    public Result updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
+    public String  updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
         String emailTypeId = emailTaskService.getEmailTypeId(emailTaskId);
         Customer customer = customerRepository.findByEmails(receiverEmail);
 
@@ -62,9 +62,9 @@ public class EmailReportController {
 
         try {
             EmailReport updatedEmailReport = emailReportService.updateUnsubscribeAmount(emailTaskId);
-            return Result.success(updatedEmailReport);
+            return "退订成功";
         } catch (Exception e) {
-            return Result.error("更新退订数量失败: " + e.getMessage());
+            return "退订失败";
         }
     }
 
