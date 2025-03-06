@@ -85,7 +85,7 @@ public class EmailReportController {
      *
      * @return 更新后的EmailReport实体
      */
-    @PutMapping("/open-email")
+    @GetMapping("/open-email")
     public Result updateOpenAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
         try {
             EmailReport updatedEmailReport = emailReportService.updateOpenAmount(emailTaskId, receiverEmail);
