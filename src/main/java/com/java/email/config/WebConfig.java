@@ -24,6 +24,8 @@ public class WebConfig implements WebMvcConfigurer {
         excludePathList.add("/userManage/createUser");
         excludePathList.add("/user/login");
         excludePathList.add("/user/logout");
+        excludePathList.add("/email-report/unsubscribe");
+        excludePathList.add("/email-report/open-email");
         excludePathList.add("/error");
         registry.addInterceptor(checkTokenInterceptor).addPathPatterns("/**").excludePathPatterns(excludePathList);
     }
