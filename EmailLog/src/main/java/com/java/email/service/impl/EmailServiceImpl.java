@@ -121,7 +121,7 @@ public class EmailServiceImpl implements EmailService {
                     }
 
                     // 添加收件人邮箱过滤（仅当recipientEmails不为null且不为空时）
-                    if (!recipientEmails.isEmpty()) {
+                    if (recipientEmails != null &&!recipientEmails.isEmpty()) {
                         b.must(m -> m.terms(t -> t
                                 .field("receiver_id")
                                 .terms(tt -> tt.value(recipientEmails.stream()
