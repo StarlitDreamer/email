@@ -37,7 +37,6 @@ public class EmailReportService {
         return emailReportRepository.save(emailReport);
     }
 
-
     /**
      * 根据email_task_id更新打开数量
      *

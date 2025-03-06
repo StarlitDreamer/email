@@ -20,11 +20,7 @@ public class UserController {
         return userService.getUserEmailByUserId(userId);
     }
 
-    //    @GetMapping("/getUserIdByEmail")
-//    public String getUserIdByEmail(@RequestParam String userEmail) {
-//        return userService.getUserIdByEmail(userEmail);
-//    }
-// 根据用户邮箱查找用户名
+    // 根据用户邮箱查找用户名
     @GetMapping("/getUserName")
     public String getUserNameByEmail(@RequestParam String userEmail) {
         return userService.getUserNameByEmail(userEmail);
