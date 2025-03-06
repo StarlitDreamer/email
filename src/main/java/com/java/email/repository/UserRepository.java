@@ -15,7 +15,5 @@ public interface UserRepository extends ElasticsearchRepository<User, String> {
     User findByUserEmail(String userEmail);
 
     List<User> findByBelongUserid(String userId);
-
-//    Optional<User> findByUserEmail(String userEmail);
 }
 

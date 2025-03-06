@@ -66,9 +66,9 @@ public class EmailTaskController {
      * 改变生日任务状态
      */
     @PutMapping("updateBirth/{tackId}")
-    public Result updateBirthEmailTask(@PathVariable String tackId,@RequestBody UpdateBirthEmailTaskRequest request) {
+    public Result updateBirthEmailTask(@RequestHeader String currentUserId,@PathVariable String tackId,@RequestBody UpdateBirthEmailTaskRequest request) {
         try {
-            return Result.success(emailTaskService.updateBirthEmailTask(tackId,request));
+            return Result.success(emailTaskService.updateBirthEmailTask(currentUserId,tackId,request));
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

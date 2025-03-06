@@ -20,13 +20,13 @@ public class StartupTaskExecutor {
         // 这里填入默认的 taskId 和 request
         String defaultTaskId = "birth"; // 你可以换成数据库中的 ID
         UpdateBirthEmailTaskRequest request = new UpdateBirthEmailTaskRequest();
-//        request.setTemplateId("default_template_id");
         request.setSubject("默认生日邮件");
-        request.setEmailStatus("2"); // 1 表示启动状态
-//        request.setAttachment(null); // 附件可为空
+        request.setEmailStatus("2"); //
+
+        String currentUserId = "1";
 
         // 执行方法
-        String result = emailTaskService.updateBirthEmailTask(defaultTaskId, request);
+        String result = emailTaskService.updateBirthEmailTask(currentUserId, defaultTaskId, request);
 //        System.out.println("updateBirthEmailTask 执行结果：" + result);
     }
 }

@@ -53,6 +53,8 @@ public class EmailTaskService {
     private RedisTemplate<String, Object> redisTemplate;
 
     private static final String redisQueueName = "TIMER_TASK9001";//redis队列name
+    @Autowired
+    private UserRepository userRepository;
 
     // 根据 emailTaskId 获取 email_type_id
     public String getEmailTypeId(String emailTaskId) {
@@ -836,20 +838,22 @@ public class EmailTaskService {
     /**
      * 改变生日任务状态
      */
-    public String updateBirthEmailTask(String tackId, UpdateBirthEmailTaskRequest request) {
+    public String updateBirthEmailTask(String currentUserId, String tackId, UpdateBirthEmailTaskRequest request) {
         long currentTime = System.currentTimeMillis() / 1000;
         String status = request.getEmailStatus();
 
         if (status.equals("1")) {
             String templateId = request.getTemplateId();
             String templateContentById = templateService.getTemplateContentById(templateId);
-
+            User byUserId = userRepository.findByUserId(currentUserId);
             EmailTask emailTask = new EmailTask();
             emailTask.setEmailTaskId(tackId);
             emailTask.setSubject(request.getSubject());
             emailTask.setTemplateId(request.getTemplateId());
             emailTask.setAttachment(request.getAttachment());
             emailTask.setEmailContent(templateContentById);
+            emailTask.setSenderId(currentUserId);
+            emailTask.setSenderName(byUserId.getUserName());
             emailTask.setTaskType(4);
 
             String emailStatus = request.getEmailStatus();
