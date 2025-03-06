@@ -232,13 +232,14 @@ public class EmailTaskService {
         // 找到 </body> 标签的位置
         int bodyEndIndex = emailContent.indexOf("</body>");
 
+        // 准备附件信息
+        StringBuilder attachmentInfoBuilder = new StringBuilder();
+
         // 确保 <body> 标签结束的位置正确
         if (bodyEndIndex != -1) {
             // 获取 <body> 标签结束位置前的内容
             String bodyContent = emailContent.substring(0, bodyEndIndex);
 
-            // 准备附件信息
-            StringBuilder attachmentInfoBuilder = new StringBuilder();
             List<Attachment> attachments = request.getAttachment();
             int size = attachments.size();
             for (Attachment attachment : attachments) {
@@ -255,12 +256,16 @@ public class EmailTaskService {
             }
         }
 
+        String string = attachmentInfoBuilder.toString();
+
         String attachmentInfo = "邮件退订地址:" + "<p>http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
         String unsubscribeInfo ="如要下载附件或退订，请复制对应链接至浏览器即可。";
         emailContentBuilder.append(attachmentInfo);
         emailContentBuilder.append(unsubscribeInfo);
         // 获取最终的 emailContent
         emailContent = emailContentBuilder.toString();
+
+        emailContent+=string;
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
