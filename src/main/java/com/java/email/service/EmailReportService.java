@@ -45,8 +45,8 @@ public class EmailReportService {
         EmailDetail emailDetail = emailDetailRepository.findByEmailTaskIdAndReceiverId(emailTaskId, receiverEmail);
         EmailReport emailReport = emailReportRepository.findByEmailTaskId(emailTaskId);
 
-        if (emailDetail.getOpened() == 0) {
-            emailDetail.setOpened(1);
+        if (emailDetail.getOpened() == 1) {
+            emailDetail.setOpened(2);
         } else {
             throw new RuntimeException("邮件已经打开");
         }
