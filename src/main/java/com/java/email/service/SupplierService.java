@@ -197,6 +197,9 @@ public class SupplierService {
                     .size(size), Supplier.class);
         }
 
+        // 获取符合条件的总数
+        long totalHits = searchResponse.hits().total() != null ? searchResponse.hits().total().value() : 0;
+
         List<Receiver> receiverList = new ArrayList<>();
         for (Hit<Supplier> CustomerHit : searchResponse.hits().hits()) {
             Supplier receiver = CustomerHit.source();
@@ -206,7 +209,7 @@ public class SupplierService {
             receiverList.add(new Receiver(receiver.getSupplierId(), receiver.getSupplierName()));
         }
         belongUserIds.clear();
-        return new FilterReceiverResponse(receiverList.size(), num, size,receiverList);
+        return new FilterReceiverResponse(totalHits, num, size,receiverList);
     }
 
 

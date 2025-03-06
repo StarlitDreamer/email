@@ -11,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class FilterReceiverResponse {
-    public Integer total_items;
+    public Long total_items;
     public Integer page_num;
     public Integer page_size;
     public List<Receiver> receiver;

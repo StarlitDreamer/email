@@ -220,6 +220,10 @@ public class CustomerService {
                     .size(size), Customer.class);
         }
 
+        // 获取符合条件的总数
+        long totalHits = searchResponse.hits().total() != null ? searchResponse.hits().total().value() : 0;
+
+
         // 处理 Elasticsearch 查询结果，将每个客户转换为 Receiver 对象
         List<Receiver> receiverList = new ArrayList<>();
         for (Hit<Customer> CustomerHit : searchResponse.hits().hits()) {
@@ -232,7 +236,7 @@ public class CustomerService {
         }
         belongUserIds.clear();
         // 返回过滤后的客户列表和分页信息
-        return new FilterReceiverResponse(receiverList.size(), num, size, receiverList);
+        return new FilterReceiverResponse(totalHits, num, size, receiverList);
     }
 
     public FilterAllReceiverResponse findFindAllCustomer(String currentUserId, int currentUserRole, SearchAllCustomerDto searchAllCustomerDto) throws IOException {
