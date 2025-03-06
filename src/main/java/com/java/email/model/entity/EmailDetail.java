@@ -38,7 +38,7 @@ public class EmailDetail {
     private Integer errorCode;  // 状态码，200成功，500失败
 
     @JsonProperty("error_msg")
-    @Field(name = "error_msg", type = FieldType.Text)
+    @Field(name = "error_msg", type = FieldType.Keyword)
     private String errorMsg;  // 错误信息，失败的错误信息
 
     @JsonProperty("receiver_id")
