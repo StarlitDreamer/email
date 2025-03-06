@@ -253,10 +253,10 @@ public class EmailTaskService {
                     attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 }
             }
-            String attachmentInfo = "<p><a href=\"http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\">点击此处取消订阅</a></p>";
-            attachmentInfoBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
         }
 
+        String attachmentInfo = "如要下载附件或退订，请复制对应链接至浏览器即可。 " + "<p>http://localhost:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
+        emailContentBuilder.append(attachmentInfo);
         // 获取最终的 emailContent
         emailContent = emailContentBuilder.toString();
 
