@@ -2,6 +2,7 @@ package com.java.email.repository;
 
 import com.java.email.model.entity.EmailDetail;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
+
 import java.util.List;
 
 public interface EmailDetailRepository extends ElasticsearchRepository<EmailDetail, String> {
@@ -16,4 +17,6 @@ public interface EmailDetailRepository extends ElasticsearchRepository<EmailDeta
 
     // 根据 emailTaskId 查询所有 EmailDetail 列表
     EmailDetail findByEmailId(String emailId);
+
+    EmailDetail findByEmailTaskIdAndReceiverId(String emailTaskId, String receiverId);
 }

@@ -20,6 +20,7 @@ public class EmailDetailService {
     @Autowired
     private EmailReportRepository emailReportRepository;
 
+
     // 获取所有状态码为 500 的邮件的 emailTaskId
     public List<String> getEmailTaskIdsForErrorCode500() {
         List<EmailDetail> emailDetails = emailDetailRepository.findByErrorCode(500);

@@ -5,6 +5,7 @@ import com.java.email.common.Result;
 import com.java.email.model.entity.Customer;
 import com.java.email.model.entity.EmailReport;
 import com.java.email.model.entity.Supplier;
+import com.java.email.model.request.OpenRequest;
 import com.java.email.repository.CustomerRepository;
 import com.java.email.repository.SupplierRepository;
 import com.java.email.service.EmailReportService;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/email-report")
@@ -29,6 +31,7 @@ public class EmailReportController {
 
     @Autowired
     private SupplierRepository supplierRepository;
+
     /**
      * 用户点击退订链接，根据email_task_id增加退订数量。
      *
@@ -36,9 +39,12 @@ public class EmailReportController {
      * @return 返回更新结果
      */
     @GetMapping("/unsubscribe")
-    public String  updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
+    public String updateUnsubscribeAmount(@RequestParam String emailTaskId, @RequestParam String receiverEmail) {
         String emailTypeId = emailTaskService.getEmailTypeId(emailTaskId);
+
         Customer customer = customerRepository.findByEmails(receiverEmail);
+        List<String> customerNoAcceptEmailTypeId = customer.getNoAcceptEmailTypeId();
+
 
         if (customer != null) {
             // 将emailTypeId添加到noAcceptEmailTypeId
@@ -50,6 +56,7 @@ public class EmailReportController {
         }
 
         Supplier supplier = supplierRepository.findByEmails(receiverEmail);
+        List<String> supplierNoAcceptEmailTypeId = supplier.getNoAcceptEmailTypeId();
 
         if (supplier != null) {
             // 将emailTypeId添加到noAcceptEmailTypeId
@@ -61,6 +68,7 @@ public class EmailReportController {
         }
 
         try {
+
             EmailReport updatedEmailReport = emailReportService.updateUnsubscribeAmount(emailTaskId);
             return "退订成功";
         } catch (Exception e) {
@@ -71,13 +79,13 @@ public class EmailReportController {
     /**
      * 根据email_task_id更新打开数量
      *
-     * @param emailId 邮件任务ID
+     * @param request 邮件任务ID
      * @return 更新后的EmailReport实体
      */
     @PutMapping("/open-email")
-    public Result updateOpenAmount(@RequestParam String emailId) {
+    public Result updateOpenAmount(@RequestBody OpenRequest request) {
         try {
-            EmailReport updatedEmailReport = emailReportService.updateOpenAmount(emailId);
+            EmailReport updatedEmailReport = emailReportService.updateOpenAmount(request);
             return Result.success(updatedEmailReport);
         } catch (Exception e) {
             return Result.error("更新打开数量失败: " + e.getMessage());
