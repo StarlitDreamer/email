@@ -819,10 +819,6 @@ public class EmailTaskService {
         long currentTime = System.currentTimeMillis() / 1000;
         emailTask.setCreatedAt(currentTime);
 
-        // 计算结束时间为当前时间6小时后的时间戳
-        long endTime = currentTime + 6 * 60 * 60;
-        emailTask.setEndDate(endTime);
-
         // Save to Elasticsearch
         emailTaskRepository.save(emailTask);
 
@@ -849,7 +845,7 @@ public class EmailTaskService {
         emailReportRepository.save(emailReport);
 
         // Save email_task_id to Redis
-        redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
+        redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, request.getStartDate());
 
         return "Email task created with ID: " + emailTaskId;
     }
