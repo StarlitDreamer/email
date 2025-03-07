@@ -29,6 +29,7 @@ public class StartupTaskExecutor {
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(defaultTaskId);
         emailTask.setSubject(defaultSubject);
+        emailTask.setTaskType(4);
 
         emailTaskRepository.save(emailTask);
 
