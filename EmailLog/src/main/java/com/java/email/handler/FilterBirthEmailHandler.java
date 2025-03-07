@@ -155,7 +155,7 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                 List<FilterEmailVo> Results =logList.stream().map(email -> {
                     FilterEmailVo filterEmailVo = new FilterEmailVo();
                     filterEmailVo.setSubject(email.getSubject());
-                    filterEmailVo.setTaskType(emailTask.getSubject());
+                    filterEmailVo.setTask_type(emailTask.getTaskType());
                     filterEmailVo.setEmailTaskId(emailTask.getEmailTaskId());
                     BeanUtils.copyProperties(email, filterEmailVo);
                     Map<String, String> receiverInfo=null;
