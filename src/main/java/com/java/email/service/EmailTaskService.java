@@ -391,10 +391,6 @@ public class EmailTaskService {
             }
         }
 
-        if (receiverEmails.size() == 0) {
-            throw new RuntimeException("收件人邮箱不能为空");
-        }
-
         // 根据 receiverKey 从 Redis 中取出存储的值
         ValueOperations<String, Object> operations = redisTemplate.opsForValue();
 
@@ -478,6 +474,10 @@ public class EmailTaskService {
                 receiverNames.add(supplierName);
                 receiverEmails.add(emails.get(i));
             }
+        }
+
+        if (receiverEmails.size() == 0) {
+            throw new RuntimeException("收件人邮箱不能为空");
         }
 
         String templateId = request.getTemplateId();
