@@ -813,7 +813,7 @@ public class EmailTaskService {
         emailTask.setSenderName(userService.getUserNameByUserId(currentUserId));
         emailTask.setAttachment(request.getAttachment());
         emailTask.setTaskType(3);
-        emailTask.setStartDate(Long.valueOf(request.getStartDate())/1000);
+        emailTask.setStartDate(Long.valueOf(request.getStartDate()));
 
         // Set created_at timestamp
         long currentTime = System.currentTimeMillis() / 1000;
