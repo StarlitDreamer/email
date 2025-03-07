@@ -1,7 +1,9 @@
 package com.java.email.job;
 
-import com.java.email.model.request.UpdateBirthEmailTaskRequest;
-import com.java.email.service.EmailTaskService;
+import com.java.email.model.entity.Email;
+import com.java.email.model.entity.EmailTask;
+import com.java.email.repository.EmailRepository;
+import com.java.email.repository.EmailTaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -11,23 +13,31 @@ import org.springframework.stereotype.Component;
 public class StartupTaskExecutor {
 
     @Autowired
-    private EmailTaskService emailTaskService;  // 假设你的 `updateBirthEmailTask` 方法在 EmailTaskService
+    private EmailTaskRepository emailTaskRepository;
+
+    @Autowired
+    private EmailRepository emailRepository;
 
     @EventListener(ApplicationReadyEvent.class)
     public void runAfterStartup() {
-        System.out.println("Spring Boot 启动完成，自动执行 updateBirthEmailTask()...");
+        long currentTimeMillis = System.currentTimeMillis();
+        long currentTime=currentTimeMillis/1000;
 
-        // 这里填入默认的 taskId 和 request
         String defaultTaskId = "birth"; // 你可以换成数据库中的 ID
-        UpdateBirthEmailTaskRequest request = new UpdateBirthEmailTaskRequest();
-        request.setSubject("默认生日邮件");
-        request.setEmailStatus("2"); //
+        String defaultSubject = "默认生日邮件";
 
-        String currentUserId = "1";
+        EmailTask emailTask = new EmailTask();
+        emailTask.setEmailTaskId(defaultTaskId);
+        emailTask.setSubject(defaultSubject);
 
-        // 执行方法
-        String result = emailTaskService.updateBirthEmailTask(currentUserId, defaultTaskId, request);
-//        System.out.println("updateBirthEmailTask 执行结果：" + result);
+        emailTaskRepository.save(emailTask);
+
+        Email email = new Email();
+        email.setEmailTaskId(defaultTaskId); // Set email_task_id
+        email.setCreatedAt(currentTime);  // Set created_at
+        email.setUpdateAt(currentTime);   // Set update_at
+        email.setEmailStatus(2);          // Set email_status to 1 (开始状态)
+
+        emailRepository.save(email);
     }
 }
-
