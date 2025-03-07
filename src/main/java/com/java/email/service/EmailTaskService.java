@@ -487,7 +487,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-        String trackingImg = "<img src=http://112.35.176.43:8080/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+        String trackingImg = "<img src=http://112.35.176.43:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -514,7 +514,7 @@ public class EmailTaskService {
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
+        String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
         emailContentBuilder.append(attachmentInfo);
 
         String s="如要下载附件或退订，请复制对应链接至浏览器即可。";
@@ -763,7 +763,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-        String trackingImg = "<img src=http://112.35.176.43:8080/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+        String trackingImg = "<img src=http://112.35.176.43:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -790,7 +790,7 @@ public class EmailTaskService {
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
+        String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s="如要下载附件或退订，请复制对应链接至浏览器即可。";
