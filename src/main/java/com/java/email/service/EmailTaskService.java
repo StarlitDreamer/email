@@ -224,6 +224,10 @@ public class EmailTaskService {
             }
         }
 
+        if (receiverEmails.size() == 0) {
+            throw new RuntimeException("收件人邮箱不能为空");
+        }
+
         String emailContent = request.getEmailContent();
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(emailContent);
@@ -385,6 +389,10 @@ public class EmailTaskService {
                     receiverEmails.add(emails.get(i));
                 }
             }
+        }
+
+        if (receiverEmails.size() == 0) {
+            throw new RuntimeException("收件人邮箱不能为空");
         }
 
         // 根据 receiverKey 从 Redis 中取出存储的值
@@ -654,6 +662,10 @@ public class EmailTaskService {
                     receiverEmails.add(emails.get(i));
                 }
             }
+        }
+
+        if (receiverEmails.size() == 0) {
+            throw new RuntimeException("收件人邮箱不能为空");
         }
 
         // 根据 receiverKey 从 Redis 中取出存储的值
