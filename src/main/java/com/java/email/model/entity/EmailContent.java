@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
+import org.springframework.data.elasticsearch.annotations.Field;
+import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @Data
 @NoArgsConstructor
@@ -16,8 +18,10 @@ import org.springframework.data.elasticsearch.annotations.Document;
 public class EmailContent {
     @Id
     @JsonProperty("email_task_id")
+    @Field(name = "email_task_id", type = FieldType.Keyword)
     private String emailTaskId;
 
     @JsonProperty("email_content")
+    @Field(name = "email_content", type = FieldType.Text)
     private String emailContent;
 }
