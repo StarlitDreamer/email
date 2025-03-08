@@ -1,7 +1,9 @@
 package com.java.email.job;
 
 import com.java.email.model.entity.Email;
+import com.java.email.model.entity.EmailReport;
 import com.java.email.model.entity.EmailTask;
+import com.java.email.repository.EmailReportRepository;
 import com.java.email.repository.EmailRepository;
 import com.java.email.repository.EmailTaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,9 @@ public class StartupTaskExecutor {
 
     @Autowired
     private EmailRepository emailRepository;
+
+    @Autowired
+    private EmailReportRepository emailReportRepository;
 
     @EventListener(ApplicationReadyEvent.class)
     public void runAfterStartup() {
@@ -40,5 +45,15 @@ public class StartupTaskExecutor {
         email.setEmailStatus(2);          // Set email_status to 1 (开始状态)
 
         emailRepository.save(email);
+
+        EmailReport emailReport = new EmailReport();
+        emailReport.setEmailTaskId(defaultTaskId);
+        emailReport.setEmailTotal(0L);
+        emailReport.setOpenAmount(0L);
+        emailReport.setDeliveryAmount(0L);
+        emailReport.setBounceAmount(0L);
+        emailReport.setUnsubscribeAmount(0L);
+
+        emailReportRepository.save(emailReport);
     }
 }
