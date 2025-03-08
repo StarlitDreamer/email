@@ -480,7 +480,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                     Query boolQuery = BoolQuery.of(b -> b
                             .must(
                                     TermQuery.of(t -> t
-                                            .field("email_resend_id.keyword")
+                                            .field("email_resend_id")
                                             .value(emailId)
                                     )._toQuery()
 

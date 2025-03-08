@@ -132,13 +132,14 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                     try {
                         emailTask = emailLogService.findByEmailTaskId(email.getEmailTaskId());
                         filterEmailVo = new FilterRsendEmailVo();
+                        BeanUtils.copyProperties(email, filterEmailVo);
                         filterEmailVo.setSubject(emailTask.getSubject());
                         filterEmailVo.setTask_type(emailTask.getTaskType());
                         filterEmailVo.setEmailTaskId(emailTask.getEmailTaskId());
 
                         filterEmailVo.setEmail_type_name(emailLogService.findByEmailTypeName(emailTask.getEmailTypeId()));
 
-                        BeanUtils.copyProperties(email, filterEmailVo);
+
                         Map<String, String> receiverInfo = null;
                         if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
                             receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId(), params);
