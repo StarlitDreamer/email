@@ -23,6 +23,9 @@ import java.util.stream.Collectors;
 public class EmailTaskService {
 
     @Autowired
+    private EmailContentRepository emailContentRepository;
+
+    @Autowired
     private EmailTaskRepository emailTaskRepository;
 
     @Autowired
@@ -259,14 +262,19 @@ public class EmailTaskService {
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
+        String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:8080/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
         emailContentBuilder.append(attachmentInfo);
 
-        String s="如要下载附件或退订，请复制对应链接至浏览器即可。";
+        String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
         emailContentBuilder.append(s);
 
         // 获取最终的 emailContent
         emailContent = emailContentBuilder.toString();
+
+        EmailContent emailContent1 = new EmailContent();
+        emailContent1.setEmailTaskId(emailTaskId);
+        emailContent1.setEmailContent(emailContent);
+        emailContentRepository.save(emailContent1);
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
@@ -277,7 +285,6 @@ public class EmailTaskService {
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
         emailTask.setSenderName(userService.getUserNameByUserId(currentUserId));
-        emailTask.setEmailContent(emailContent);
         emailTask.setAttachment(request.getAttachment());
         emailTask.setReceiverName(receiverNames);
         emailTask.setReceiverId(receiverEmails);
@@ -514,13 +521,18 @@ public class EmailTaskService {
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>" ;
+        String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
         emailContentBuilder.append(attachmentInfo);
 
-        String s="如要下载附件或退订，请复制对应链接至浏览器即可。";
+        String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
         emailContentBuilder.append(s);
 
         templateContentById = emailContentBuilder.toString();
+
+        EmailContent emailContent1 = new EmailContent();
+        emailContent1.setEmailTaskId(emailTaskId);
+        emailContent1.setEmailContent(templateContentById);
+        emailContentRepository.save(emailContent1);
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
@@ -529,7 +541,6 @@ public class EmailTaskService {
         emailTask.setSubject(request.getSubject());
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
-        emailTask.setEmailContent(templateContentById);
         emailTask.setTaskCycle(Long.valueOf(request.getSendCycle()));
         emailTask.setSenderId(userService.getUserEmailByUserId(currentUserId));
         emailTask.setSenderName(userService.getUserNameByUserId(currentUserId));
@@ -793,18 +804,22 @@ public class EmailTaskService {
         String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
         emailContentBuilder.append(attachmentInfo);
 
-        String s="如要下载附件或退订，请复制对应链接至浏览器即可。";
+        String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
         emailContentBuilder.append(s);
 
         // 获取最终的 emailContent
         templateContentById = emailContentBuilder.toString();
+
+        EmailContent emailContent1 = new EmailContent();
+        emailContent1.setEmailTaskId(emailTaskId);
+        emailContent1.setEmailContent(templateContentById);
+        emailContentRepository.save(emailContent1);
 
         // Create EmailTask object
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(emailTaskId);
         emailTask.setEmailId(emailTaskId);
         emailTask.setSubject(request.getSubject());
-        emailTask.setEmailContent(templateContentById);
         emailTask.setEmailTypeId(request.getEmailTypeId());
         emailTask.setTemplateId(request.getTemplateId());
         emailTask.setReceiverName(receiverNames);
@@ -860,13 +875,57 @@ public class EmailTaskService {
         if (status.equals("1")) {
             String templateId = request.getTemplateId();
             String templateContentById = templateService.getTemplateContentById(templateId);
+
+            // 使用 StringBuilder 进行字符串拼接
+            StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
+
+            String trackingImg = "<img src=http://112.35.176.43:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+            emailContentBuilder.append(trackingImg);
+
+            // 找到 </body> 标签的位置
+            int bodyEndIndex = templateContentById.indexOf("</body>");
+
+            // 确保 <body> 标签结束的位置正确
+            if (bodyEndIndex != -1) {
+                // 获取 <body> 标签结束位置前的内容
+                String bodyContent = templateContentById.substring(0, bodyEndIndex);
+
+                List<Attachment> attachments = request.getAttachment();
+                int size = attachments.size();
+                for (Attachment attachment : attachments) {
+                    size--;
+                    if (size == 0) {
+                        String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                                ", 附件下载链接: " + attachment.getAttachmentUrl();
+                        emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
+                    } else {
+                        String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
+                                ", 附件下载链接: " + attachment.getAttachmentUrl();
+                        emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
+                    }
+                }
+            }
+
+            String attachmentInfo = "<p>邮件退订地址:" + "http://112.35.176.43:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
+            emailContentBuilder.append(attachmentInfo);
+
+            String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
+            emailContentBuilder.append(s);
+
+            // 获取最终的 emailContent
+            templateContentById = emailContentBuilder.toString();
+
+            EmailContent emailContent = new EmailContent();
+            emailContent.setEmailTaskId("birth");
+            emailContent.setEmailContent(templateContentById);
+            emailContentRepository.save(emailContent);
+
             User byUserId = userRepository.findByUserId(currentUserId);
             EmailTask emailTask = new EmailTask();
             emailTask.setEmailTaskId(tackId);
             emailTask.setSubject(request.getSubject());
             emailTask.setTemplateId(request.getTemplateId());
             emailTask.setAttachment(request.getAttachment());
-            emailTask.setEmailContent(templateContentById);
             emailTask.setSenderId(byUserId.getUserEmail());
             emailTask.setSenderName(byUserId.getUserName());
             emailTask.setTaskType(4);
