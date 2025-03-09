@@ -235,7 +235,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(emailContent);
 
-        String trackingImg = "<img src=http://112.35.176.43:8080/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+        String trackingImg = "<img src=https://www.tangxinkang.com:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -494,7 +494,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-        String trackingImg = "<img src=http://112.35.176.43:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+        String trackingImg = "<img src=https://www.tangxinkang.com:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -774,7 +774,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-        String trackingImg = "<img src=http://112.35.176.43:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+        String trackingImg = "<img src=https://www.tangxinkang.com:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -879,7 +879,7 @@ public class EmailTaskService {
             // 使用 StringBuilder 进行字符串拼接
             StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-            String trackingImg = "<img src=http://112.35.176.43:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+            String trackingImg = "<img src=https://www.tangxinkang.com:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
             emailContentBuilder.append(trackingImg);
 
             // 找到 </body> 标签的位置
