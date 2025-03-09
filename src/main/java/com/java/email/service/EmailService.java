@@ -61,7 +61,6 @@ public class EmailService {
     }
 
     public String beginEmailTask(UpdateTaskStatusRequest request) {
-        long currentTimeMillis = System.currentTimeMillis();
         String emailTaskId = request.getEmailTaskId();
         Integer operateStatus = request.getOperateStatus();
 
@@ -70,12 +69,13 @@ public class EmailService {
         if (email == null) {
             throw new RuntimeException("邮件任务状态未找到");
         }else {
+            email.setEmailTaskId(emailTaskId);
             email.setEmailStatus(operateStatus);
         }
         emailRepository.save(email);
+        long currentTime=System.currentTimeMillis()/1000;
 
-        redisTemplate.opsForValue().set(emailTaskId, emailTaskId,currentTimeMillis/1000);
-
+        redisTemplate.opsForZSet().add(redisQueueName, emailTaskId, currentTime);
         return "Email task resumed and stored in Redis";
     }
 
