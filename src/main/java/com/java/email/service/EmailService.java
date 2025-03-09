@@ -53,6 +53,7 @@ public class EmailService {
         if (byEmailTaskId == null) {
             throw new RuntimeException("邮件任务未找到");
         }else {
+            email.setEmailTaskId(emailTaskId);
             email.setEmailStatus(operateStatus);
         }
         emailRepository.save(email);
