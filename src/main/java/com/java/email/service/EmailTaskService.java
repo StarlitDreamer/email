@@ -262,7 +262,7 @@ public class EmailTaskService {
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
+        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
@@ -521,7 +521,7 @@ public class EmailTaskService {
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
+        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
@@ -801,7 +801,7 @@ public class EmailTaskService {
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
+        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
@@ -906,7 +906,7 @@ public class EmailTaskService {
                 }
             }
 
-            String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}></p>";
+            String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
             emailContentBuilder.append(attachmentInfo);
 
             String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
