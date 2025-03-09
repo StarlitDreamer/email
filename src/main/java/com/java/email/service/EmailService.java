@@ -61,6 +61,7 @@ public class EmailService {
     }
 
     public String beginEmailTask(UpdateTaskStatusRequest request) {
+        long currentTimeMillis = System.currentTimeMillis();
         String emailTaskId = request.getEmailTaskId();
         Integer operateStatus = request.getOperateStatus();
 
@@ -73,7 +74,7 @@ public class EmailService {
         }
         emailRepository.save(email);
 
-        redisTemplate.opsForValue().set(emailTaskId, emailTaskId);
+        redisTemplate.opsForValue().set(emailTaskId, emailTaskId,currentTimeMillis/1000);
 
         return "Email task resumed and stored in Redis";
     }
