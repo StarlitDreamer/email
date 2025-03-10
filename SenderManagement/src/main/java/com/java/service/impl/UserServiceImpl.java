@@ -164,7 +164,10 @@ public class UserServiceImpl implements UserService {
             });
             // 根据角色添加查询条件
             if (currentUserRole == 3) {
-                boolQuery.must(m -> m.term(t -> t.field("belong_user_id").value(current_id)));
+                // 小管理可以查询自己和下属用户
+                boolQuery.should(s -> s.term(t -> t.field("user_id").value(current_id)));
+                boolQuery.should(s -> s.term(t -> t.field("belong_user_id").value(current_id)));
+                boolQuery.minimumShouldMatch("1"); // 至少匹配一个 should 条件
             } else if (currentUserRole == 4) {
                 GetResponse<User> response = getUserById(current_id);
                 String belongUserId = response.source().getBelongUserId();
@@ -471,6 +474,12 @@ public class UserServiceImpl implements UserService {
         if (userRole == 1 || userRole == 2) {
             throw new IOException("不能删除公司或大管理员账号");
         }
+        // 不允许自己删除自己，只能上级管理员删
+        String currentUserId = ThreadLocalUtil.getUserId();
+        if(currentUserId.equals(userId)){
+            throw new IOException("不能删除自己");
+        }
+        // 删除token
         boolean redisDelete = redisService.delete(RedisConstData.USER_LOGIN_TOKEN + userId);
         if (!redisDelete) {
             throw new IOException("删除token失败");
