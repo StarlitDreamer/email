@@ -3,14 +3,12 @@ server:
 
 spring:
   elasticsearch:
-    uris: http://112.35.176.43:9201
-#    uris: http://es:9200
+    uris: http://es:9200
     username: elastic
     password: M9VhXO063NGdy=X8IQpV
 
   data:
     redis:
-#      host: email-redis
-#      port: 6379
-      host: 112.35.176.43
-      port: 9500
+      host: email-redis
+      port: 6379
+      database: 0
