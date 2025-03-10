@@ -30,10 +30,12 @@ public class StartupTaskExecutor {
 
         String defaultTaskId = "birth"; // 你可以换成数据库中的 ID
         String defaultSubject = "默认生日邮件";
+        String defaultEmailTypeId = "birth";
 
         EmailTask emailTask = new EmailTask();
         emailTask.setEmailTaskId(defaultTaskId);
         emailTask.setSubject(defaultSubject);
+        emailTask.setEmailTypeId(defaultEmailTypeId);
         emailTask.setTaskType(4);
 
         emailTaskRepository.save(emailTask);
