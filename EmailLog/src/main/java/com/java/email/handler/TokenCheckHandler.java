@@ -21,9 +21,9 @@ import java.util.Map;
 @Slf4j
 public class TokenCheckHandler extends ChannelInboundHandlerAdapter {
     private final RedisService redisService;
-    private final ObjectMapper objectMapper;
+
     private static final LogUtil logUtil = LogUtil.getLogger(TokenCheckHandler.class);
-    
+
     private final List<String> excludePaths = Arrays.asList(
             "/userManage/createUser",
             "/user/login",
@@ -32,7 +32,7 @@ public class TokenCheckHandler extends ChannelInboundHandlerAdapter {
 
     public TokenCheckHandler(RedisService redisService) {
         this.redisService = redisService;
-        this.objectMapper = new ObjectMapper();
+
     }
 
     @Override
@@ -44,7 +44,7 @@ public class TokenCheckHandler extends ChannelInboundHandlerAdapter {
 
         FullHttpRequest request = (FullHttpRequest) msg;
         String uri = request.uri();
-        
+
         // 检查是否是排除的路径
         if (isExcludePath(uri)) {
             ctx.fireChannelRead(request.retain());
@@ -88,7 +88,7 @@ public class TokenCheckHandler extends ChannelInboundHandlerAdapter {
                 // 验证通过，存储用户信息
                 userMap.put("token", redisToken);
                 ThreadLocalUtil.set(userMap);
-                
+
                 // 继续处理请求
                 ctx.fireChannelRead(request.retain());
                 return;
@@ -97,10 +97,10 @@ public class TokenCheckHandler extends ChannelInboundHandlerAdapter {
 
             // 记录错误日志
             logUtil.error("TokenCheckHandler error in step : " + runStep + ", url: " + request.uri());
-            
+
             // 发送未授权响应
             HttpUtil.sendResponse(ctx, HttpResponseStatus.UNAUTHORIZED, "未授权访问");
-            
+
         } finally {
             // 清理ThreadLocal
             ThreadLocalUtil.remove();
@@ -118,4 +118,4 @@ public class TokenCheckHandler extends ChannelInboundHandlerAdapter {
         HttpUtil.sendResponse(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, "服务器内部错误");
         ctx.close();
     }
-} 
+}

@@ -59,10 +59,10 @@ public class NettyServerConfig {
                                     .addLast(new TokenCheckHandler(redisService))
                                     .addLast(new ReportHandler(emailLogService,emailReportService,userService))
                                     .addLast(new ManualReportHandler(emailLogService,emailReportService,userService))
-                                    .addLast(new FilterEmailTaskHandler(emailLogService,userService,emailManageService))
-                                    .addLast(new FilterEmailHandler(emailLogService,userService,emailRecipientService))
-                                    .addLast(new FilterBirthEmailHandler(emailLogService,userService,emailRecipientService))
-                                    .addLast(new FilterUndeliveredEmailHandler(userService,emailLogService,emailRecipientService,emailManageService))
+                                    .addLast(new FilterEmailTaskHandler(emailLogService,userService,emailManageService,redisService))
+                                    .addLast(new FilterEmailHandler(emailLogService,userService,emailRecipientService,redisService))
+                                    .addLast(new FilterBirthEmailHandler(emailLogService,userService,emailRecipientService,redisService))
+                                    .addLast(new FilterUndeliveredEmailHandler(userService,emailLogService,emailRecipientService,emailManageService,redisService))
                                     ;
 
                         }

@@ -1,7 +1,10 @@
 package com.java.email.handler;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.java.email.common.Redis.RedisService;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.pojo.EmailTask;
 import com.java.email.pojo.RsendDetails;
@@ -31,6 +34,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
@@ -41,13 +45,13 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final EmailLogService emailLogService;
     private final EmailRecipientService emailRecipientService;
-    private final EmailManageService emailManageService;
+    private final RedisService redisService;
 
-    public FilterUndeliveredEmailHandler(UserService userService, EmailLogService emailLogService, EmailRecipientService emailRecipientService, EmailManageService emailManageService) {
+    public FilterUndeliveredEmailHandler(UserService userService, EmailLogService emailLogService, EmailRecipientService emailRecipientService, EmailManageService emailManageService, RedisService redisService) {
         this.userService = userService;
         this.emailRecipientService = emailRecipientService;
         this.emailLogService = emailLogService;
-        this.emailManageService = emailManageService;
+        this.redisService = redisService;
     }
 
 
@@ -69,6 +73,7 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
 
                 Integer userRole = (Integer) userInfo.get("role");
                 String userEmail = userService.findById(ThreadLocalUtil.getUserId()).getUserEmail() ;
+                String userId = ThreadLocalUtil.getUserId();
 
                 if (userRole == null || userEmail == null) {
                     sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无法获取用户信息");
@@ -84,7 +89,12 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                     case 2: // 大管理员，不需要额外限制
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
-                        managedUserEmails = userService.findManagedUserEmails((String) userInfo.get("id"));
+                        String cacheKey = "managed_users:" + userId;
+                        managedUserEmails =  objectMapper.readValue(redisService.get(cacheKey),new TypeReference<List<String>>(){});
+                        if (managedUserEmails == null) {
+                            managedUserEmails = userService.findManagedUserEmails(userId);
+                            redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                        }
                         if (params.containsKey("sender_id")) {
                             String requestedSender = params.get("sender_id");
                             if (!managedUserEmails.contains(requestedSender)) {
@@ -140,13 +150,30 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                         filterEmailVo.setEmail_type_name(emailLogService.findByEmailTypeName(emailTask.getEmailTypeId()));
 
 
-                        Map<String, String> receiverInfo = null;
-                        if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
-                            receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId(), params);
-                        } else {
-                            receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId());
-                        }
+                        Map<String, String> receiverInfo;
+                        try {
+                            if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
+                                String paramHash = generateParamHash(params); // 生成参数哈希
+                                String receiverCacheKey = "recipient:" + email.getReceiverId() + ":" + paramHash;
+                                receiverInfo = objectMapper.readValue(redisService.get(receiverCacheKey), new TypeReference<Map<String, String>>() {
+                                });
 
+                                if (receiverInfo == null) {
+                                    receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId(), params);
+                                    redisService.set(receiverCacheKey, receiverInfo, 6, TimeUnit.HOURS);
+                                }
+                            } else {
+                                String receiverCacheKey = "recipient:" + email.getReceiverId();
+                                receiverInfo = objectMapper.readValue(redisService.get(receiverCacheKey), new TypeReference<Map<String, String>>() {
+                                });
+                                if (receiverInfo == null) {
+                                    receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId());
+                                    redisService.set(receiverCacheKey, receiverInfo, 24, TimeUnit.HOURS);
+                                }
+                            }
+                        } catch (JsonProcessingException e) {
+                            throw new RuntimeException(e);
+                        }
                         filterEmailVo.setEmail_status(email.getErrorCode());
                         filterEmailVo.setError_msg(email.getErrorMsg());
                         filterEmailVo.setStart_date(dateTimeFormatter(email.getStartDate()));
@@ -159,7 +186,13 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                         filterEmailVo.setReceiver_name(email.getReceiverName());
                         filterEmailVo.setReceiver_birth(receiverInfo.get("birth"));
 
-                        RsendDetails resendInfo = emailRecipientService.getResendDetails(email.getEmailId());
+                        RsendDetails resendInfo;
+                        String  resendCacheKey = "resend:" + email.getEmailId();
+                        resendInfo=objectMapper.readValue(redisService.get(resendCacheKey),RsendDetails.class);
+                        if(resendInfo==null){
+                            resendInfo=emailRecipientService.getResendDetails(email.getEmailId());
+                            redisService.set(resendCacheKey,resendInfo,1,TimeUnit.HOURS);
+                        }
                         if (resendInfo != null) {
                             filterEmailVo.setResend_start_date(resendInfo.getStartTime());
                             filterEmailVo.setResend_end_date(resendInfo.getEndTime());
@@ -221,5 +254,18 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
         log.error("Channel exception caught", cause);
         sendResponse(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, "Internal Server Error");
         ctx.close();
+    }
+
+    // 生成参数哈希方法
+    private String generateParamHash(Map<String, String> params) {
+        try {
+            return params.entrySet().stream()
+                    .filter(e -> e.getKey().startsWith("receiver_"))
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(e -> e.getKey() + "=" + e.getValue())
+                    .collect(Collectors.joining("&"));
+        } catch (Exception e) {
+            return "default_hash";
+        }
     }
 }

@@ -1,6 +1,9 @@
 package com.java.email.handler;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.java.email.common.Redis.RedisService;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.pojo.Customer;
 import com.java.email.result.Result;
@@ -21,6 +24,8 @@ import com.java.email.service.EmailLogService;
 import com.java.email.service.UserService;
 import com.java.email.vo.FilterEmailVo;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -29,23 +34,27 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 /**
  * @author EvoltoStar
  */
+
 @Slf4j
 public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+
     private final EmailLogService emailLogService;
     private final UserService userService;
     private final EmailRecipientService emailRecipientService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final RedisService redisService;
     private static final int MAX_PAGE_SIZE = 10000;  // ES默认最大返回10000条
 
-    public FilterBirthEmailHandler(EmailLogService emailLogService, UserService userService, EmailRecipientService emailRecipientService) {
+    public FilterBirthEmailHandler(EmailLogService emailLogService, UserService userService, EmailRecipientService emailRecipientService, RedisService redisService) {
         this.emailLogService = emailLogService;
         this.userService = userService;
-
         this.emailRecipientService = emailRecipientService;
+        this.redisService = redisService;
     }
 
     @Override
@@ -66,8 +75,9 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
 
                 Integer userRole = (Integer) userInfo.get("role");
                 String userEmail = userService.findById(ThreadLocalUtil.getUserId()).getUserEmail() ;
+                String userId = ThreadLocalUtil.getUserId();
 
-                if (userRole == null || userEmail == null) {
+                if (userRole == null || userId == null) {
                     sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无法获取用户信息");
                     return;
                 }
@@ -81,7 +91,12 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                     case 2: // 大管理员，不需要额外限制
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
-                        managedUserEmails = userService.findManagedUserEmails((String) userInfo.get("id"));
+                        String cacheKey = "managed_users:" + userId;
+                        managedUserEmails =  objectMapper.readValue(redisService.get(cacheKey),new TypeReference<List<String>>(){});
+                        if (managedUserEmails == null) {
+                            managedUserEmails = userService.findManagedUserEmails(userId);
+                            redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                        }
                         if (params.containsKey("sender_id")) {
                             String requestedSender = params.get("sender_id");
                             if (!managedUserEmails.contains(requestedSender)) {
@@ -102,27 +117,6 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                 int page = Integer.parseInt(params.getOrDefault("page_num", "1"));
                 int size = Integer.parseInt(params.getOrDefault("page_size", "5"));
 
-//                // 处理发件人和收件人名称查询
-//                if(params.containsKey("senderName")){
-//                    String senderEmail = userService.findUserEmailByUserName(params.get("senderName"));
-//                    // 验证权限
-//                    if (userRole == 4 && !senderEmail.equals(userEmail)) {
-//                        sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "只能查看自己的邮件");
-//                        return;
-//                    } else if (userRole == 3) {
-//                        managedUserEmails = userService.findManagedUserEmails(userEmail);
-//                        if (!managedUserEmails.contains(senderEmail)) {
-//                            sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无权查看该用户的邮件");
-//                            return;
-//                        }
-//                    }
-//                    params.put("senderId", senderEmail);
-//                }
-
-//                if(params.containsKey("receiverName")){
-//                    params.put("receiverId", userService.findUserEmailByUserName(params.get("receiverName")));
-//                }
-
                 // 移除分页参数
                 params.remove("page_num");
                 params.remove("page_size");
@@ -132,8 +126,15 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                     params.remove("subject");
                 }
 
-//                // 获取所有符合条件的邮件任务
-                EmailTask emailTask = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
+                // 邮件任务缓存（固定任务类型）
+                String taskCacheKey = "birth_task:" + userId;
+                EmailTask cachedTask = objectMapper.readValue(redisService.get(taskCacheKey), EmailTask.class) ;
+                if (cachedTask == null) {
+                    params.put("email_task_id", "birth");
+                    params.put("task_type", "4");
+                    cachedTask = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
+                    redisService.set(taskCacheKey, cachedTask, 30, TimeUnit.MINUTES);
+                }
 
                 // 收集所有邮件记录
                 if(subject!=null){
@@ -141,28 +142,48 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                 }
 
                 List<String> finalManagedUserEmails = managedUserEmails;
-                EmailVo emailVo = emailLogService.findByDynamicQueryEmail(
+                EmailVo emailVo = emailLogService.findByDynamicQueryBirthEmail(
                         params,
                         page,  // from
                         size,  // 使用请求的大小和最大限制中的较小值
                         userRole,
                         userEmail,
-                        finalManagedUserEmails
+                        finalManagedUserEmails,
+                        cachedTask.getEmailTaskId()
                 );
 
                 List<UndeliveredEmail> logList = emailVo.getEmailList();
 
+                EmailTask finalCachedTask = cachedTask;
                 List<FilterEmailVo> Results =logList.stream().map(email -> {
                     FilterEmailVo filterEmailVo = new FilterEmailVo();
                     filterEmailVo.setSubject(email.getSubject());
-                    filterEmailVo.setTask_type(emailTask.getTaskType());
-                    filterEmailVo.setEmailTaskId(emailTask.getEmailTaskId());
+                    filterEmailVo.setTask_type(finalCachedTask.getTaskType());
+                    filterEmailVo.setEmailTaskId(finalCachedTask.getEmailTaskId());
                     BeanUtils.copyProperties(email, filterEmailVo);
-                    Map<String, String> receiverInfo=null;
-                    if(params.containsKey("receiver_level")||params.containsKey("receiver_birth")){
-                        receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId(),params);
-                    }else {
-                        receiverInfo=emailRecipientService.getRecipientDetail(email.getReceiverId());
+                    Map<String, String> receiverInfo;
+                    try {
+                        if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
+                            String paramHash = generateParamHash(params); // 生成参数哈希
+                            String receiverCacheKey = "recipient:" + email.getReceiverId() + ":" + paramHash;
+                            receiverInfo = objectMapper.readValue(redisService.get(receiverCacheKey), new TypeReference<Map<String, String>>() {
+                            });
+
+                            if (receiverInfo == null) {
+                                receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId(), params);
+                                redisService.set(receiverCacheKey, receiverInfo, 6, TimeUnit.HOURS);
+                            }
+                        } else {
+                            String receiverCacheKey = "recipient:" + email.getReceiverId();
+                            receiverInfo = objectMapper.readValue(redisService.get(receiverCacheKey), new TypeReference<Map<String, String>>() {
+                            });
+                            if (receiverInfo == null) {
+                                receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId());
+                                redisService.set(receiverCacheKey, receiverInfo, 24, TimeUnit.HOURS);
+                            }
+                        }
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
                     }
 
                     filterEmailVo.setEmail_status(email.getErrorCode());
@@ -227,5 +248,18 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
         log.error("Channel exception caught", cause);
         sendResponse(ctx, HttpResponseStatus.INTERNAL_SERVER_ERROR, "Internal Server Error");
         ctx.close();
+    }
+
+    // 生成参数哈希方法
+    private String generateParamHash(Map<String, String> params) {
+        try {
+            return params.entrySet().stream()
+                    .filter(e -> e.getKey().startsWith("receiver_"))
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(e -> e.getKey() + "=" + e.getValue())
+                    .collect(Collectors.joining("&"));
+        } catch (Exception e) {
+            return "default_hash";
+        }
     }
 }

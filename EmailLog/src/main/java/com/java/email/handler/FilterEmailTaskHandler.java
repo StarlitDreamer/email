@@ -1,5 +1,6 @@
 package com.java.email.handler;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.java.email.common.userCommon.ThreadLocalUtil;
 import com.java.email.result.Result;
@@ -19,7 +20,7 @@ import com.java.email.service.UserService;
 import com.java.email.vo.FilterTaskVo;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-
+import com.java.email.common.Redis.RedisService;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -28,20 +29,25 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author EvoltoStar
  */
 @Slf4j
 public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
+
     private final EmailLogService emailLogService;
     private final UserService userService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final EmailManageService emailManageService;
-    public FilterEmailTaskHandler(EmailLogService emailLogService, UserService userService, EmailManageService emailManageService) {
+    private final RedisService redisService;
+
+    public FilterEmailTaskHandler(EmailLogService emailLogService, UserService userService, EmailManageService emailManageService, RedisService redisService) {
         this.emailLogService = emailLogService;
         this.userService = userService;
         this.emailManageService = emailManageService;
+        this.redisService = redisService;
     }
 
     @Override
@@ -62,6 +68,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
 
                 Integer userRole = (Integer) userInfo.get("role");
                 String userEmail = userService.findById(ThreadLocalUtil.getUserId()).getUserEmail() ;
+                String userId = ThreadLocalUtil.getUserId();
 
 
                 if (userRole == null || userEmail == null) {
@@ -78,7 +85,12 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                     case 2: // 大管理员，不需要额外限制
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
-                        managedUserEmails = userService.findManagedUserEmails((String) userInfo.get("id"));
+                        String cacheKey = "managed_users:" + userId;
+                        managedUserEmails =  objectMapper.readValue(redisService.get(cacheKey),new TypeReference<List<String>>(){});
+                        if (managedUserEmails == null) {
+                            managedUserEmails = userService.findManagedUserEmails(userId);
+                            redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                        }
                         if (params.containsKey("sender_id")) {
                             String requestedSender = params.get("sender_id");
                             if (!managedUserEmails.contains(requestedSender)) {
@@ -128,13 +140,29 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                                 filterTaskVo.setStart_date(dateTimeFormatter(emailTask.getStartDate()));
                                 filterTaskVo.setEnd_date(dateTimeFormatter(emailTask.getEndDate()));
 
-                                filterTaskVo.setTask_status(emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId()));
 
                                 try {
-                                    filterTaskVo.setEmail_type_name(emailLogService.findByEmailTypeName(emailTask.getEmailTypeId()));
+                                    // 邮件类型名称缓存
+                                    String typeCacheKey = "email_type:" + emailTask.getEmailTypeId();
+                                    String emailTypeName = redisService.get(typeCacheKey);
+                                    if (emailTypeName == null) {
+                                        emailTypeName = emailLogService.findByEmailTypeName(emailTask.getEmailTypeId());
+                                        redisService.set(typeCacheKey, emailTypeName, 1, TimeUnit.HOURS);
+                                    }
+                                    filterTaskVo.setEmail_type_name(emailTypeName);
+
+                                    // 任务状态缓存（带自动过期）
+                                    String statusKey = "task_status:" + emailTask.getEmailTaskId();
+                                    Long taskStatus = objectMapper.readValue(redisService.get(statusKey), Long.class);
+                                    if (taskStatus == null) {
+                                        taskStatus = emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId());
+                                        redisService.set(statusKey, taskStatus, 1, TimeUnit.HOURS); // 短期缓存
+                                    }
+                                    filterTaskVo.setTask_status(taskStatus);
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
+
                                 if (emailTask.getSenderId() != null ) {
 
                                         filterTaskVo.setSender_name(emailTask.getSenderName());
@@ -171,7 +199,7 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
 
     private String dateTimeFormatter(long secondsTimestamp) {
         LocalDateTime dateTime = LocalDateTime.ofInstant(
-                Instant.ofEpochSecond(secondsTimestamp), 
+                Instant.ofEpochSecond(secondsTimestamp),
                 ZoneId.systemDefault()
         );
         return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));

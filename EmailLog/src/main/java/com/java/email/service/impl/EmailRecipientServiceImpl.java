@@ -158,6 +158,7 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
     public Map<String, String> getRecipientDetail(String email, Map<String, String> params) {
         try {
             String level = params.get("receiver_level") != null ? params.get("receiver_level") : null;
+            String birth = params.get("receiver_birth") != null ? params.get("receiver_birth") : null;
             // 并行查询Customer和Supplier索引
             CompletableFuture<SearchResponse<Customer>> customerFuture = CompletableFuture.supplyAsync(() -> {
                 try {
@@ -172,6 +173,13 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                         customerBoolQuery.must(TermQuery.of(t -> t
                                 .field("customer_level")
                                 .value(Long.parseLong(level))
+                        )._toQuery());
+                    }
+
+                    if (birth != null && !birth.isEmpty()) {
+                        customerBoolQuery.must(TermQuery.of(t -> t
+                                .field("birth")
+                                .value(birth)
                         )._toQuery());
                     }
 
@@ -200,6 +208,13 @@ public class EmailRecipientServiceImpl implements EmailRecipientService {
                         supplierBoolQuery.must(TermQuery.of(t -> t
                                 .field("supplier_level")
                                 .value(level)
+                        )._toQuery());
+                    }
+
+                    if (birth != null && !birth.isEmpty()) {
+                        supplierBoolQuery.must(TermQuery.of(t -> t
+                                .field("birth")
+                                .value(birth)
                         )._toQuery());
                     }
 

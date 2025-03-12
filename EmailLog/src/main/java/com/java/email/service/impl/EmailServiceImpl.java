@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -208,9 +209,6 @@ public class EmailServiceImpl implements EmailService {
             if (value != null && !value.isEmpty() &&
                     !Arrays.asList("email_status", "receiver_level", "receiver_birth").contains(key)) {
                 switch (key) {
-                    case "subject":
-                        b.must(m -> m.match(t -> t.field("subject").query(value)));
-                        break;
                     case "email_id":
                         b.must(m -> m.term(t -> t.field("email_id").value(value)));
                         break;
@@ -264,6 +262,18 @@ public class EmailServiceImpl implements EmailService {
         return response.found() ? response.source() : null;
     }
 
+    /**
+     * 根据动态查询条件搜索未送达邮件
+     * @param params
+     * @param emailTaskIds
+     * @param page
+     * @param size
+     * @param userRole
+     * @param userEmail
+     * @param finalManagedUserEmails
+     * @return
+     * @throws IOException
+     */
     @Override
     public EmailVo findByDynamicQueryUndeliveredEmail(Map<String, String> params, List<String> emailTaskIds, int page, int size, Integer userRole, String userEmail, List<String> finalManagedUserEmails) throws IOException {
         try {
@@ -298,6 +308,7 @@ public class EmailServiceImpl implements EmailService {
                 resendEmailsIdSet = null;
             }
 
+
             // 找到 emailTaskIds 和 resendEmailTaskIdSet 中的交集
             Set<String> commonTaskIds = new HashSet<>(emailTaskIds);
             if (resendEmailTaskIdSet != null) {
@@ -305,15 +316,20 @@ public class EmailServiceImpl implements EmailService {
             }
 
             List<String> finalEmailTaskIds = new ArrayList<>(commonTaskIds);
-            // 检查 receiver_level 和 receiver_birth 参数
+
             // 添加收件人邮箱过滤
             if (recipientEmails != null && resendEmails != null) {
                 recipientEmails.retainAll(resendEmails);
-            }else {
-                recipientEmails = resendEmails;
+            }else if((recipientEmails==null)&&(resendEmails!=null)){
+                recipientEmails=resendEmails;
             }
-            if ((params.containsKey("receiver_level") || params.containsKey("receiver_birth")) &&
-                (recipientEmails == null || recipientEmails.isEmpty())) {
+
+            if ((params.containsKey("resend_status") ||
+                    params.containsKey("resend_start_date") ||
+                    params.containsKey("resend_end_date") ||
+                    params.containsKey("receiver_level") ||
+                    params.containsKey("receiver_birth"))
+                    &&(recipientEmails == null || recipientEmails.isEmpty())) {
                 // 直接返回空结果，不执行查询
                 EmailVo emptyResult = new EmailVo();
                 emptyResult.setEmailList(Collections.emptyList());
@@ -321,8 +337,9 @@ public class EmailServiceImpl implements EmailService {
                 return emptyResult;
             }
 
-            Set<String> recipientEmailss=recipientEmails;
+
             // 继续执行查询
+            Set<String> finalRecipientEmails = recipientEmails;
             SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
                 s.index(INDEX_NAME);
                 s.from((page - 1) * size);
@@ -337,10 +354,10 @@ public class EmailServiceImpl implements EmailService {
                                         .toList()))
                         ));
                     }
-                    if (recipientEmailss != null && !recipientEmailss.isEmpty()) {
+                    if (finalRecipientEmails != null &&!finalRecipientEmails.isEmpty()) {
                         b.must(m -> m.terms(t -> t
                                 .field("receiver_id")
-                                .terms(tt -> tt.value(recipientEmailss.stream()
+                                .terms(tt -> tt.value(finalRecipientEmails.stream()
                                         .map(FieldValue::of)
                                         .toList()))
                         ));
@@ -399,6 +416,153 @@ public class EmailServiceImpl implements EmailService {
                     params, userRole, userEmail, e);
             throw e;
         }
+    }
+
+    @Override
+    public EmailVo findByDynamicQueryBirthEmail(Map<String, String> params, int page, int size, Integer userRole, String userEmail, List<String> managedUserEmails,String emailTaskId) throws IOException {
+        try {
+            Set<String> recipientEmails;
+            if(emailTaskId==null){
+                EmailVo emailVo=new EmailVo();
+                emailVo.setTotal(0L);
+                emailVo.setEmailList(Collections.emptyList());
+                return emailVo;
+            }
+            if(params.containsKey("receiver_level") ||params.containsKey("receiver_birth")){
+                // 先获取符合条件的收件人邮箱
+                recipientEmails= emailRecipientService.findMatchingRecipientEmails(params);/**/
+                if(recipientEmails==null|| recipientEmails.isEmpty()){
+                    EmailVo emailVo=new EmailVo();
+                    emailVo.setTotal(0L);
+                    emailVo.setEmailList(Collections.emptyList());
+                    return emailVo;
+                }
+            } else {
+                recipientEmails = null;
+            }
+
+
+
+
+
+            SearchResponse<UndeliveredEmail> response = esClient.search(s -> {
+                s.index(INDEX_NAME);
+                s.from((page - 1) * size);
+                s.size(size);
+
+                s.query(q -> q.bool(b -> {
+                    // 处理邮件状态查询
+                    if (params.containsKey("email_status")) {
+                        String status = params.get("email_status");
+                        if ("200".equals(status)) {
+                            // 发送成功的邮件
+                            b.must(m -> m.term(t -> t.field("error_code").value(200)));
+                        } else if ("500".equals(status)) {
+                            // 未发送的邮件
+                            b.must(m -> m.term(t -> t.field("error_code").value(500)));
+                        } else if ("535".equals(status)) {
+                            b.must(m->m.term(t -> t.field("error_code").value(535)));
+
+                        }
+                        // 如果status不是200或500，忽略此条件
+                    }
+                    b.must(m->m.term(t->t.field("email_task_id").value(emailTaskId)));
+
+                    // 添加收件人邮箱过滤（仅当recipientEmails不为null且不为空时）
+                    if (recipientEmails != null &&!recipientEmails.isEmpty()) {
+                        b.must(m -> m.terms(t -> t
+                                .field("receiver_id")
+                                .terms(tt -> tt.value(recipientEmails.stream()
+                                        .map(FieldValue::of)
+                                        .collect(Collectors.toList())))
+                        ));
+                    }
+
+                    // 根据用户角色添加权限过滤
+                    addRoleBasedFilter(b, userRole, userEmail, managedUserEmails);
+
+                    // 处理其他查询参数
+                    if (!params.isEmpty()) {
+                        addOtherQueryParams_Birth(b, params, userRole, userEmail, managedUserEmails);
+                    } else {
+                        b.must(m -> m.matchAll(ma -> ma));
+                    }
+
+                    return b;
+                }));
+
+                // 添加默认排序
+                s.sort(sort -> sort
+                        .field(f -> f
+                                .field("start_date")
+                                .order(SortOrder.Desc)
+                        )
+                );
+
+                return s;
+            }, UndeliveredEmail.class);
+            assert response.hits().total() != null;
+            long totalHits = response.hits().total().value();
+            EmailVo emailVo = new EmailVo();
+            emailVo.setEmailList(response.hits().hits().stream()
+                    .map(Hit::source)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList()));
+            emailVo.setTotal(totalHits);
+
+            return emailVo;
+        } catch (Exception e) {
+            log.error("Error while searching emails: params={}, userRole={}, userEmail={}",
+                    params, userRole, userEmail, e);
+            throw e;
+        }
+    }
+    private void addOtherQueryParams_Birth(BoolQuery.Builder b, Map<String, String> params,
+                                     Integer userRole, String userEmail, List<String> managedUserEmails) {
+        // 如果params为空，不添加任何查询条件，返回所有结果
+        if (params == null || params.isEmpty()) {
+            return;
+        }
+        params.forEach((key, value) -> {
+            if (value != null && !value.isEmpty() &&
+                    !Arrays.asList("email_status", "receiver_level", "receiver_birth").contains(key)) {
+                switch (key) {
+                    case "subject":
+                        b.must(m -> m.match(t -> t.field("subject").query(value).operator(Operator.And)));
+                        break;
+                    case "email_id":
+                        b.must(m -> m.term(t -> t.field("email_id").value(value)));
+                        break;
+//                    case "email_task_id":
+//                        b.must(m -> m.term(t -> t.field("email_task_id").value(value)));
+//                        break;
+                    case "sender_email":
+                        validateSenderAccess(userRole, userEmail, managedUserEmails, value);
+                        b.must(m -> m.term(t -> t.field("sender_id").value(value)));
+                        break;
+                    case "receiver_email":
+                        b.must(m -> m.term(t -> t.field("receiver_id").value(value)));
+                        break;
+                    case "sender_name":
+                        b.must(m -> m.match(t -> t.field("sender_name").query(value)));
+                        break;
+                    case "receiver_name":
+                        b.must(m -> m.match(t -> t.field("receiver_name").query(value)));
+                        break;
+                    case "start_date":
+                        b.must(m -> m.range(r -> r
+                                .field("end_date")
+                                .gte(JsonData.of(Long.parseLong(value)))
+                        ));
+                        break;
+                    case "end_date":
+                        b.must(m -> m.range(r -> r
+                                .field("start_date")
+                                .lte(JsonData.of(Long.parseLong(value)))
+                        ));
+                }
+            }
+        });
     }
 
 

@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Operator;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -109,7 +110,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
         }
     }
 
-    private void addRoleBasedFilter(BoolQuery.Builder b, Integer userRole, 
+    private void addRoleBasedFilter(BoolQuery.Builder b, Integer userRole,
             String userEmail, List<String> managedUserEmails) {
         switch (userRole) {
             case 2: // 大管理员，不需要额外限制
@@ -144,12 +145,15 @@ public class EmailTaskServiceImpl implements EmailTaskService {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            b.must(m -> m.terms(t -> t
-                    .field("email_task_id")
-                    .terms(tt -> tt.value(emailTaskIds.stream()
-                            .map(FieldValue::of)
-                            .collect(Collectors.toList())))
-            ));
+            if((emailTaskIds!=null)&&(!emailTaskIds.isEmpty())){
+                b.must(m -> m.terms(t -> t
+                        .field("email_task_id")
+                        .terms(tt -> tt.value(emailTaskIds.stream()
+                                .map(FieldValue::of)
+                                .collect(Collectors.toList())))
+                ));
+            }
+
         }
         params.forEach((key, value) -> {
             if (value != null)
@@ -162,7 +166,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                         b.must(m -> m.term(t -> t.field("email_type_id").value(value)));
                         break;
                     case "subject":
-                        b.must(m -> m.match(t -> t.field("subject").query(value)));
+                        b.must(m -> m.match(t -> t.field("subject").query(value).operator(Operator.And)));
                         break;
                     case "task_type":
                         b.must(m -> m.term(t -> t.field("task_type").value(value)));
@@ -197,7 +201,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
         });
     }
 
-    private void validateSenderAccess(Integer userRole, String userEmail, 
+    private void validateSenderAccess(Integer userRole, String userEmail,
             List<String> managedUserEmails, String requestedSenderId) {
         if (userRole == 4 && !userEmail.equals(requestedSenderId)) {
             throw new IllegalArgumentException("User can only query their own tasks");
@@ -279,7 +283,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                                     b.must(m -> m.term(t -> t.field("task_type").value(value)));
                                     break;
                                 case "subject":
-                                    b.must(m -> m.match(t -> t.field("subject").query(value)));
+                                    b.must(m -> m.match(t -> t.field("subject").query(value).operator(Operator.And)));
                                     break;
                                 case "sender_id":
                                     validateSenderAccess(userRole, userEmail, managedUserEmails, value);
@@ -342,7 +346,7 @@ public class EmailTaskServiceImpl implements EmailTaskService {
                                     b.must(m -> m.term(t -> t.field("task_type").value(value)));
                                     break;
                                 case "subject":
-                                    b.must(m -> m.match(t -> t.field("subject").query(value)));
+                                    b.must(m -> m.match(t -> t.field("subject").query(value).operator(Operator.And)));
                                     break;
                                 case "sender_id":
                                     validateSenderAccess(userRole, userEmail, managedUserEmails, value);
