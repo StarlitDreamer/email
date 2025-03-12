@@ -5,8 +5,8 @@ spring:
    servlet:
      multipart:
        enabled: true
-       max-file-size: 10MB
-       max-request-size: 10MB
+       max-file-size: 20MB
+       max-request-size: 20MB
        resolve-lazily: true
        location: ${java.io.tmpdir}
    mvc:
@@ -19,12 +19,13 @@ spring:
            host: email-redis
            port: 6379
            database: 0
+           password: M9VhXO063NGdy=X8IQpV
 elasticsearch:
  host: es
  port: 9200
  scheme: http
  username: elastic
- password: M9VhXO063NGdy=X8IQpV 
+ password: M9VhXO063NGdy=X8IQpV
 server:
    tomcat:
      max-swallow-size: -1
