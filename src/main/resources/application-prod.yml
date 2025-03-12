@@ -8,6 +8,7 @@ spring:
       host: email-redis
       port: 6379
       database: 0
+      password: M9VhXO063NGdy=X8IQpV
 
 
 
