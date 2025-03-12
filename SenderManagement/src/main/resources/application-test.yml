@@ -17,6 +17,7 @@ spring:
 #      host: 112.35.176.43
 #      port: 9500
       database: 0
+      password: M9VhXO063NGdy=X8IQpV
   servlet:
     multipart:
       max-file-size: 20MB
