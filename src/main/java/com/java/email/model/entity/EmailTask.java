@@ -39,7 +39,7 @@ public class EmailTask {
     private String subject;               // 邮件主题，支持分词
 
     @JsonProperty("email_content")
-    @Field(name = "email_content", type = FieldType.Keyword)
+    @Field(name = "email_content", type = FieldType.Text)
     private String emailContent;          // 邮件内容，支持全文检索
 
     @JsonProperty("created_at")
