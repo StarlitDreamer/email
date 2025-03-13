@@ -17,21 +17,22 @@ spring:
 #        port: 9500
 #        database: 0
 
-elasticsearch:
-  host: 112.35.176.43
-  port: 9201
-  username: elastic
-  password: M9VhXO063NGdy=X8IQpV
-
-#  data:
-#    redis:
-#      host: email-redis
-#      port: 6379
-#      database: 0
 #elasticsearch:
-#  host: es
-#  port: 9200
-#  username: elastic  # ES 用户名
-#  password: M9VhXO063NGdy=X8IQpV # ES 密码
+#  host: 112.35.176.43
+#  port: 9201
+#  username: elastic
+#  password: M9VhXO063NGdy=X8IQpV
+
+  data:
+    redis:
+      host: email-redis
+      port: 6379
+      database: 0
+      password: M9VhXO063NGdy=X8IQpV
+elasticsearch:
+  host: es
+  port: 9200
+  username: elastic  # ES 用户名
+  password: M9VhXO063NGdy=X8IQpV # ES 密码
 server:
   port: 8888

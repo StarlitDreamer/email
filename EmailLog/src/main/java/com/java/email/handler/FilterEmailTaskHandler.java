@@ -86,13 +86,26 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
                         String cacheKey = "managed_users:" + userId;
-                        managedUserEmails =  objectMapper.readValue(redisService.get(cacheKey),new TypeReference<List<String>>(){});
+                        String cacheValue = redisService.get(cacheKey);
+
+                        if (cacheValue != null) {
+                            try {
+                                managedUserEmails = objectMapper.readValue(cacheValue, new TypeReference<List<String>>() {});
+                            } catch (Exception e) {
+                                log.error("Redis 缓存解析失败", e);
+                            }
+                        }
+
                         if (managedUserEmails == null) {
                             managedUserEmails = userService.findManagedUserEmails(userId);
-                            redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                            if (managedUserEmails != null) {
+                                redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                            }
                         }
+
                         if (params.containsKey("sender_id")) {
                             String requestedSender = params.get("sender_id");
+                            assert managedUserEmails != null;
                             if (!managedUserEmails.contains(requestedSender)) {
                                 sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无权查看该用户的邮件");
                                 return;
@@ -110,15 +123,6 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                 // 获取分页参数
                 int page = Integer.parseInt(params.getOrDefault("page_num", "1"));
                 int size = Integer.parseInt(params.getOrDefault("page_size", "5"));
-
-//                // 处理发件人名称查询
-//                if (params.containsKey("senderName")) {
-//                    String senderEmail = userService.findUserEmailByUserName(params.get("senderName"));
-//                    if (senderEmail != null) {
-//                        params.put("senderId", senderEmail);
-//                    }
-//                    params.remove("senderName");
-//                }
 
                 // 移除分页参数
                 params.remove("page_num");
@@ -147,17 +151,34 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                                     String emailTypeName = redisService.get(typeCacheKey);
                                     if (emailTypeName == null) {
                                         emailTypeName = emailLogService.findByEmailTypeName(emailTask.getEmailTypeId());
-                                        redisService.set(typeCacheKey, emailTypeName, 1, TimeUnit.HOURS);
+                                        if(emailTypeName != null){
+                                            redisService.set(typeCacheKey, emailTypeName, 1, TimeUnit.HOURS);
+                                        }
                                     }
                                     filterTaskVo.setEmail_type_name(emailTypeName);
 
                                     // 任务状态缓存（带自动过期）
                                     String statusKey = "task_status:" + emailTask.getEmailTaskId();
-                                    Long taskStatus = objectMapper.readValue(redisService.get(statusKey), Long.class);
-                                    if (taskStatus == null) {
-                                        taskStatus = emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId());
-                                        redisService.set(statusKey, taskStatus, 1, TimeUnit.HOURS); // 短期缓存
+                                    String statusValue = redisService.get(statusKey);
+                                    Long taskStatus=null;
+
+                                    if(statusValue!=null){
+                                        try {
+                                            taskStatus = objectMapper.readValue(statusValue, Long.class);
+                                        }catch (Exception e){
+                                            log.error("Redis 缓存解析失败", e);
+                                        }
                                     }
+                                    if (taskStatus == null) {
+                                        // 如果缓存中没有值，从数据库获取
+                                        taskStatus = emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId());
+                                        // 将新的状态存入缓存
+                                        if (taskStatus != null) {
+                                            redisService.set(statusKey, objectMapper.writeValueAsString(taskStatus), 1, TimeUnit.HOURS);
+                                        }
+                                    }
+
+
                                     filterTaskVo.setTask_status(taskStatus);
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);

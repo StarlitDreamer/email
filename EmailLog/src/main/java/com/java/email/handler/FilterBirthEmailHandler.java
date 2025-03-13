@@ -92,13 +92,26 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
                         String cacheKey = "managed_users:" + userId;
-                        managedUserEmails =  objectMapper.readValue(redisService.get(cacheKey),new TypeReference<List<String>>(){});
+                        String cacheValue = redisService.get(cacheKey);
+
+                        if (cacheValue != null) {
+                            try {
+                                managedUserEmails = objectMapper.readValue(cacheValue, new TypeReference<List<String>>() {});
+                            } catch (Exception e) {
+                                log.error("Redis 缓存解析失败", e);
+                            }
+                        }
+
                         if (managedUserEmails == null) {
                             managedUserEmails = userService.findManagedUserEmails(userId);
-                            redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                            if (managedUserEmails != null) {
+                                redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                            }
                         }
+
                         if (params.containsKey("sender_id")) {
                             String requestedSender = params.get("sender_id");
+                            assert managedUserEmails != null;
                             if (!managedUserEmails.contains(requestedSender)) {
                                 sendResponse(ctx, HttpResponseStatus.FORBIDDEN, "无权查看该用户的邮件");
                                 return;
@@ -126,14 +139,28 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                     params.remove("subject");
                 }
 
-                // 邮件任务缓存（固定任务类型）
+                EmailTask cachedTask = null;
+                // 生日任务缓存（固定任务类型）
                 String taskCacheKey = "birth_task:" + userId;
-                EmailTask cachedTask = objectMapper.readValue(redisService.get(taskCacheKey), EmailTask.class) ;
-                if (cachedTask == null) {
+                String cacheValue = redisService.get(taskCacheKey);
+                if(cacheValue!=null){
+                    try {
+                        cachedTask = objectMapper.readValue(cacheValue, EmailTask.class) ;
+                    }catch (Exception e){
+                        log.error("redis缓存解析失败",e);
+                        params.put("email_task_id", "birth");
+                        params.put("task_type", "4");
+                        cachedTask = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
+                        if(cachedTask!=null)
+                            redisService.set(taskCacheKey, cachedTask, 30, TimeUnit.MINUTES);
+                    }
+                }else {
                     params.put("email_task_id", "birth");
                     params.put("task_type", "4");
                     cachedTask = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
-                    redisService.set(taskCacheKey, cachedTask, 30, TimeUnit.MINUTES);
+                    if(cachedTask!=null){
+                        redisService.set(taskCacheKey, cachedTask, 30, TimeUnit.MINUTES);
+                    }
                 }
 
                 // 收集所有邮件记录
@@ -142,6 +169,7 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                 }
 
                 List<String> finalManagedUserEmails = managedUserEmails;
+                assert cachedTask != null;
                 EmailVo emailVo = emailLogService.findByDynamicQueryBirthEmail(
                         params,
                         page,  // from
@@ -161,29 +189,36 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                     filterEmailVo.setTask_type(finalCachedTask.getTaskType());
                     filterEmailVo.setEmailTaskId(finalCachedTask.getEmailTaskId());
                     BeanUtils.copyProperties(email, filterEmailVo);
-                    Map<String, String> receiverInfo;
-                    try {
-                        if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
-                            String paramHash = generateParamHash(params); // 生成参数哈希
-                            String receiverCacheKey = "recipient:" + email.getReceiverId() + ":" + paramHash;
-                            receiverInfo = objectMapper.readValue(redisService.get(receiverCacheKey), new TypeReference<Map<String, String>>() {
-                            });
+                    Map<String, String> receiverInfo = null;
+                    String receiverCacheKey;
+                    int cacheDuration = 24; // 默认缓存时间 24 小时
 
-                            if (receiverInfo == null) {
-                                receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId(), params);
-                                redisService.set(receiverCacheKey, receiverInfo, 6, TimeUnit.HOURS);
-                            }
-                        } else {
-                            String receiverCacheKey = "recipient:" + email.getReceiverId();
-                            receiverInfo = objectMapper.readValue(redisService.get(receiverCacheKey), new TypeReference<Map<String, String>>() {
-                            });
-                            if (receiverInfo == null) {
-                                receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId());
-                                redisService.set(receiverCacheKey, receiverInfo, 24, TimeUnit.HOURS);
-                            }
+                    if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
+                        String paramHash = generateParamHash(params);
+                        receiverCacheKey = "recipient:" + email.getReceiverId() + ":" + paramHash;
+                        cacheDuration = 6; // 特殊参数时缓存 6 小时
+                    } else {
+                        receiverCacheKey = "recipient:" + email.getReceiverId();
+                    }
+
+                    String receiverCacheValue = redisService.get(receiverCacheKey);
+
+                    if (receiverCacheValue != null) {
+                        try {
+                            receiverInfo = objectMapper.readValue(receiverCacheValue, new TypeReference<Map<String, String>>() {});
+                        } catch (Exception e) {
+                            log.error("Error parsing receiverInfo from cache: {}", e.getMessage());
                         }
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
+                    }
+
+                    if (receiverInfo == null) {
+                        receiverInfo = params.containsKey("receiver_level") || params.containsKey("receiver_birth")
+                                ? emailRecipientService.getRecipientDetail(email.getReceiverId(), params)
+                                : emailRecipientService.getRecipientDetail(email.getReceiverId());
+
+                        if (receiverInfo != null) {
+                            redisService.set(receiverCacheKey, receiverInfo, cacheDuration, TimeUnit.HOURS);
+                        }
                     }
 
                     filterEmailVo.setEmail_status(email.getErrorCode());

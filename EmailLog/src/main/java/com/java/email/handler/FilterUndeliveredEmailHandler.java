@@ -90,11 +90,23 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                         break;
                     case 3: // 小管理员，只能查看自己管理的用户的邮件
                         String cacheKey = "managed_users:" + userId;
-                        managedUserEmails =  objectMapper.readValue(redisService.get(cacheKey),new TypeReference<List<String>>(){});
+                        String cacheValue = redisService.get(cacheKey);
+
+                        if (cacheValue != null) {
+                            try {
+                                managedUserEmails = objectMapper.readValue(cacheValue, new TypeReference<List<String>>() {});
+                            } catch (Exception e) {
+                                log.error("Redis 缓存解析失败", e);
+                            }
+                        }
+
                         if (managedUserEmails == null) {
                             managedUserEmails = userService.findManagedUserEmails(userId);
-                            redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                            if (managedUserEmails != null) {
+                                redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                            }
                         }
+
                         if (params.containsKey("sender_id")) {
                             String requestedSender = params.get("sender_id");
                             if (!managedUserEmails.contains(requestedSender)) {
@@ -150,30 +162,38 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                         filterEmailVo.setEmail_type_name(emailLogService.findByEmailTypeName(emailTask.getEmailTypeId()));
 
 
-                        Map<String, String> receiverInfo;
-                        try {
-                            if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
-                                String paramHash = generateParamHash(params); // 生成参数哈希
-                                String receiverCacheKey = "recipient:" + email.getReceiverId() + ":" + paramHash;
-                                receiverInfo = objectMapper.readValue(redisService.get(receiverCacheKey), new TypeReference<Map<String, String>>() {
-                                });
+                        Map<String, String> receiverInfo = null;
+                        String receiverCacheKey;
+                        int cacheDuration = 24; // 默认缓存时间 24 小时
 
-                                if (receiverInfo == null) {
-                                    receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId(), params);
-                                    redisService.set(receiverCacheKey, receiverInfo, 6, TimeUnit.HOURS);
-                                }
-                            } else {
-                                String receiverCacheKey = "recipient:" + email.getReceiverId();
-                                receiverInfo = objectMapper.readValue(redisService.get(receiverCacheKey), new TypeReference<Map<String, String>>() {
-                                });
-                                if (receiverInfo == null) {
-                                    receiverInfo = emailRecipientService.getRecipientDetail(email.getReceiverId());
-                                    redisService.set(receiverCacheKey, receiverInfo, 24, TimeUnit.HOURS);
-                                }
-                            }
-                        } catch (JsonProcessingException e) {
-                            throw new RuntimeException(e);
+                        if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
+                            String paramHash = generateParamHash(params);
+                            receiverCacheKey = "recipient:" + email.getReceiverId() + ":" + paramHash;
+                            cacheDuration = 6; // 特殊参数时缓存 6 小时
+                        } else {
+                            receiverCacheKey = "recipient:" + email.getReceiverId();
                         }
+
+                        String receiverCacheValue = redisService.get(receiverCacheKey);
+
+                        if (receiverCacheValue != null) {
+                            try {
+                                receiverInfo = objectMapper.readValue(receiverCacheValue, new TypeReference<Map<String, String>>() {});
+                            } catch (Exception e) {
+                                log.error("Error parsing receiverInfo from cache: {}", e.getMessage());
+                            }
+                        }
+
+                        if (receiverInfo == null) {
+                            receiverInfo = params.containsKey("receiver_level") || params.containsKey("receiver_birth")
+                                    ? emailRecipientService.getRecipientDetail(email.getReceiverId(), params)
+                                    : emailRecipientService.getRecipientDetail(email.getReceiverId());
+
+                            if (receiverInfo != null) {
+                                redisService.set(receiverCacheKey, receiverInfo, cacheDuration, TimeUnit.HOURS);
+                            }
+                        }
+
                         filterEmailVo.setEmail_status(email.getErrorCode());
                         filterEmailVo.setError_msg(email.getErrorMsg());
                         filterEmailVo.setStart_date(dateTimeFormatter(email.getStartDate()));
@@ -186,13 +206,8 @@ public class FilterUndeliveredEmailHandler extends SimpleChannelInboundHandler<F
                         filterEmailVo.setReceiver_name(email.getReceiverName());
                         filterEmailVo.setReceiver_birth(receiverInfo.get("birth"));
 
-                        RsendDetails resendInfo;
-                        String  resendCacheKey = "resend:" + email.getEmailId();
-                        resendInfo=objectMapper.readValue(redisService.get(resendCacheKey),RsendDetails.class);
-                        if(resendInfo==null){
-                            resendInfo=emailRecipientService.getResendDetails(email.getEmailId());
-                            redisService.set(resendCacheKey,resendInfo,1,TimeUnit.HOURS);
-                        }
+                        RsendDetails resendInfo=emailRecipientService.getResendDetails(email.getEmailId());
+
                         if (resendInfo != null) {
                             filterEmailVo.setResend_start_date(resendInfo.getStartTime());
                             filterEmailVo.setResend_end_date(resendInfo.getEndTime());
