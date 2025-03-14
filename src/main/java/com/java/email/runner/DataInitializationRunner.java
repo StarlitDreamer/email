@@ -34,7 +34,6 @@ public class DataInitializationRunner implements CommandLineRunner {
         while (retryCount < maxRetries) {
             try {
                 initializeData();
-                log.info("初始化创建公司、大管理成功");
                 return;
             } catch (Exception e) {
                 retryCount++;
