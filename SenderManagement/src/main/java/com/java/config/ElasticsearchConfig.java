@@ -4,6 +4,7 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -57,7 +58,8 @@ public class ElasticsearchConfig {
 
         // 配置 ObjectMapper
         ObjectMapper objectMapper = new ObjectMapper()
-                .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+                .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
         // 创建 Transport
         ElasticsearchTransport transport = new RestClientTransport(

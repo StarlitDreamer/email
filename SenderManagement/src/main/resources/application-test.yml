@@ -10,6 +10,9 @@ spring:
     password: M9VhXO063NGdy=X8IQpV
     connection-timeout: 50000
     socket-timeout: 50000
+    json:
+      mapper:
+        ignore_unknown_properties: true
   data:
     redis:
       host: email-redis
@@ -17,6 +20,7 @@ spring:
 #      host: 112.35.176.43
 #      port: 9500
       database: 0
+      password: M9VhXO063NGdy=X8IQpV
   servlet:
     multipart:
       max-file-size: 20MB

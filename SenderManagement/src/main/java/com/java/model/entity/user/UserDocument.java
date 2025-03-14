@@ -1,5 +1,7 @@
 package com.java.model.entity.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
@@ -9,6 +11,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 import java.util.List;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Document(indexName = "user")
 public class UserDocument {
     @Id
@@ -27,13 +30,13 @@ public class UserDocument {
     @Field(name = "user_name", type = FieldType.Text, analyzer = "ik_max_word")
     private String userName;
 
-    @Field(name = "user_account", type = FieldType.Text)
+    @Field(name = "user_account", type = FieldType.Keyword)
     private String userAccount;
 
     @Field(name = "user_password", type = FieldType.Keyword)
     private String userPassword;
 
-    @Field(name = "user_email", type = FieldType.Text)
+    @Field(name = "user_email", type = FieldType.Keyword)
     private String userEmail;
 
     @Field(name = "user_email_code", type = FieldType.Keyword)

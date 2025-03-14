@@ -1,5 +1,6 @@
 package com.java.model.entity.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
@@ -8,6 +9,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @Data
 @Document(indexName = "auth")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AuthDocument {
     @Id
     @Field(name = "auth_id", type = FieldType.Keyword)
