@@ -9,7 +9,9 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
 import com.java.email.constant.UserConstData;
+import com.java.email.esdao.repository.dictionary.EmailTypeRepository;
 import com.java.email.esdao.repository.user.UserRepository;
+import com.java.email.model.entity.dictionary.EmailTypeDocument;
 import com.java.email.model.entity.user.UserDocument;
 import com.java.email.utils.Md5Util;
 
@@ -19,10 +21,11 @@ public class DataInitializationRunner implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final ElasticsearchClient esClient;
-    
-    public DataInitializationRunner(UserRepository userRepository, ElasticsearchClient esClient) {
+    private final EmailTypeRepository emailTypeRepository;
+    public DataInitializationRunner(UserRepository userRepository, ElasticsearchClient esClient, EmailTypeRepository emailTypeRepository) {
         this.userRepository = userRepository;
         this.esClient = esClient;
+        this.emailTypeRepository = emailTypeRepository;
     }
 
     @Override
@@ -96,5 +99,24 @@ public class DataInitializationRunner implements CommandLineRunner {
         adminLarge.setUpdatedAt(System.currentTimeMillis()/1000);
         userRepository.save(adminLarge);
         log.info("创建默认大管理用户成功");
+
+        // 检查邮件类型表是否为空
+        if (emailTypeRepository.findAll().iterator().hasNext()) {
+            log.info("邮件类型表已存在数据，跳过初始化");
+            return;
+        }
+        log.info("邮件类型表为空，开始初始化数据");
+
+        // 创建默认邮件类型
+        log.info("开始创建默认生日邮件类型");
+        EmailTypeDocument emailType = new EmailTypeDocument();
+        emailType.setEmailTypeId(UserConstData.BIRTH_TYPE_ID);
+        emailType.setEmailTypeName(UserConstData.BIRTH_TYPE_NAME);
+        // 获取当前时间的 ISO 格式字符串
+        String now = java.time.Instant.now().toString();
+        emailType.setCreatedAt(now);
+        emailType.setUpdatedAt(now);
+        emailTypeRepository.save(emailType);
+        log.info("创建默认生日邮件类型成功");
     }
 } 

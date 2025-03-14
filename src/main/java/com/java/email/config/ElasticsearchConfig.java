@@ -12,6 +12,7 @@ import org.elasticsearch.client.RestClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.elasticsearch.core.mapping.SimpleElasticsearchMappingContext;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 @Configuration
@@ -54,5 +55,12 @@ public class ElasticsearchConfig {
     @Bean
     public ElasticsearchClient elasticsearchClient(ElasticsearchTransport transport) {
         return new ElasticsearchClient(transport);
+    }
+
+    @Bean
+    public SimpleElasticsearchMappingContext elasticsearchMappingContext() {
+        SimpleElasticsearchMappingContext mappingContext = new SimpleElasticsearchMappingContext();
+        mappingContext.setWriteTypeHints(false);  // 禁用 _class 字段
+        return mappingContext;
     }
 }
