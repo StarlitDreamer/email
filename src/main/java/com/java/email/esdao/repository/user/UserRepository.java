@@ -35,4 +35,6 @@ public interface UserRepository extends ElasticsearchRepository<UserDocument, St
 
     UserDocument findByUserName(String trim);
 
+    String findByUserRole(Integer roleCompany);
+
 } 
