@@ -105,7 +105,8 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                         if (managedUserEmails == null) {
                             managedUserEmails = userService.findManagedUserEmails(userId);
                             if (managedUserEmails != null) {
-                                redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                                String managedUserEmailsJson=objectMapper.writeValueAsString(managedUserEmails);
+                                redisService.set(cacheKey, managedUserEmailsJson, 30, TimeUnit.MINUTES);
                             }
                         }
 
@@ -151,15 +152,19 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                         params.put("email_task_id", "birth");
                         params.put("task_type", "4");
                         cachedTask = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
-                        if(cachedTask!=null)
-                            redisService.set(taskCacheKey, cachedTask, 30, TimeUnit.MINUTES);
+                        if(cachedTask!=null){
+                            String cachedTaskJson = objectMapper.writeValueAsString(cachedTask);
+                            redisService.set(taskCacheKey, cachedTaskJson, 30, TimeUnit.MINUTES);
+                        }
+
                     }
                 }else {
                     params.put("email_task_id", "birth");
                     params.put("task_type", "4");
                     cachedTask = emailLogService.findByEmailTasks(params, userRole, userEmail, managedUserEmails);
                     if(cachedTask!=null){
-                        redisService.set(taskCacheKey, cachedTask, 30, TimeUnit.MINUTES);
+                        String cachedTaskJson = objectMapper.writeValueAsString(cachedTask);
+                        redisService.set(taskCacheKey, cachedTaskJson, 30, TimeUnit.MINUTES);
                     }
                 }
 
@@ -191,12 +196,12 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                     BeanUtils.copyProperties(email, filterEmailVo);
                     Map<String, String> receiverInfo = null;
                     String receiverCacheKey;
-                    int cacheDuration = 24; // 默认缓存时间 24 小时
+                    int cacheDuration = 60; // 默认缓存时间 1 小时
 
                     if (params.containsKey("receiver_level") || params.containsKey("receiver_birth")) {
                         String paramHash = generateParamHash(params);
                         receiverCacheKey = "recipient:" + email.getReceiverId() + ":" + paramHash;
-                        cacheDuration = 6; // 特殊参数时缓存 6 小时
+                        cacheDuration = 30; // 特殊参数时缓存 30 分钟
                     } else {
                         receiverCacheKey = "recipient:" + email.getReceiverId();
                     }
@@ -217,7 +222,13 @@ public class FilterBirthEmailHandler extends SimpleChannelInboundHandler<FullHtt
                                 : emailRecipientService.getRecipientDetail(email.getReceiverId());
 
                         if (receiverInfo != null) {
-                            redisService.set(receiverCacheKey, receiverInfo, cacheDuration, TimeUnit.HOURS);
+                            try {
+                                String receiverInfoJson = objectMapper.writeValueAsString(receiverInfo);
+                                redisService.set(receiverCacheKey, receiverInfoJson, cacheDuration, TimeUnit.MINUTES);
+                            } catch (JsonProcessingException e) {
+                                throw new RuntimeException(e);
+                            }
+
                         }
                     }
 

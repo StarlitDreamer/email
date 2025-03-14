@@ -99,7 +99,8 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                         if (managedUserEmails == null) {
                             managedUserEmails = userService.findManagedUserEmails(userId);
                             if (managedUserEmails != null) {
-                                redisService.set(cacheKey, managedUserEmails, 1, TimeUnit.HOURS);
+                                String managedUserEmailsJson=objectMapper.writeValueAsString(managedUserEmails);
+                                redisService.set(cacheKey, managedUserEmailsJson, 30, TimeUnit.MINUTES);
                             }
                         }
 
@@ -135,6 +136,8 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                     List<EmailTask> emailTaskList =  emailTaskVo.getEmailTask();
 
 
+
+
                     // 转换为VO对象
                     List<FilterTaskVo> emailFilterTaskVoList = emailTaskList.stream()
                             .map(emailTask -> {
@@ -147,13 +150,23 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
 
                                 try {
                                     // 邮件类型名称缓存
+                                    if(emailTask.getEmailTypeId() == null){
+                                        emailTask.setEmailTypeId("birth");
+                                    }
                                     String typeCacheKey = "email_type:" + emailTask.getEmailTypeId();
-                                    String emailTypeName = redisService.get(typeCacheKey);
-                                    if (emailTypeName == null) {
-                                        emailTypeName = emailLogService.findByEmailTypeName(emailTask.getEmailTypeId());
-                                        if(emailTypeName != null){
-                                            redisService.set(typeCacheKey, emailTypeName, 1, TimeUnit.HOURS);
+                                    String emailTypeNameUnJson = redisService.get(typeCacheKey);
+                                    String emailTypeName=null;
+                                    if (emailTypeNameUnJson != null) {
+                                        try {
+                                            emailTypeName = objectMapper.readValue(emailTypeNameUnJson, String.class);
+                                        }catch (Exception e){
+                                            log.error("Redis 缓存解析失败", e);
                                         }
+                                    }
+                                    if(emailTypeName==null){
+                                        emailTypeName = emailLogService.findByEmailTypeName(emailTask.getEmailTypeId());
+                                        String emailTypeNameJson=objectMapper.writeValueAsString(emailTypeName);
+                                        redisService.set(typeCacheKey, emailTypeNameJson, 30, TimeUnit.MINUTES);
                                     }
                                     filterTaskVo.setEmail_type_name(emailTypeName);
 
@@ -174,7 +187,8 @@ public class FilterEmailTaskHandler extends SimpleChannelInboundHandler<FullHttp
                                         taskStatus = emailManageService.findLatestStatusByTaskId(emailTask.getEmailTaskId());
                                         // 将新的状态存入缓存
                                         if (taskStatus != null) {
-                                            redisService.set(statusKey, objectMapper.writeValueAsString(taskStatus), 1, TimeUnit.HOURS);
+                                            String taskStatusJson=objectMapper.writeValueAsString(taskStatus);
+                                            redisService.set(statusKey, taskStatusJson, 30, TimeUnit.MINUTES);
                                         }
                                     }
 
