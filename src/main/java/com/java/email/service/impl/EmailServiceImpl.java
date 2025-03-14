@@ -112,18 +112,28 @@ public class EmailServiceImpl implements EmailService {
             // 计算从第几条记录开始
             int from = (request.getPage_num() - 1) * request.getPage_size();
 
-            // 构建搜索请求
+            // 构建搜索请求，id为birth的不返回
             SearchResponse<Map> response = elasticsearchClient.search(s -> s
                     .index("email_type")
-                    .query(q -> {
-                        if (StringUtils.hasText(request.getEmail_type_name())) {
-                            return q.match(t -> t
-                                    .field("email_type_name")
-                                    .query(request.getEmail_type_name())
-                            );
-                        }
-                        return q.matchAll(ma -> ma);
-                    })
+                    .query(q -> q
+                            .bool(b -> b
+                                    .must(m -> {
+                                        if (StringUtils.hasText(request.getEmail_type_name())) {
+                                            return m.match(t -> t
+                                                    .field("email_type_name")
+                                                    .query(request.getEmail_type_name())
+                                            );
+                                        }
+                                        return m.matchAll(ma -> ma);
+                                    })
+                                    .mustNot(mn -> mn
+                                            .term(t -> t
+                                                    .field("email_type_id")
+                                                    .value("birth")
+                                            )
+                                    )
+                            )
+                    )
                     .sort(sort -> sort
                             .field(f -> f
                                     .field("updated_at")
