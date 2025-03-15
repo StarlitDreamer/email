@@ -928,6 +928,7 @@ public class EmailTaskService {
             emailTask.setAttachment(request.getAttachment());
             emailTask.setSenderId(byUserId.getUserEmail());
             emailTask.setSenderName(byUserId.getUserName());
+            emailTask.setEmailTypeId("birth");
             emailTask.setTaskType(4);
 
             String emailStatus = request.getEmailStatus();
