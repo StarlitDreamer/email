@@ -16,3 +16,7 @@ spring:
       port: 6379
       database: 0
       password: M9VhXO063NGdy=X8IQpV
+
+app:
+  email:
+    base-url: ${EMAIL_BASE_URL}

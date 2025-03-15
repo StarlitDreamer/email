@@ -10,6 +10,7 @@ import com.java.email.model.response.GetEmailsBySupplierIdsResponse;
 import com.java.email.repository.*;
 import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
@@ -52,6 +53,12 @@ public class EmailTaskService {
     @Autowired
     private UserService userService;
 
+    @Value("${app.email.base-url}")
+    private String baseUrl;
+
+//    String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+
+
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
@@ -90,10 +97,7 @@ public class EmailTaskService {
         List<Customer> customers = customerRepository.findByCustomerIdIn(customerId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
-        List<String> receiverId = customers.stream()
-                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Customer::getCustomerId)
-                .collect(Collectors.toList());
+        List<String> receiverId = customers.stream().filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Customer::getCustomerId).collect(Collectors.toList());
 
         //客户id集合不为空
         if (receiverId != null && !receiverId.isEmpty()) {
@@ -120,10 +124,7 @@ public class EmailTaskService {
         List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(receiverSupplierId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
-        List<String> receiverSupplierIds = suppliers.stream()
-                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Supplier::getSupplierId)
-                .collect(Collectors.toList());
+        List<String> receiverSupplierIds = suppliers.stream().filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Supplier::getSupplierId).collect(Collectors.toList());
 
         //供应商id集合不为空
         if (receiverSupplierIds != null && !receiverSupplierIds.isEmpty()) {
@@ -170,10 +171,7 @@ public class EmailTaskService {
         List<Customer> customersKey = customerRepository.findByCustomerIdIn(receiverKeyId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
-        List<String> receiverIdKey = customersKey.stream()
-                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Customer::getCustomerId)
-                .collect(Collectors.toList());
+        List<String> receiverIdKey = customersKey.stream().filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Customer::getCustomerId).collect(Collectors.toList());
 
         List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverIdKey);
 
@@ -209,10 +207,7 @@ public class EmailTaskService {
         List<Supplier> suppliersKey = supplierRepository.findBySupplierIdIn(receiverKeySupplierId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
-        List<String> receiverSupplierIdsKey = suppliersKey.stream()
-                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Supplier::getSupplierId)
-                .collect(Collectors.toList());
+        List<String> receiverSupplierIdsKey = suppliersKey.stream().filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Supplier::getSupplierId).collect(Collectors.toList());
 
         List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierIdsKey);
 
@@ -235,7 +230,8 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(emailContent);
 
-        String trackingImg = "<img src=https://www.tangxinkang.com:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
+
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -251,18 +247,16 @@ public class EmailTaskService {
             for (Attachment attachment : attachments) {
                 size--;
                 if (size == 0) {
-                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") + ", 附件下载链接: " + attachment.getAttachmentUrl();
                     emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 } else {
-                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") + ", 附件下载链接: " + attachment.getAttachmentUrl();
                     emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 }
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
@@ -347,10 +341,7 @@ public class EmailTaskService {
         List<Customer> customers = customerRepository.findByCustomerIdIn(customerId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
-        List<String> receiverId = customers.stream()
-                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Customer::getCustomerId)
-                .collect(Collectors.toList());
+        List<String> receiverId = customers.stream().filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Customer::getCustomerId).collect(Collectors.toList());
 
         //客户id集合不为空
         if (receiverId != null && !receiverId.isEmpty()) {
@@ -377,10 +368,7 @@ public class EmailTaskService {
         List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(receiverSupplierId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
-        List<String> receiverSupplierIds = suppliers.stream()
-                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Supplier::getSupplierId)
-                .collect(Collectors.toList());
+        List<String> receiverSupplierIds = suppliers.stream().filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Supplier::getSupplierId).collect(Collectors.toList());
 
         if (receiverSupplierIds != null && !receiverSupplierIds.isEmpty()) {
             // List 不为空
@@ -426,10 +414,7 @@ public class EmailTaskService {
         List<Customer> customersKey = customerRepository.findByCustomerIdIn(receiverKeyId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
-        List<String> receiverIdKey = customersKey.stream()
-                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Customer::getCustomerId)
-                .collect(Collectors.toList());
+        List<String> receiverIdKey = customersKey.stream().filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Customer::getCustomerId).collect(Collectors.toList());
 
         List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverIdKey);
 
@@ -465,10 +450,7 @@ public class EmailTaskService {
         List<Supplier> suppliersKey = supplierRepository.findBySupplierIdIn(receiverKeySupplierId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
-        List<String> receiverSupplierIdsKey = suppliersKey.stream()
-                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Supplier::getSupplierId)
-                .collect(Collectors.toList());
+        List<String> receiverSupplierIdsKey = suppliersKey.stream().filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Supplier::getSupplierId).collect(Collectors.toList());
 
         List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverSupplierIdsKey);
 
@@ -494,7 +476,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-        String trackingImg = "<img src=https://www.tangxinkang.com:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -510,18 +492,16 @@ public class EmailTaskService {
             for (Attachment attachment : attachments) {
                 size--;
                 if (size == 0) {
-                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") + ", 附件下载链接: " + attachment.getAttachmentUrl();
                     emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 } else {
-                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") + ", 附件下载链接: " + attachment.getAttachmentUrl();
                     emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 }
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
@@ -626,10 +606,7 @@ public class EmailTaskService {
         List<Customer> customers = customerRepository.findByCustomerIdIn(customerId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
-        List<String> receiverId = customers.stream()
-                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Customer::getCustomerId)
-                .collect(Collectors.toList());
+        List<String> receiverId = customers.stream().filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Customer::getCustomerId).collect(Collectors.toList());
 
         if (receiverId != null && !receiverId.isEmpty()) {
             // List 不为空
@@ -654,10 +631,7 @@ public class EmailTaskService {
         List<Supplier> suppliers = supplierRepository.findBySupplierIdIn(receiverSupplierId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
-        List<String> receiverSupplierIds = suppliers.stream()
-                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Supplier::getSupplierId)
-                .collect(Collectors.toList());
+        List<String> receiverSupplierIds = suppliers.stream().filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Supplier::getSupplierId).collect(Collectors.toList());
 
         if (receiverSupplierIds != null && !receiverSupplierIds.isEmpty()) {
             // List 不为空
@@ -707,10 +681,7 @@ public class EmailTaskService {
         List<Customer> customersKey = customerRepository.findByCustomerIdIn(receiverKeyId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的客户
-        List<String> receiverIdKey = customersKey.stream()
-                .filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Customer::getCustomerId)
-                .collect(Collectors.toList());
+        List<String> receiverIdKey = customersKey.stream().filter(customer -> customer.getNoAcceptEmailTypeId() == null || !customer.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Customer::getCustomerId).collect(Collectors.toList());
 
 
         List<GetEmailsByCustomerIdsResponse> customerKeyEmailsAndNames = customerService.getCustomerEmailsAndNames(receiverKeyId);
@@ -745,10 +716,7 @@ public class EmailTaskService {
         List<Supplier> suppliersKey = supplierRepository.findBySupplierIdIn(receiverKeySupplierId);
 
         // 过滤掉那些在 noAcceptEmailTypeId 中包含 emailTypeId 的供应商
-        List<String> receiverSupplierIdsKey = suppliersKey.stream()
-                .filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId))
-                .map(Supplier::getSupplierId)
-                .collect(Collectors.toList());
+        List<String> receiverSupplierIdsKey = suppliersKey.stream().filter(supplier -> supplier.getNoAcceptEmailTypeId() == null || !supplier.getNoAcceptEmailTypeId().contains(emailTypeId)).map(Supplier::getSupplierId).collect(Collectors.toList());
 
         List<GetEmailsBySupplierIdsResponse> supplierKeyEmailsAndNames = supplierService.getSupplierEmailsAndNames(receiverKeySupplierId);
 
@@ -774,7 +742,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-        String trackingImg = "<img src=https://www.tangxinkang.com:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -790,18 +758,16 @@ public class EmailTaskService {
             for (Attachment attachment : attachments) {
                 size--;
                 if (size == 0) {
-                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") + ", 附件下载链接: " + attachment.getAttachmentUrl();
                     emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 } else {
-                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                            ", 附件下载链接: " + attachment.getAttachmentUrl();
+                    String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") + ", 附件下载链接: " + attachment.getAttachmentUrl();
                     emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                 }
             }
         }
 
-        String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
@@ -879,7 +845,7 @@ public class EmailTaskService {
             // 使用 StringBuilder 进行字符串拼接
             StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-            String trackingImg = "<img src=https://www.tangxinkang.com:9900/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail} style=\"display: none\">";
+            String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
             emailContentBuilder.append(trackingImg);
 
             // 找到 </body> 标签的位置
@@ -895,18 +861,16 @@ public class EmailTaskService {
                 for (Attachment attachment : attachments) {
                     size--;
                     if (size == 0) {
-                        String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                                ", 附件下载链接: " + attachment.getAttachmentUrl();
+                        String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") + ", 附件下载链接: " + attachment.getAttachmentUrl();
                         emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                     } else {
-                        String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") +
-                                ", 附件下载链接: " + attachment.getAttachmentUrl();
+                        String attachmentInfo = "附件名称: " + (attachment.getAttachmentName() != null ? attachment.getAttachmentName() : "未知") + ", 附件下载链接: " + attachment.getAttachmentUrl();
                         emailContentBuilder.append("<p>").append(attachmentInfo).append("</p>");  // 每个附件信息包裹在 <p> 标签中
                     }
                 }
             }
 
-            String attachmentInfo = "<p>邮件退订地址:" + "https://www.tangxinkang.com:9900/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+            String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
             emailContentBuilder.append(attachmentInfo);
 
             String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
