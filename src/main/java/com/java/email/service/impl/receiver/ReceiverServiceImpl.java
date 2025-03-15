@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.java.email.constant.MagicMathConstData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -217,6 +218,7 @@ public class ReceiverServiceImpl implements ReceiverService {
                     // 更新供应商信息
                     supplier.setBelongUserId(newUserId);
                     supplier.setUpdatedAt(currentTime);
+                    supplier.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
                     supplierRepository.save(supplier);
 
                     String supplierId = supplier.getSupplierId();
@@ -253,6 +255,8 @@ public class ReceiverServiceImpl implements ReceiverService {
                     // 更新客户信息
                     customer.setBelongUserId(newUserId);
                     customer.setUpdatedAt(currentTime);
+                    customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
+
                     customerRepository.save(customer);
 
                     String customerId = customer.getCustomerId();
