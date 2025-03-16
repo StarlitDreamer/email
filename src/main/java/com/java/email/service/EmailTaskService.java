@@ -57,14 +57,14 @@ public class EmailTaskService {
     private String baseUrl;
 
     //打开链接
-    private String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
+//    private String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
 
     //退订链接
-    private String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
+//    private String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
 
 //    String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
 
-    private String s = "如要下载附件，请复制对应链接至浏览器即可。";
+//    private String s = "如要下载附件，请复制对应链接至浏览器即可。";
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
@@ -237,7 +237,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(emailContent);
 
-//        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
+        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
 
         emailContentBuilder.append(trackingImg);
 
@@ -264,9 +264,10 @@ public class EmailTaskService {
         }
 
 //        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
         emailContentBuilder.append(attachmentInfo);
 
-//        String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
+        String s = "如要下载附件，请复制对应链接至浏览器即可。";
         emailContentBuilder.append(s);
 
         // 获取最终的 emailContent
@@ -483,7 +484,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-//        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
+        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -509,9 +510,10 @@ public class EmailTaskService {
         }
 
 //        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
         emailContentBuilder.append(attachmentInfo);
 
-//        String s = "如要下载附件，请复制对应链接至浏览器即可。";
+        String s = "如要下载附件，请复制对应链接至浏览器即可。";
         emailContentBuilder.append(s);
 
         templateContentById = emailContentBuilder.toString();
@@ -749,7 +751,7 @@ public class EmailTaskService {
         // 使用 StringBuilder 进行字符串拼接
         StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-//        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
+        String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
         emailContentBuilder.append(trackingImg);
 
         // 找到 </body> 标签的位置
@@ -775,9 +777,10 @@ public class EmailTaskService {
         }
 
 //        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
         emailContentBuilder.append(attachmentInfo);
 
-//        String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
+        String s = "如要下载附件，请复制对应链接至浏览器即可。";
         emailContentBuilder.append(s);
 
         // 获取最终的 emailContent
@@ -852,7 +855,7 @@ public class EmailTaskService {
             // 使用 StringBuilder 进行字符串拼接
             StringBuilder emailContentBuilder = new StringBuilder(templateContentById);
 
-//            String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
+            String trackingImg = "<img src=\"" + baseUrl + "/email-report/open-email?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" style=\"display: none\">";
             emailContentBuilder.append(trackingImg);
 
             // 找到 </body> 标签的位置
@@ -878,9 +881,10 @@ public class EmailTaskService {
             }
 
 //            String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+            String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
             emailContentBuilder.append(attachmentInfo);
 
-//            String s = "如要下载附件或退订，请复制对应链接至浏览器即可。";
+            String s = "如要下载附件，请复制对应链接至浏览器即可。";
             emailContentBuilder.append(s);
 
             // 获取最终的 emailContent
