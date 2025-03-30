@@ -381,6 +381,12 @@ public class CustomerServiceImpl implements CustomerService {
                                                         .value(email)
                                                 )
                                         )
+                                        .mustNot(mn -> mn
+                                                .term(t -> t
+                                                        .field("customer_id")
+                                                        .value(existingCustomer.getCustomerId())
+                                                )
+                                        )
                                 )
                         )
                         .build();
@@ -1902,19 +1908,22 @@ public class CustomerServiceImpl implements CustomerService {
                     // Get country name from country id
                     CountryDocument country = countryRepository.findById(customer.getCustomerCountryId()).orElse(null);
                     map.put("customer_country_name", country != null ? country.getCountryName() : "");
+                    map.put("customer_country_id", country != null ? country.getCountryId() : "");
 
                     // Get commodity names from commodity ids
                     List<String> commodityNames = new ArrayList<>();
+                    List<CommodityDocument> commodityOptions = new ArrayList<>();
                     if (customer.getCommodityId() != null) {
                         for (String commodityId : customer.getCommodityId()) {
                             CommodityDocument commodity = commodityRepository.findById(commodityId).orElse(null);
                             if (commodity != null) {
+                                commodityOptions.add(commodity);
                                 commodityNames.add(commodity.getCommodityName());
                             }
                         }
                     }
                     map.put("commodity_name", commodityNames);
-
+                    map.put("commodity", commodityOptions);
                     map.put("sex", customer.getSex());
                     map.put("birth", customer.getBirth());
                     map.put("emails", customer.getEmails());

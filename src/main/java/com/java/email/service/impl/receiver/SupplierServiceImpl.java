@@ -422,6 +422,12 @@ public class SupplierServiceImpl implements SupplierService {
                                                         .value(email)
                                                 )
                                         )
+                                        .mustNot(mn -> mn
+                                                .term(t -> t
+                                                        .field("supplier_id")
+                                                        .value(existingSupplier.getSupplierId())
+                                                )
+                                        )
                                 )
                         )
                         .build();
@@ -1717,20 +1723,29 @@ public class SupplierServiceImpl implements SupplierService {
                     map.put("contact_person", supplier.getContactPerson());
                     map.put("contact_way", supplier.getContactWay());
                     map.put("supplier_level", supplier.getSupplierLevel());
+                    map.put("trade_type", supplier.getTradeType());
+
 
                     // Get country name from country id
                     CountryDocument country = countryRepository.findByCountryId(supplier.getSupplierCountryId()).orElse(null);
                     map.put("supplier_country_name", country != null ? country.getCountryName() : "");
+                    map.put("customer_country_id", country != null ? country.getCountryId() : "");
 
-                    map.put("trade_type", supplier.getTradeType());
 
                     // Get commodity names from commodity ids
-                    List<String> commodityNames = supplier.getCommodityId().stream()
-                            .map(id -> commodityRepository.findById(id)
-                                    .map(CommodityDocument::getCommodityName)
-                                    .orElse(""))
-                            .collect(Collectors.toList());
+                    List<String> commodityNames = new ArrayList<>();
+                    List<CommodityDocument> commodityOptions = new ArrayList<>();
+                    if (supplier.getCommodityId() != null) {
+                        for (String commodityId : supplier.getCommodityId()) {
+                            CommodityDocument commodity = commodityRepository.findById(commodityId).orElse(null);
+                            if (commodity != null) {
+                                commodityOptions.add(commodity);
+                                commodityNames.add(commodity.getCommodityName());
+                            }
+                        }
+                    }
                     map.put("commodity_name", commodityNames);
+                    map.put("commodity", commodityOptions);
 
                     map.put("sex", supplier.getSex());
                     map.put("birth", supplier.getBirth());
