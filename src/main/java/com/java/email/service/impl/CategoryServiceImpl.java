@@ -241,6 +241,16 @@ public class CategoryServiceImpl implements CategoryService {
                     .id(request.getCategory_id())
             );
 
+            // 删除该品类下的所有商品
+            elasticsearchClient.deleteByQuery(d -> d
+                    .index("commodity")
+                    .query(q -> q
+                            .term(t -> t
+                                    .field("category_id")
+                                    .value(request.getCategory_id())
+                            )
+                    )
+            );
             Map<String, Object> resultData = new HashMap<>();
             resultData.put("category_id", request.getCategory_id());
             return Result.success(resultData);
