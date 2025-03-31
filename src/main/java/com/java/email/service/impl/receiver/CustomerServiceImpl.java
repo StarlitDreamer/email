@@ -9,6 +9,7 @@ import com.java.email.esdao.repository.dictionary.EmailTypeRepository;
 import com.java.email.esdao.repository.receiver.CustomerAssignRepository;
 import com.java.email.esdao.repository.receiver.CustomerRepository;
 import com.java.email.esdao.repository.user.UserRepository;
+import com.java.email.model.dto.Import.ImportCustomerResponse;
 import com.java.email.model.dto.request.CustomerFilterRequest;
 import com.java.email.model.entity.dictionary.CommodityDocument;
 import com.java.email.model.entity.dictionary.CountryDocument;
@@ -1676,6 +1677,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result importCustomer(MultipartFile file) {
         if (file.isEmpty()) {
             return new Result(ResultCode.R_ParamError);
@@ -1690,186 +1692,296 @@ public class CustomerServiceImpl implements CustomerService {
             String headerLine = reader.readLine();
             String line;
             List<CustomerDocument> customers = new ArrayList<>();
-
+            List<String> errorMsg = new ArrayList<>();
+            int total = 0;
+            int lineNumber = 1; // 记录行号，头行为第1行
+            
             while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                
+                // 跳过空行
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+                
+                total++;
                 String[] data = line.split(",");
-                CustomerDocument customer = new CustomerDocument();
-
-                // 设置基本信息
-                customer.setCustomerName(data[0]);
-                customer.setContactPerson(data[1]);
-                customer.setContactWay(data[2]);
-                customer.setCustomerLevel(Integer.parseInt(data[3]));
-
-                // 通过国家名称查询国家ID
-                String countryName = data[4];
-                CountryDocument country = countryRepository.findByCountryName(countryName);
-                if (country != null) {
-                    customer.setCustomerCountryId(country.getCountryId());
-                }
-                if (country == null) {
-                    logUtil.error("国家不存在: " + countryName);
+                
+                // 检查数据格式是否完整
+                if (data.length < 10) {
+                    logUtil.error("CSV第" + lineNumber + "行数据不完整，需要至少10列");
+                    errorMsg.add("CSV第" + lineNumber + "行数据不完整，需要至少10列");
                     continue;
                 }
+                
+                try {
+                    CustomerDocument customer = new CustomerDocument();
 
-                customer.setTradeType(Integer.parseInt(data[5]));
-
-                // 处理商品名称数组，转换为商品ID
-                String[] commodityNames = data[6].split(";");
-                List<String> commodityIds = new ArrayList<>();
-                for (String commodityName : commodityNames) {
-                    CommodityDocument commodity = commodityRepository.findByCommodityName(commodityName.trim());
-                    if (commodity == null) {
+                    // 检查必填字段
+                    if (data[0] == null || data[0].trim().isEmpty()) {
+                        logUtil.error("CSV第" + lineNumber + "行：客户名称不能为空");
+                        errorMsg.add("CSV第" + lineNumber + "行：客户名称不能为空");
                         continue;
                     }
-                    commodityIds.add(commodity.getCommodityId());
-                }
-                customer.setCommodityId(commodityIds);
-
-                customer.setSex(data[7]);
-
-                // 处理birth日期，转换为ISO格式
-                String birthDate = data[8];
-                if (birthDate != null && !birthDate.isEmpty()) {
+                    
+                    // 设置基本信息
+                    customer.setCustomerName(data[0]);
+                    
+                    if (data[1] == null || data[1].trim().isEmpty()) {
+                        logUtil.error("CSV第" + lineNumber + "行：联系人不能为空");
+                        errorMsg.add("CSV第" + lineNumber + "行：联系人不能为空");
+                        continue;
+                    }
+                    customer.setContactPerson(data[1]);
+                    
+                    if (data[2] == null || data[2].trim().isEmpty()) {
+                        logUtil.error("CSV第" + lineNumber + "行：联系方式不能为空");
+                        errorMsg.add("CSV第" + lineNumber + "行：联系方式不能为空");
+                        continue;
+                    }
+                    customer.setContactWay(data[2]);
+                    
                     try {
-                        // 支持多种日期格式: yyyy/MM/dd, yyyy-MM-dd, 包括单位数的月日
-                        DateTimeFormatter[] formatters = {
-                                DateTimeFormatter.ofPattern("yyyy/MM/dd"),
-                                DateTimeFormatter.ofPattern("yyyy/M/d"),
-                                DateTimeFormatter.ofPattern("yyyy-MM-dd"),
-                                DateTimeFormatter.ofPattern("yyyy-M-d")
-                        };
+                        customer.setCustomerLevel(Integer.parseInt(data[3]));
+                    } catch (NumberFormatException e) {
+                        logUtil.error("CSV第" + lineNumber + "行：客户等级必须为数字");
+                        errorMsg.add("CSV第" + lineNumber + "行：客户等级必须为数字");
+                        continue;
+                    }
 
-                        LocalDate date = null;
-                        for (DateTimeFormatter formatter : formatters) {
-                            try {
-                                date = LocalDate.parse(birthDate, formatter);
-                                break;
-                            } catch (DateTimeParseException e) {
-                                continue;
+                    // 通过国家名称查询国家ID
+                    if (data[4] == null || data[4].trim().isEmpty()) {
+                        logUtil.error("CSV第" + lineNumber + "行：国家名称不能为空");
+                        errorMsg.add("CSV第" + lineNumber + "行：国家名称不能为空");
+                        continue;
+                    }
+                    
+                    String countryName = data[4];
+                    CountryDocument country = countryRepository.findByCountryName(countryName);
+                    if (country != null) {
+                        customer.setCustomerCountryId(country.getCountryId());
+                    }
+
+                    if (country == null) {
+                        logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，国家不存在: " + countryName);
+                        errorMsg.add("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，国家不存在: " + countryName);
+                        continue;
+                    }
+
+                    try {
+                        customer.setTradeType(Integer.parseInt(data[5]));
+                    } catch (NumberFormatException e) {
+                        logUtil.error("CSV第" + lineNumber + "行：贸易类型必须为数字");
+                        errorMsg.add("CSV第" + lineNumber + "行：贸易类型必须为数字");
+                        continue;
+                    }
+
+                    // 处理商品名称数组，转换为商品ID
+                    if (data[6] == null || data[6].trim().isEmpty()) {
+                        logUtil.error("CSV第" + lineNumber + "行：商品不能为空");
+                        errorMsg.add("CSV第" + lineNumber + "行：商品不能为空");
+                        continue;
+                    }
+                    
+                    String[] commodityNames = data[6].split(";");
+                    List<String> commodityIds = new ArrayList<>();
+                    for (String commodityName : commodityNames) {
+                        if (commodityName.trim().isEmpty()) {
+                            continue;
+                        }
+                        CommodityDocument commodity = commodityRepository.findByCommodityName(commodityName.trim());
+                        if (commodity == null) {
+                            logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，商品不存在: " + commodityName);
+                            errorMsg.add("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，商品不存在: " + commodityName);
+                            continue;
+                        }
+                        commodityIds.add(commodity.getCommodityId());
+                    }
+                    if (commodityIds.isEmpty()) {
+                        logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，商品列表全部不存在");
+                        errorMsg.add("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，商品列表全部不存在");
+                        continue;
+                    }
+                    customer.setCommodityId(commodityIds);
+
+                    if (data[7] == null || (!data[7].equals("男") && !data[7].equals("女"))) {
+                        logUtil.error("CSV第" + lineNumber + "行：性别必须为'男'或'女'");
+                        errorMsg.add("CSV第" + lineNumber + "行：性别必须为'男'或'女'");
+                        continue;
+                    }
+                    customer.setSex(data[7]);
+
+                    // 处理birth日期，转换为ISO格式
+                    String birthDate = data[8];
+                    if (birthDate != null && !birthDate.isEmpty()) {
+                        try {
+                            // 支持多种日期格式: yyyy/MM/dd, yyyy-MM-dd, 包括单位数的月日
+                            DateTimeFormatter[] formatters = {
+                                    DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                                    DateTimeFormatter.ofPattern("yyyy/M/d"),
+                                    DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                                    DateTimeFormatter.ofPattern("yyyy-M-d")
+                            };
+
+                            LocalDate date = null;
+                            for (DateTimeFormatter formatter : formatters) {
+                                try {
+                                    date = LocalDate.parse(birthDate, formatter);
+                                    break;
+                                } catch (DateTimeParseException e) {
+                                    continue;
+                                }
                             }
+
+                            if (date == null) {
+                                logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，无法解析日期: " + birthDate);
+                                throw new DateTimeParseException("无法解析日期", birthDate, 0);
+                            }
+
+                            String isoDate = date.atStartOfDay(ZoneOffset.UTC)
+                                    .format(DateTimeFormatter.ISO_INSTANT);
+                            customer.setBirth(isoDate);
+                        } catch (DateTimeParseException e) {
+                            logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，日期格式错误，应为yyyy/MM/dd格式：" + birthDate);
+                            errorMsg.add("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，日期格式错误" + birthDate);
+                            continue;
                         }
+                    }
 
-                        if (date == null) {
-                            logUtil.error("无法解析日期: " + birthDate);
-                            throw new DateTimeParseException("无法解析日期", birthDate, 0);
-                        }
-
-                        String isoDate = date.atStartOfDay(ZoneOffset.UTC)
-                                .format(DateTimeFormatter.ISO_INSTANT);
-                        customer.setBirth(isoDate);
-                    } catch (DateTimeParseException e) {
-                        logUtil.error("日期格式错误，应为yyyy/MM/dd格式：" + birthDate);
+                    // 处理邮箱列表
+                    if (data[9] == null || data[9].trim().isEmpty()) {
+                        logUtil.error("CSV第" + lineNumber + "行：邮箱不能为空");
+                        errorMsg.add("CSV第" + lineNumber + "行：邮箱不能为空");
                         continue;
                     }
-                }
-
-                // 处理邮箱列表
-                String[] emails = data[9].split(";");
-                // 检查数组内是否有重复
-                List<String> emailList = new ArrayList<>();
-                for (String email : emails) {
-                    if (email == null || email.trim().isEmpty()) {
-                        logUtil.error("邮箱不能为空");
-                        continue;
-                    }
-                    if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
-                        logUtil.error("邮箱格式错误: " + email);
-                        continue;
-                    }
+                    
+                    String[] emails = data[9].split(";");
                     // 检查数组内是否有重复
-                    if (Arrays.stream(emails)
-                            .filter(e -> e.equals(email))
-                            .count() > 1) {
-                        logUtil.error("邮箱不能重复: " + email);
+                    List<String> emailList = new ArrayList<>();
+                    for (String email : emails) {
+                        if (email == null || email.trim().isEmpty()) {
+                            logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，邮箱不能为空");
+                            errorMsg.add("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，邮箱不能为空");
+                            continue;
+                        }
+                        if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+                            logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，邮箱格式错误: " + email);
+                            errorMsg.add("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，邮箱格式错误: " + email);
+                            continue;
+                        }
+                        // 检查数组内是否有重复
+                        if (Arrays.stream(emails)
+                                .filter(e -> e.equals(email))
+                                .count() > 1) {
+                            logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，邮箱不能重复: " + email);
+                            errorMsg.add("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，邮箱不能重复: " + email);
+                            continue;
+                        }
+
+                        // 检查客户、供应商数据库中是否已存在该邮箱
+                        NativeQuery searchCustomerQuery = NativeQuery.builder()
+                                .withQuery(q -> q
+                                        .bool(b -> b
+                                                .must(m -> m
+                                                        .term(t -> t
+                                                                .field("emails")
+                                                                .value(email)
+                                                        )
+                                                )
+                                        )
+                                )
+                                .build();
+
+                        SearchHits<CustomerDocument> searchCustomerHits = elasticsearchOperations.search(
+                                searchCustomerQuery,
+                                CustomerDocument.class
+                        );
+
+                        NativeQuery searchSupplierQuery = NativeQuery.builder()
+                                .withQuery(q -> q
+                                        .bool(b -> b
+                                                .must(m -> m
+                                                        .term(t -> t
+                                                                .field("emails")
+                                                                .value(email)
+                                                        )
+                                                )
+                                        )
+                                )
+                                .build();
+
+                        SearchHits<SupplierDocument> searchSupplierHits = elasticsearchOperations.search(
+                                searchSupplierQuery,
+                                SupplierDocument.class
+                        );
+
+                        if (searchCustomerHits.getTotalHits() > 0 || searchSupplierHits.getTotalHits() > 0) {
+                            logUtil.error("CSV第" + lineNumber + "行，客户或供应商邮箱已存在: " + email);
+                            errorMsg.add("CSV第" + lineNumber + "行，该邮箱数据库中已存在: " + email);
+                            continue;
+                        }
+                        emailList.add(email);
+                    }
+                    if (emailList.isEmpty()) {
+                        logUtil.error("CSV第" + lineNumber + "行，该客户"+customer.getCustomerName()+"邮箱验证全部不合格");
+                        errorMsg.add("CSV第" + lineNumber + "行，该客户"+customer.getCustomerName()+"邮箱验证全部不合格");
                         continue;
                     }
+                    customer.setEmails(emailList);
 
-                    // 检查客户、供应商数据库中是否已存在该邮箱
-                    NativeQuery searchCustomerQuery = NativeQuery.builder()
-                            .withQuery(q -> q
-                                    .bool(b -> b
-                                            .must(m -> m
-                                                    .term(t -> t
-                                                            .field("emails")
-                                                            .value(email)
-                                                    )
-                                            )
-                                    )
-                            )
-                            .build();
+                    // 默认不接受的邮件类型为空
+                    customer.setNoAcceptEmailTypeId(new ArrayList<>());
 
-                    SearchHits<CustomerDocument> searchCustomerHits = elasticsearchOperations.search(
-                            searchCustomerQuery,
-                            CustomerDocument.class
-                    );
-
-                    NativeQuery searchSupplierQuery = NativeQuery.builder()
-                            .withQuery(q -> q
-                                    .bool(b -> b
-                                            .must(m -> m
-                                                    .term(t -> t
-                                                            .field("emails")
-                                                            .value(email)
-                                                    )
-                                            )
-                                    )
-                            )
-                            .build();
-
-                    SearchHits<SupplierDocument> searchSupplierHits = elasticsearchOperations.search(
-                            searchSupplierQuery,
-                            SupplierDocument.class
-                    );
-
-                    if (searchCustomerHits.getTotalHits() > 0 || searchSupplierHits.getTotalHits() > 0) {
-                        logUtil.error("客户或供应商邮箱已存在: " + email);
-                        continue;
+                    // 设置用户相关字段
+                    String userId = ThreadLocalUtil.getUserId();
+                    if (userId == null) {
+                        logUtil.error("当前用户ID不存在");
+                        errorMsg.add("当前登录用户信息错误");
+                        throw new Exception("当前登录用户信息错误");
                     }
-                    emailList.add(email);
+                    customer.setBelongUserId(userId);
+                    customer.setCreatorId(userId);
+
+                    // 设置状态,大小管理默认未分配，普通用户默认已分配
+                    Integer userRole = ThreadLocalUtil.getUserRole();
+                    if (userRole == null) {
+                        logUtil.error("当前用户角色不存在");
+                        errorMsg.add("当前登录用户信息错误");
+                        throw new Exception("当前登录用户信息错误");
+                    }
+                    if (userRole == 4) {
+                        customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
+                    } else {
+                        customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_UNASSIGNED);
+                    }
+
+                    // 生成客户ID
+                    String customerId = UUID.randomUUID().toString();
+                    customer.setCustomerId("customer_" + customerId);
+
+                    // 设置创建和更新时间
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+                    String currentTime = LocalDateTime.now().format(formatter);
+                    customer.setCreatedAt(currentTime);
+                    customer.setUpdatedAt(currentTime);
+
+                    customers.add(customer);
+                } catch (Exception e) {
+                    logUtil.error("CSV第" + lineNumber + "行数据处理失败: " + e.getMessage());
+                    errorMsg.add("CSV第" + lineNumber + "行数据处理失败: " + e.getMessage());
                 }
-                if (emailList.isEmpty()) {
-                    logUtil.error("邮箱验证全部重复");
-                    continue;
-                }
-                customer.setEmails(emailList);
-                // 设置接受的邮件类型ID列表
-                // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
-                //         .map(EmailTypeDocument::getEmailTypeId)
-                //         .collect(Collectors.toList());
-                // 默认不接受的邮件类型为空
-                customer.setNoAcceptEmailTypeId(new ArrayList<>());
-
-                // 设置用户相关字段
-                String userId = ThreadLocalUtil.getUserId();
-                customer.setBelongUserId(userId);
-                customer.setCreatorId(userId);
-
-                // 设置状态,大小管理默认未分配，普通用户默认已分配
-                Integer userRole = ThreadLocalUtil.getUserRole();
-                if (userRole == 4) {
-                    customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
-                } else {
-                    customer.setStatus(MagicMathConstData.CUSTOMER_STATUS_UNASSIGNED);
-                }
-
-                // 生成客户ID
-                String customerId = UUID.randomUUID().toString();
-                customer.setCustomerId("customer_" + customerId);
-
-                // 设置创建和更新时间
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-                String currentTime = LocalDateTime.now().format(formatter);
-                customer.setCreatedAt(currentTime);
-                customer.setUpdatedAt(currentTime);
-
-                customers.add(customer);
             }
 
             // 批量保存到ES
-            customerRepository.saveAll(customers);
-
-            return new Result(ResultCode.R_Ok, customers.size());
+            if (!customers.isEmpty()) {
+                customerRepository.saveAll(customers);
+            }
+            
+            ImportCustomerResponse response = new ImportCustomerResponse();
+            response.setSuccess_count(customers.size());
+            response.setFail_count(total - customers.size());
+            response.setErrorMsg(errorMsg);
+            return new Result(ResultCode.R_Ok, response);
 
         } catch (IOException e) {
             logUtil.error("CSV文件读取失败", e);
