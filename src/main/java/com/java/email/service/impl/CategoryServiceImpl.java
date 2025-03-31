@@ -71,6 +71,7 @@ public class CategoryServiceImpl implements CategoryService {
             
             int successCount = 0;
             int failCount = 0;
+            List<String> errorMsg = new ArrayList<>();
 
             for (CSVRecord record : csvParser) {
                 try {
@@ -94,6 +95,7 @@ public class CategoryServiceImpl implements CategoryService {
 
                     if (total > 0) {
                         log.warn("找到重复的品类: {}", categoryName);
+                        errorMsg.add("找到重复的品类: " + categoryName);
                         failCount++;
                         continue;
                     }
@@ -124,6 +126,7 @@ public class CategoryServiceImpl implements CategoryService {
             ImportCategoryResponse response = new ImportCategoryResponse();
             response.setSuccess_count(successCount);
             response.setFail_count(failCount);
+            response.setErrorMsg(errorMsg);
             return Result.success(response);
         } catch (Exception e) {
             return Result.error("导入品类失败：" + e.getMessage());

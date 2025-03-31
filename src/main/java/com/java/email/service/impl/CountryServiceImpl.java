@@ -77,6 +77,7 @@ public class CountryServiceImpl implements CountryService {
             
             int successCount = 0;
             int failCount = 0;
+            List<String> errorMsg = new ArrayList<>();
 
             for (CSVRecord record : csvParser) {
                 try {
@@ -97,6 +98,7 @@ public class CountryServiceImpl implements CountryService {
                     
                     if (nameResponse.hits().total().value() > 0) {
                         log.warn("Duplicate country name: {}", countryName);
+                        errorMsg.add("找到重复的国家名称: " + countryName);
                         failCount++;
                         continue;
                     }
@@ -115,6 +117,7 @@ public class CountryServiceImpl implements CountryService {
                     
                     if (codeResponse.hits().total().value() > 0) {
                         log.warn("Duplicate country code: {}", countryCode);
+                        errorMsg.add("找到重复的国家代码: " + countryCode);
                         failCount++;
                         continue;
                     }
@@ -150,7 +153,7 @@ public class CountryServiceImpl implements CountryService {
             ImportCountryResponse response = new ImportCountryResponse();
             response.setSuccess_count(successCount);
             response.setFail_count(failCount);
-
+            response.setErrorMsg(errorMsg);
             return Result.success(response);
         } catch (Exception e) {
             log.error("Import failed", e);

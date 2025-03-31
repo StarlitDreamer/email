@@ -78,7 +78,7 @@ public class CommodityServiceImpl implements CommodityService {
             
             int successCount = 0;
             int failCount = 0;
-
+            List<String> errorMsg = new ArrayList<>();
             for (CSVRecord record : csvParser) {
                 try {
                     String commodityName = record.get(0).trim().replace("\"", "");
@@ -98,6 +98,7 @@ public class CommodityServiceImpl implements CommodityService {
                     
                     if (commodityResponse.hits().total().value() > 0) {
                         log.warn("找到重复的商品名称: {}", commodityName);
+                        errorMsg.add("找到重复的商品名称: " + commodityName);
                         failCount++;
                         continue;
                     }
@@ -116,6 +117,7 @@ public class CommodityServiceImpl implements CommodityService {
                     
                     if (categoryResponse.hits().total().value() == 0) {
                         log.warn("未找到品类: {}", categoryName);
+                        errorMsg.add("未找到品类: " + categoryName);
                         failCount++;
                         continue;
                     }
@@ -148,6 +150,7 @@ public class CommodityServiceImpl implements CommodityService {
             ImportCommodityResponse response = new ImportCommodityResponse();
             response.setSuccess_count(successCount);
             response.setFail_count(failCount);
+            response.setErrorMsg(errorMsg);
             return Result.success(response);
         } catch (Exception e) {
             return Result.error("导入商品失败: " + e.getMessage());

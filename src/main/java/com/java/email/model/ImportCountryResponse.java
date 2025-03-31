@@ -1,8 +1,11 @@
 package com.java.email.model;
 
+import java.util.List;
+
 public class ImportCountryResponse {
     private Integer success_count;
     private Integer fail_count;
+    private List<String> errorMsg;
 
     public Integer getSuccess_count() {
         return success_count;
@@ -18,5 +21,13 @@ public class ImportCountryResponse {
 
     public void setFail_count(Integer fail_count) {
         this.fail_count = fail_count;
+    }
+
+    public List<String> getErrorMsg() {
+        return errorMsg;
+    }
+
+    public void setErrorMsg(List<String> errorMsg) {
+        this.errorMsg = errorMsg;
     }
 } 
