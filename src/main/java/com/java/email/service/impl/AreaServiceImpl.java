@@ -183,7 +183,7 @@ public class AreaServiceImpl implements AreaService {
                 area.setArea_id((String) hit.source().get("area_id"));
                 area.setArea_name((String) hit.source().get("area_name"));
                 List<String> countryIds = (List<String>) hit.source().get("area_country");
-                List<String> countryNames = new ArrayList<>();
+                List<Map<String, Object>> countrys = new ArrayList<>();
                 for (String countryId : countryIds) {
                     Map<String, Object> country = elasticsearchClient.get(g -> g
                             .index("country")
@@ -191,10 +191,10 @@ public class AreaServiceImpl implements AreaService {
                             Map.class
                     ).source();
                     if (country != null) {
-                        countryNames.add((String) country.get("country_name"));
+                        countrys.add(country);
                     }
                 }
-                area.setArea_country(countryNames);
+                area.setArea_country(countrys);
                 area.setCreated_at((String) hit.source().get("created_at"));
                 area.setUpdated_at((String) hit.source().get("updated_at"));
                 areas.add(area);
