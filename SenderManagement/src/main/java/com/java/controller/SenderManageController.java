@@ -140,15 +140,14 @@ public class SenderManageController {
 
 
     @PostMapping("/importUser")
-    public Result<String> uploadCsvFile(@RequestParam("file") MultipartFile file) {
+    public Result uploadCsvFile(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResultUtils.error("文件不能为空");
         }
         try {
             // 将文件转化为 Java 对象
             List<CsvUserDto> persons = CsvUtil.parseCsvFile(file);
-            userAssignService.BatchUserImport(persons);
-            return ResultUtils.success();
+            return userAssignService.BatchUserImport(persons);
         } catch (IOException e) {
             return ResultUtils.error(e.getMessage());
         }
