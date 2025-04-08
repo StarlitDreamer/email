@@ -102,13 +102,8 @@ public class UserServiceImpl implements UserService {
             if (status != null && (status == 1 || status == 2)) {
                 filters.put("status", status);
             }
-            // 要查询的是所属用户名。所属用户名不在user表中，需要单独查询。
-            // if (belong_user_name != null && !belong_user_name.isEmpty()) {
 
-            //     filters.put("belong_user_name", belong_user_name);
-            // }
-
-            // 先查询 belong_user_name 对应的用户
+            // 如果有belong_user_name查询条件，则查询 belong_user_name 对应的用户
             if (belong_user_name != null && !belong_user_name.isEmpty()) {
                 SearchResponse<User> belongUserResponse = esClient.search(s -> s
                         .index(INDEX_NAME)
@@ -125,9 +120,8 @@ public class UserServiceImpl implements UserService {
                         .map(hit -> hit.source().getUserId())
                         .collect(Collectors.toList());
 
-                // 如果找到匹配的用户，添加到查询条件中
-                if (!belongUserIds.isEmpty()) {
-                    boolQuery.must(q -> q
+                // 添加到查询条件中
+                boolQuery.must(q -> q
                             .terms(t -> t
                                     .field("belong_user_id")
                                     .terms(t2 -> t2
@@ -137,23 +131,19 @@ public class UserServiceImpl implements UserService {
                                     )
                             )
                     );
-                }
             }
             filters.forEach((key, value) -> {
                 if (value != null && !value.toString().isEmpty()) {
                     switch (key) {
                         case "user_name":
-                            boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
+                            boolQuery.must(m -> m.match(mm -> mm.field(key).query(value.toString())));
                             break;
                         case "user_account":
-                            boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
+                            boolQuery.must(m -> m.match(mm -> mm.field(key).query(value.toString())));
                             break;
                         case "user_email":
-                            boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
+                            boolQuery.must(m -> m.match(mm -> mm.field(key).query(value.toString())));
                             break;
-                        // case "belong_user_name":
-                        //     boolQuery.should(m -> m.match(mm -> mm.field(key).query(value.toString())));
-                        //     break;
                         case "status":
                             boolQuery.must(m -> m.term(t -> t.field("status").value(FieldValue.of(value))));
                             break;
@@ -165,17 +155,21 @@ public class UserServiceImpl implements UserService {
             // 根据角色添加查询条件
             if (currentUserRole == 3) {
                 // 小管理可以查询自己和下属用户
-                boolQuery.should(s -> s.term(t -> t.field("user_id").value(current_id)));
-                boolQuery.should(s -> s.term(t -> t.field("belong_user_id").value(current_id)));
-                boolQuery.minimumShouldMatch("1"); // 至少匹配一个 should 条件
+                // 创建一个子 bool 查询来处理角色权限
+                BoolQuery.Builder roleQuery = new BoolQuery.Builder();
+                roleQuery.should(s -> s.term(t -> t.field("user_id").value(current_id)));
+                roleQuery.should(s -> s.term(t -> t.field("belong_user_id").value(current_id)));
+                roleQuery.minimumShouldMatch("1");
+                
+                // 将角色权限作为必须满足的条件
+                boolQuery.must(q -> q.bool(roleQuery.build()));
             } else if (currentUserRole == 4) {
                 GetResponse<User> response = getUserById(current_id);
                 String belongUserId = response.source().getBelongUserId();
                 boolQuery.must(m -> m.term(t -> t.field("belong_user_id").value(belongUserId)));
             }
-            SearchResponse<User> searchResponse;
-            if (filters.isEmpty()) {
-                searchResponse = esClient.search(s -> s
+            // 开始查询
+            SearchResponse<User> searchResponse = esClient.search(s -> s
                         .index(INDEX_NAME)
                         .query(q -> q.bool(boolQuery.build()))
                         .from((page_num - 1) * page_size)
@@ -186,21 +180,7 @@ public class UserServiceImpl implements UserService {
                                         .order(SortOrder.Desc)
                                 )
                         ), User.class);
-            } else {
-                searchResponse = esClient.search(s -> s
-                        .index(INDEX_NAME)
-                        .query(q -> q.bool(boolQuery.build()))
-                        .from((page_num - 1) * page_size)
-                        .size(page_size)
-                        .sort(sort -> sort  // 添加排序
-                                .field(f -> f
-                                        .field("updated_at")
-                                        .order(SortOrder.Desc)
-                                )
-                        ), User.class);
-            }
 
-            List<UserVo> userVoList = new ArrayList<>();
             // 收集所有需要查询的 belongUserId
             Set<String> belongUserIds = searchResponse.hits().hits().stream()
                     .map(hit -> hit.source().getBelongUserId())
@@ -226,6 +206,8 @@ public class UserServiceImpl implements UserService {
                 }
 
             }
+            // 创建返回数据
+            List<UserVo> userVoList = new ArrayList<>();
             for (Hit<User> hit : searchResponse.hits().hits()) {
                 User user = hit.source();
                 if (user != null) {
@@ -234,7 +216,6 @@ public class UserServiceImpl implements UserService {
                     UserVo userVo = new UserVo(
                             user.getUserId(),
                             user.getUserName(),
-                            //user.getBelongUserId(),
                             belongUserName,
                             user.getUserAccount(),
                             user.getUserEmail(),
