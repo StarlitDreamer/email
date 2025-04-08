@@ -242,7 +242,8 @@ public class CustomerServiceImpl implements CustomerService {
         // 获取用户ID
         String userId = ThreadLocalUtil.getUserId();
         Integer userRole = ThreadLocalUtil.getUserRole();
-        if (userId == null || userRole == null) {
+        String userName = ThreadLocalUtil.getUserName();
+        if (userId == null || userRole == null || userName == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
 
@@ -253,15 +254,24 @@ public class CustomerServiceImpl implements CustomerService {
             // 普通用户默认已分配
             if (userRole == 4) {
                 customerDocument.setStatus(MagicMathConstData.CUSTOMER_STATUS_ASSIGNED);
+                // 更新分配记录
+                Map<String, Object> process = new HashMap<>();
+                process.put("assignor_id", userId);
+                process.put("assignor_name", userName);
+                process.put("assignee_id", userId);
+                process.put("assignee_name", userName);
+                process.put("assign_date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+
+                CustomerAssignDocument assignment = new CustomerAssignDocument();
+                assignment.setCustomerId(customerId);
+                assignment.setAssignProcess(new ArrayList<>());
+                assignment.getAssignProcess().add(process);
+                customerAssignRepository.save(assignment);
             } else {
                 customerDocument.setStatus(MagicMathConstData.CUSTOMER_STATUS_UNASSIGNED);
             }
             customerDocument.setBelongUserId(userId);
             customerDocument.setCreatorId(userId);
-            // 默认不接受的邮件类型为空
-            // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
-            //         .map(EmailTypeDocument::getEmailTypeId)
-            //         .collect(Collectors.toList());
             customerDocument.setNoAcceptEmailTypeId(new ArrayList<>());
             // 获取当前时间
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");

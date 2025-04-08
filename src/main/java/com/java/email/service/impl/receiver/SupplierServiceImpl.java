@@ -264,7 +264,8 @@ public class SupplierServiceImpl implements SupplierService {
         // 获取用户ID
         String userId = ThreadLocalUtil.getUserId();
         Integer userRole = ThreadLocalUtil.getUserRole();
-        if (userId == null || userRole == null) {
+        String userName = ThreadLocalUtil.getUserName();
+        if (userId == null || userRole == null || userName == null) {
             return new Result(ResultCode.R_UserNotFound);
         }
 
@@ -276,15 +277,24 @@ public class SupplierServiceImpl implements SupplierService {
             // 普通用户默认已分配
             if (userRole == 4) {
                 supplierDocument.setStatus(MagicMathConstData.SUPPLIER_STATUS_ASSIGNED);
+                // 更新分配记录
+                Map<String, Object> process = new HashMap<>();
+                process.put("assignor_id", userId);
+                process.put("assignor_name", userName);
+                process.put("assignee_id", userId);
+                process.put("assignee_name", userName);
+                process.put("assign_date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+
+                SupplierAssignDocument assignment = new SupplierAssignDocument();
+                assignment.setSupplierId(supplierId);
+                assignment.setAssignProcess(new ArrayList<>());
+                assignment.getAssignProcess().add(process);
+                supplierAssignRepository.save(assignment);
             } else {
                 supplierDocument.setStatus(MagicMathConstData.SUPPLIER_STATUS_UNASSIGNED);
             }
             supplierDocument.setBelongUserId(userId);
             supplierDocument.setCreatorId(userId);
-            // 默认接受所有邮件类型
-            // List<String> emailTypeIds = StreamSupport.stream(emailTypeRepository.findAll().spliterator(), false)
-            //         .map(EmailTypeDocument::getEmailTypeId)
-            //         .collect(Collectors.toList());
             // 默认不接受的邮件类型为空
             supplierDocument.setNoAcceptEmailTypeId(new ArrayList<>());
             // 获取当前时间

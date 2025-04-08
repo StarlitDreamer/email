@@ -129,6 +129,27 @@ public class TemplateServiceImpl implements TemplateService {
                 templateDoc.setCreatorName(userName);
                 if (userRole == 4) {
                     templateDoc.setStatus(MagicMathConstData.TEMPLATE_STATUS_ASSIGNED);
+                    // 创建分配记录
+                    Map<String, Object> process = new HashMap<>();
+                    // 分配人
+                    process.put("assignor_id", userId);
+                    process.put("assignor_name", userName);
+                    // 被分配人
+                    List<Map<String, String>> assigneeList = new ArrayList<>();
+                    Map<String, String> assignee = new HashMap<>();
+                    assignee.put("assignee_id", userId);
+                    assignee.put("assignee_name", userName);
+                    assigneeList.add(assignee);
+                    process.put("assignee", assigneeList);
+                    // 分配时间
+                    process.put("assign_date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+
+                    List<Map<String, Object>> processList = new ArrayList<>();
+                    processList.add(process);
+                    TemplateAssignDocument assignDoc = new TemplateAssignDocument();
+                    assignDoc.setTemplateId(templateId);
+                    assignDoc.setAssignProcess(processList);
+                    templateAssignRepository.save(assignDoc);
                 } else {
                     templateDoc.setStatus(MagicMathConstData.TEMPLATE_STATUS_UNASSIGNED);
                 }

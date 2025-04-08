@@ -94,6 +94,10 @@ public class AttachmentServiceImpl implements AttachmentService {
             if (userRole == null) {
                 return new Result(ResultCode.R_Error);
             }
+            String userName = ThreadLocalUtil.getUserName();
+            if (userName == null) {
+                return new Result(ResultCode.R_Error);
+            }
             // 参数校验
             if (request == null || !request.containsKey("attachment")) {
                 return new Result(ResultCode.R_ParamError);
@@ -120,6 +124,27 @@ public class AttachmentServiceImpl implements AttachmentService {
                 // 普通用户上传的附件默认是已分配
                 if (userRole == 4) {
                     doc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_ASSIGNED);
+                    // 创建分配记录
+                    Map<String, Object> process = new HashMap<>();
+                    // 分配人
+                    process.put("assignor_id", userId);
+                    process.put("assignor_name", userName);
+                    // 被分配人
+                    List<Map<String, String>> assigneeList = new ArrayList<>();
+                    Map<String, String> assignee = new HashMap<>();
+                    assignee.put("assignee_id", userId);
+                    assignee.put("assignee_name", userName);
+                    assigneeList.add(assignee);
+                    process.put("assignee", assigneeList);
+                    // 分配时间
+                    process.put("assign_date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
+
+                    List<Map<String, Object>> processList = new ArrayList<>();
+                    processList.add(process);
+                    AttachmentAssignDocument assignDoc = new AttachmentAssignDocument();
+                    assignDoc.setAttachmentId(attachment.get("attachment_id"));
+                    assignDoc.setAssignProcess(processList);
+                    attachmentAssignRepository.save(assignDoc);
                 } else {
                     doc.setStatus(MagicMathConstData.ATTACHMENT_STATUS_UNASSIGNED);
                 }
