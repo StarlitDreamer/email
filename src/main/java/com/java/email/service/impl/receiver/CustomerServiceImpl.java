@@ -588,6 +588,8 @@ public class CustomerServiceImpl implements CustomerService {
                             );
                         }
                         mainQuery.must(m -> m.bool(creatorQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("creator_id").query("")));
                     }
                 }
 
@@ -728,6 +730,8 @@ public class CustomerServiceImpl implements CustomerService {
                             );
                         }
                         mainQuery.must(m -> m.bool(commodityQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("commodity_id").query("")));
                     }
                 }
 
@@ -755,6 +759,7 @@ public class CustomerServiceImpl implements CustomerService {
                         )
                 );
             }
+            
             if (userRole.equals(UserConstData.ROLE_ADMIN_LARGE)) {
                 // 创建人条件
                 if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
@@ -770,6 +775,8 @@ public class CustomerServiceImpl implements CustomerService {
                             );
                         }
                         mainQuery.must(m -> m.bool(creatorQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("creator_id").query("")));
                     }
                 }
 
@@ -778,15 +785,17 @@ public class CustomerServiceImpl implements CustomerService {
                     List<UserDocument> belongUsers = userRepository.findByUserNameLike(request.getBelongUserName().trim());
                     if (!belongUsers.isEmpty()) {
                         BoolQuery.Builder belongQuery = new BoolQuery.Builder();
-                        for (UserDocument user : belongUsers) {
+                        for (UserDocument belongUser : belongUsers) {
                             belongQuery.should(s -> s
                                     .term(t -> t
                                             .field("belong_user_id")
-                                            .value(user.getUserId())
+                                            .value(belongUser.getUserId())
                                     )
                             );
                         }
                         mainQuery.must(m -> m.bool(belongQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("belong_user_id").query("")));
                     }
                 }
 
@@ -852,6 +861,7 @@ public class CustomerServiceImpl implements CustomerService {
 
                 // 商品ID条件
                 if (request.getCommodityName() != null && !request.getCommodityName().trim().isEmpty()) {
+                    // 根据商品名称查询商品ID
                     List<CommodityDocument> commodities = commodityRepository.findByCommodityNameLike(request.getCommodityName().trim());
                     if (!commodities.isEmpty()) {
                         BoolQuery.Builder commodityQuery = new BoolQuery.Builder();
@@ -864,6 +874,8 @@ public class CustomerServiceImpl implements CustomerService {
                             );
                         }
                         mainQuery.must(m -> m.bool(commodityQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("commodity_id").query("")));
                     }
                 }
 
@@ -946,102 +958,86 @@ public class CustomerServiceImpl implements CustomerService {
             if (userRole.equals(UserConstData.ROLE_ADMIN_SMALL)) {
                 // 添加必要的权限过滤
                 BoolQuery.Builder accessQuery = new BoolQuery.Builder();
-                boolean hasCreator = false;
-                boolean hasBelong = false;
-
-                // 验证创建人是否为自己或下属
-                if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
-                    hasCreator = true;
-                    ValidationResult creatorValidation = subordinateValidation.findSubordinatesAndSelfByName(
-                            request.getCreatorName().trim(),
-                            currentUserId
-                    );
-                    if (!creatorValidation.isValid()) {
-                        return new Result(ResultCode.R_NotBelongToAdmin);
-                    }
-                    List<UserDocument> validUsers = creatorValidation.getValidUsers();
-                    // 创建人条件
-                    BoolQuery.Builder creatorQuery = new BoolQuery.Builder();
-                    for (UserDocument user : validUsers) {
-                        creatorQuery.should(s -> s
+                // 创建者是自己或下属
+                BoolQuery.Builder creatorAccessQuery = new BoolQuery.Builder();
+                creatorAccessQuery.should(s -> s
+                        .term(t -> t
+                                .field("creator_id")
+                                .value(currentUserId)
+                        )
+                );
+                List<UserDocument> subordinates = userRepository.findByBelongUserId(currentUserId);
+                if (!subordinates.isEmpty()) {
+                    for (UserDocument sub : subordinates) {
+                        creatorAccessQuery.should(s -> s
                                 .term(t -> t
                                         .field("creator_id")
-                                        .value(user.getUserId())
+                                        .value(sub.getUserId())
                                 )
                         );
                     }
-                    mainQuery.must(m -> m.bool(creatorQuery.build()));
                 }
-
-                // 验证所属用户是否为自己或下属
-                if (request.getBelongUserName() != null && !request.getBelongUserName().trim().isEmpty()) {
-                    hasBelong = true;
-                    ValidationResult belongValidation = subordinateValidation.findSubordinatesAndSelfByName(
-                            request.getBelongUserName().trim(),
-                            currentUserId
-                    );
-                    if (!belongValidation.isValid()) {
-                        return new Result(ResultCode.R_NotBelongToAdmin);
-                    }
-                    List<UserDocument> validUsers = belongValidation.getValidUsers();
-                    // 所属用户条件
-                    BoolQuery.Builder belongQuery = new BoolQuery.Builder();
-                    for (UserDocument user : validUsers) {
-                        belongQuery.should(s -> s
+                accessQuery.should(s -> s.bool(creatorAccessQuery.build()));
+                // 所属用户是自己或下属
+                BoolQuery.Builder belongAccessQuery = new BoolQuery.Builder();
+                belongAccessQuery.should(s -> s
+                        .term(t -> t
+                                .field("belong_user_id")
+                                .value(currentUserId)
+                        )
+                );
+                if (!subordinates.isEmpty()) {
+                    for (UserDocument sub : subordinates) {
+                        belongAccessQuery.should(s -> s
                                 .term(t -> t
                                         .field("belong_user_id")
-                                        .value(user.getUserId())
+                                        .value(sub.getUserId())
                                 )
                         );
                     }
-                    mainQuery.must(m -> m.bool(belongQuery.build()));
                 }
+                accessQuery.should(s -> s.bool(belongAccessQuery.build()));
 
-                // 如果创建者和所属用户都没有指定，则添加必要权限过滤
-                if (!hasCreator && !hasBelong) {
-                    // 创建者是自己或下属
-                    BoolQuery.Builder creatorAccessQuery = new BoolQuery.Builder();
-                    creatorAccessQuery.should(s -> s
-                            .term(t -> t
-                                    .field("creator_id")
-                                    .value(currentUserId)
-                            )
-                    );
-                    List<UserDocument> subordinates = userRepository.findByBelongUserId(currentUserId);
-                    if (!subordinates.isEmpty()) {
-                        for (UserDocument sub : subordinates) {
-                            creatorAccessQuery.should(s -> s
+                // 至少满足一个权限条件
+                accessQuery.minimumShouldMatch("1");
+                mainQuery.must(m -> m.bool(accessQuery.build()));
+
+                // 创建人条件
+                if (request.getCreatorName() != null && !request.getCreatorName().trim().isEmpty()) {
+                    List<UserDocument> creators = userRepository.findByUserNameLike(request.getCreatorName().trim());
+                    if (!creators.isEmpty()) {
+                        BoolQuery.Builder creatorQuery = new BoolQuery.Builder();
+                        for (UserDocument creator : creators) {
+                            creatorQuery.should(s -> s
                                     .term(t -> t
                                             .field("creator_id")
-                                            .value(sub.getUserId())
+                                            .value(creator.getUserId())
                                     )
                             );
                         }
+                        mainQuery.must(m -> m.bool(creatorQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("creator_id").query("")));
                     }
-                    accessQuery.should(s -> s.bool(creatorAccessQuery.build()));
-                    // 所属用户是自己或下属
-                    BoolQuery.Builder belongAccessQuery = new BoolQuery.Builder();
-                    belongAccessQuery.should(s -> s
-                            .term(t -> t
-                                    .field("belong_user_id")
-                                    .value(currentUserId)
-                            )
-                    );
-                    if (!subordinates.isEmpty()) {
-                        for (UserDocument sub : subordinates) {
-                            belongAccessQuery.should(s -> s
+                }
+
+                // 所属用户条件
+                if (request.getBelongUserName() != null && !request.getBelongUserName().trim().isEmpty()) {
+                    List<UserDocument> belongUsers = userRepository.findByUserNameLike(request.getBelongUserName().trim());
+                    if (!belongUsers.isEmpty()) {
+                        BoolQuery.Builder belongQuery = new BoolQuery.Builder();
+                        for (UserDocument belongUser : belongUsers) {
+                            belongQuery.should(s -> s
                                     .term(t -> t
                                             .field("belong_user_id")
-                                            .value(sub.getUserId())
+                                            .value(belongUser.getUserId())
                                     )
                             );
                         }
+                        mainQuery.must(m -> m.bool(belongQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("belong_user_id").query("")));
                     }
-                    accessQuery.should(s -> s.bool(belongAccessQuery.build()));
-
-                    // 至少满足一个权限条件
-                    accessQuery.minimumShouldMatch("1");
-                    mainQuery.must(m -> m.bool(accessQuery.build()));
                 }
 
                 // 客户名称条件
@@ -1106,6 +1102,7 @@ public class CustomerServiceImpl implements CustomerService {
 
                 // 商品ID条件
                 if (request.getCommodityName() != null && !request.getCommodityName().trim().isEmpty()) {
+                    // 根据商品名称查询商品ID
                     List<CommodityDocument> commodities = commodityRepository.findByCommodityNameLike(request.getCommodityName().trim());
                     if (!commodities.isEmpty()) {
                         BoolQuery.Builder commodityQuery = new BoolQuery.Builder();
@@ -1118,6 +1115,8 @@ public class CustomerServiceImpl implements CustomerService {
                             );
                         }
                         mainQuery.must(m -> m.bool(commodityQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("commodity_id").query("")));
                     }
                 }
 
@@ -1271,6 +1270,7 @@ public class CustomerServiceImpl implements CustomerService {
 
                 // 商品ID条件
                 if (request.getCommodityName() != null && !request.getCommodityName().trim().isEmpty()) {
+                    // 根据商品名称查询商品ID
                     List<CommodityDocument> commodities = commodityRepository.findByCommodityNameLike(request.getCommodityName().trim());
                     if (!commodities.isEmpty()) {
                         BoolQuery.Builder commodityQuery = new BoolQuery.Builder();
@@ -1283,6 +1283,8 @@ public class CustomerServiceImpl implements CustomerService {
                             );
                         }
                         mainQuery.must(m -> m.bool(commodityQuery.build()));
+                    }else{
+                        mainQuery.must(m -> m.match(t -> t.field("commodity_id").query("")));
                     }
                 }
 
@@ -1799,7 +1801,6 @@ public class CustomerServiceImpl implements CustomerService {
                     }
                     if (commodityIds.isEmpty()) {
                         logUtil.error("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，商品列表全部不存在");
-                        errorMsg.add("CSV第" + lineNumber + "行，该客户："+customer.getCustomerName()+"，商品列表全部不存在");
                         continue;
                     }
                     customer.setCommodityId(commodityIds);
@@ -1924,7 +1925,6 @@ public class CustomerServiceImpl implements CustomerService {
                     }
                     if (emailList.isEmpty()) {
                         logUtil.error("CSV第" + lineNumber + "行，该客户"+customer.getCustomerName()+"邮箱验证全部不合格");
-                        errorMsg.add("CSV第" + lineNumber + "行，该客户"+customer.getCustomerName()+"邮箱验证全部不合格");
                         continue;
                     }
                     customer.setEmails(emailList);
