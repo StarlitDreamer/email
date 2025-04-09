@@ -263,7 +263,7 @@ public class CustomerServiceImpl implements CustomerService {
                 process.put("assign_date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
 
                 CustomerAssignDocument assignment = new CustomerAssignDocument();
-                assignment.setCustomerId(customerId);
+                assignment.setCustomerId("customer_" + customerId);
                 assignment.setAssignProcess(new ArrayList<>());
                 assignment.getAssignProcess().add(process);
                 customerAssignRepository.save(assignment);

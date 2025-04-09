@@ -121,10 +121,11 @@ public class TemplateServiceImpl implements TemplateService {
         try {
             if (!StringUtils.hasText(templateId)) {
                 // 新建记录
+                String newTemplateId = java.util.UUID.randomUUID().toString();
                 List<String> belongUserId = new ArrayList<>();
                 belongUserId.add(userId);
                 templateDoc.setBelongUserId(belongUserId);
-                templateDoc.setTemplateId(java.util.UUID.randomUUID().toString());
+                templateDoc.setTemplateId(newTemplateId);
                 templateDoc.setCreatorId(userId);
                 templateDoc.setCreatorName(userName);
                 if (userRole == 4) {
@@ -147,7 +148,7 @@ public class TemplateServiceImpl implements TemplateService {
                     List<Map<String, Object>> processList = new ArrayList<>();
                     processList.add(process);
                     TemplateAssignDocument assignDoc = new TemplateAssignDocument();
-                    assignDoc.setTemplateId(templateId);
+                    assignDoc.setTemplateId(newTemplateId);
                     assignDoc.setAssignProcess(processList);
                     templateAssignRepository.save(assignDoc);
                 } else {

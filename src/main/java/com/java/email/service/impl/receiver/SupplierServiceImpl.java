@@ -286,7 +286,7 @@ public class SupplierServiceImpl implements SupplierService {
                 process.put("assign_date", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")));
 
                 SupplierAssignDocument assignment = new SupplierAssignDocument();
-                assignment.setSupplierId(supplierId);
+                assignment.setSupplierId("supplier_" + supplierId);
                 assignment.setAssignProcess(new ArrayList<>());
                 assignment.getAssignProcess().add(process);
                 supplierAssignRepository.save(assignment);
