@@ -263,8 +263,8 @@ public class EmailTaskService {
             }
         }
 
-//        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
-        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
+        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+//        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件，请复制对应链接至浏览器即可。";
@@ -509,8 +509,8 @@ public class EmailTaskService {
             }
         }
 
-//        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
-        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
+        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+//        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件，请复制对应链接至浏览器即可。";
@@ -776,8 +776,8 @@ public class EmailTaskService {
             }
         }
 
-//        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
-        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
+        String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+//        String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
         emailContentBuilder.append(attachmentInfo);
 
         String s = "如要下载附件，请复制对应链接至浏览器即可。";
@@ -880,8 +880,8 @@ public class EmailTaskService {
                 }
             }
 
-//            String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
-            String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
+            String attachmentInfo = "<p>邮件退订地址:" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}</p>";
+//            String attachmentInfo = "<p>邮件退订地址: <a href=\"" + baseUrl + "/email-report/unsubscribe?emailTaskId=${emailTaskId}&receiverEmail=${receiverEmail}\" target=\"_blank\">点击此处退订邮件</a></p>";
             emailContentBuilder.append(attachmentInfo);
 
             String s = "如要下载附件，请复制对应链接至浏览器即可。";
